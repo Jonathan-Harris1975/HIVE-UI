@@ -1,14 +1,14 @@
 # HIVE-UI Build Plan
 
-## Session 0: backend contract
+## Session 0: backend contract — complete
 
-- Persist streamed user and assistant messages.
-- Return conversation identity before tokens arrive.
-- Generate a bounded title from the first user message.
-- Add rename and delete operations.
-- Cover persistence, titles and lifecycle operations with tests.
+- Persistent streamed user and assistant messages.
+- Conversation identity emitted before tokens arrive.
+- Automatic bounded first-message title.
+- Conversation rename and delete operations.
+- Persistence and lifecycle tests.
 
-## Session 1: frontend foundation
+## Session 1: frontend foundation — complete
 
 - Vite + React + TypeScript + Tailwind.
 - Cloudflare Pages Function authentication boundary.
@@ -16,40 +16,45 @@
 - Routes: `/chat`, `/files`, `/skills`, `/ops`.
 - Lighter HIVE navy/cyan/mint visual system.
 
-## Session 2: chat
+## Session 2: chat — complete
 
 - Conversation sidebar and mobile drawer.
 - Streaming thread and stop generation.
 - Shared composer, mode picker and model picker.
-- Auto route as the default.
+- Auto route default.
 - Markdown/code rendering and cost metadata.
+- Scroll-to-latest control.
 - Collapsed inspector.
 
-## Session 3: files
+## Session 3: files — complete
 
-- Upload and listing.
-- Metadata inspection.
+- Multipart upload and drag-and-drop.
+- Pasted-text upload.
+- File listing and metadata inspection.
 - Shared file-chat route.
 - Workflow presets and source citations.
 
-## Session 4: skills
+## Session 4: skills — complete
 
-- Search, scores and filters.
+- Search, scores and repo/lane/risk filters.
 - Task recommendation.
-- Skill detail inspection.
+- Status badges and detailed inspection.
+- Skill-to-chat hand-off.
 
-## Session 5: ops
+## Session 5: ops — complete
 
-- Health flags.
-- Repository hygiene report.
-- Workflow template data.
-- Review queue data.
-- Later: interactive graph, decision controls and evidence packs.
+- Health flags dashboard.
+- Repository hygiene summaries and full report inspection.
+- Workflow template selection.
+- Interactive plan-only workflow graph display.
+- Controlled execution-preview step statuses.
+- Execution review queue table.
+- Evidence-pack inspection.
+- Approve, reject and needs-changes review decisions.
 
-## Session 6: polish and deployment
+## Session 6: polish and deployment — next
 
-- Responsive and empty/error states.
 - Production Cloudflare Pages deployment.
-- Deployed API/CORS validation.
+- Deployed API and CORS validation.
 - Browser regression tests.
-- Cost and token presentation refinement.
+- Final mobile QA and telemetry refinement.
