@@ -319,3 +319,22 @@ export interface ExecutionReviewsResponse {
   error_code?: string
   [key: string]: unknown
 }
+
+export interface R2Lane {
+  lane: string
+  bucket?: string | null
+  public_base_url?: string | null
+  configured?: boolean
+  description?: string
+  primary_upload_lane?: boolean
+}
+
+export interface R2LanesResponse {
+  ok: boolean
+  count?: number
+  configured_count?: number
+  primary_upload_lane?: string
+  lanes?: R2Lane[]
+  note?: string
+  error?: string
+}
