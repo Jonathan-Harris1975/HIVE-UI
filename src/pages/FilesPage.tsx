@@ -1,4 +1,7 @@
 import {
+  ChevronDown,
+  Database,
+  ExternalLink,
   FileArchive,
   FileText,
   FileUp,
@@ -22,7 +25,7 @@ import { StatusBadge } from '../components/StatusBadge'
 import { useInspector } from '../context/InspectorContext'
 import { apiFetch } from '../lib/api'
 import { formatBytes, formatDate } from '../lib/format'
-import type { FileListResponse, FileObject } from '../types/api'
+import type { FileListResponse, FileObject, R2Lane, R2LanesResponse } from '../types/api'
 
 type UploadMode = 'file' | 'text'
 
@@ -45,6 +48,8 @@ export function FilesPage() {
   const navigate = useNavigate()
   const { setPayload, setOpen } = useInspector()
   const [files, setFiles] = useState<FileObject[]>([])
+  const [lanes, setLanes] = useState<R2Lane[]>([])
+  const [lanesOpen, setLanesOpen] = useState(false)
   const [storage, setStorage] = useState('storage')
   const [loading, setLoading] = useState(true)
   const [uploading, setUploading] = useState(false)
@@ -61,10 +66,14 @@ export function FilesPage() {
     setLoading(true)
     setError(null)
     try {
-      const response = await apiFetch<FileListResponse>('/v1/files/list?prefix=uploads%2F&limit=200')
-      if (!response.ok) throw new Error(response.message || response.error || 'File listing failed.')
-      setFiles(response.files ?? [])
-      setStorage(response.storage ?? 'storage')
+      const [fileResponse, laneResponse] = await Promise.all([
+        apiFetch<FileListResponse>('/v1/files/list?prefix=uploads%2F&limit=200'),
+        apiFetch<R2LanesResponse>('/v1/files/r2-lanes').catch(() => ({ ok: false, lanes: [] })),
+      ])
+      if (!fileResponse.ok) throw new Error(fileResponse.message || fileResponse.error || 'File listing failed.')
+      setFiles(fileResponse.files ?? [])
+      setStorage(fileResponse.storage ?? 'storage')
+      setLanes(laneResponse.lanes ?? [])
     } catch (caught) {
       setError(caught instanceof Error ? caught.message : 'Files could not be loaded.')
     } finally {
@@ -81,6 +90,8 @@ export function FilesPage() {
     if (!needle) return files
     return files.filter((file) => `${fileName(file)} ${fileKey(file)}`.toLowerCase().includes(needle))
   }, [files, query])
+
+  const configuredLaneCount = useMemo(() => lanes.filter((lane) => lane.configured).length, [lanes])
 
   async function uploadFiles(selected: File[]) {
     if (!selected.length) return
@@ -167,10 +178,52 @@ export function FilesPage() {
                 Upload files or paste text, inspect stored metadata, then open the source inside the same HIVE chat interface.
               </p>
             </div>
-            <button type="button" onClick={() => void loadFiles()} className="flex h-10 items-center justify-center gap-2 rounded-xl border border-white/8 bg-white/[0.035] px-3 text-xs text-slate-300 hover:bg-white/[0.06]">
-              <RefreshCw className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`} /> Refresh
-            </button>
+            <div className="flex flex-wrap gap-2">
+              {lanes.length > 0 && (
+                <button type="button" onClick={() => setLanesOpen((current) => !current)} aria-expanded={lanesOpen} className="flex h-10 items-center justify-center gap-2 rounded-xl border border-white/8 bg-white/[0.035] px-3 text-xs text-slate-300 hover:bg-white/[0.06]">
+                  <Database className="h-4 w-4" /> Storage map
+                  <ChevronDown className={`h-3.5 w-3.5 transition ${lanesOpen ? 'rotate-180' : ''}`} />
+                </button>
+              )}
+              <button type="button" onClick={() => void loadFiles()} className="flex h-10 items-center justify-center gap-2 rounded-xl border border-white/8 bg-white/[0.035] px-3 text-xs text-slate-300 hover:bg-white/[0.06]">
+                <RefreshCw className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`} /> Refresh
+              </button>
+            </div>
           </div>
+
+          {lanesOpen && lanes.length > 0 && (
+            <section className="mt-6 rounded-2xl border border-cyan-300/12 bg-[#071426]/75 p-4" aria-label="R2 ecosystem storage map">
+              <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+                <div>
+                  <h3 className="text-sm font-semibold text-white">Ecosystem storage map</h3>
+                  <p className="mt-1 text-xs leading-5 text-slate-500">The uploads lane is active for file operations. Other configured buckets are registry-aware only, ready for a later scoped read-access phase.</p>
+                </div>
+                <StatusBadge status="active" label={`${configuredLaneCount}/${lanes.length} configured`} compact />
+              </div>
+              <div className="mt-4 grid gap-2 sm:grid-cols-2 xl:grid-cols-3">
+                {lanes.map((lane) => (
+                  <article key={lane.lane} className="rounded-xl border border-white/8 bg-[#061126]/80 p-3">
+                    <div className="flex items-start justify-between gap-2">
+                      <div className="min-w-0">
+                        <p className="truncate text-xs font-semibold text-slate-200">{lane.lane.replace(/_/g, ' ')}</p>
+                        <p className="mt-1 line-clamp-2 text-[11px] leading-4 text-slate-600">{lane.description || 'Configured ecosystem storage lane'}</p>
+                      </div>
+                      <StatusBadge
+                        status={lane.primary_upload_lane ? 'active' : lane.configured ? 'readonly' : 'unknown'}
+                        label={lane.primary_upload_lane ? 'Read/write' : lane.configured ? 'Registry only' : 'Not configured'}
+                        compact
+                      />
+                    </div>
+                    {lane.public_base_url && (
+                      <a href={lane.public_base_url} target="_blank" rel="noreferrer" className="mt-3 inline-flex items-center gap-1.5 text-[11px] text-cyan-300/70 hover:text-cyan-200">
+                        Public base <ExternalLink className="h-3 w-3" />
+                      </a>
+                    )}
+                  </article>
+                ))}
+              </div>
+            </section>
+          )}
 
           <div className="mt-6 border-t border-white/8 pt-5">
             <div className="flex w-fit gap-1 rounded-xl border border-white/8 bg-[#071426] p-1">

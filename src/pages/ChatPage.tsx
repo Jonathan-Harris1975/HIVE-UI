@@ -1,15 +1,12 @@
 import {
   ArrowDown,
-  Bot,
   BrainCircuit,
   ChevronDown,
   CircleStop,
-  FileText,
   LoaderCircle,
   Paperclip,
   Send,
   Sparkles,
-  UserRound,
   X,
 } from 'lucide-react'
 import {
@@ -34,7 +31,7 @@ import type {
   UiMessage,
   WorkflowPreset,
 } from '../types/api'
-import { MarkdownMessage } from '../components/MarkdownMessage'
+import { ChatMessage } from '../components/ChatMessage'
 
 const modeOptions: Array<{ value: ChatMode; label: string }> = [
   { value: 'auto', label: 'Auto route' },
@@ -116,6 +113,10 @@ export function ChatPage() {
   }, [attachedFile])
 
   const sortedModels = useMemo(() => [...models].sort((a, b) => (a.name || a.id).localeCompare(b.name || b.id)), [models])
+  const conversationUsage = useMemo(() => messages.reduce((total, message) => ({
+    tokens: total.tokens + Number(message.usage?.total_tokens ?? message.token_total ?? 0),
+    cost: total.cost + Number(message.usage?.cost ?? message.cost_usd ?? 0),
+  }), { tokens: 0, cost: 0 }), [messages])
 
   function removeAttachment() {
     const next = new URLSearchParams(searchParams)
@@ -318,44 +319,7 @@ export function ChatPage() {
           ) : (
             <div className="space-y-6 py-2">
               {messages.map((message) => (
-                <article key={message.id} className={`flex gap-3 sm:gap-4 ${message.role === 'user' ? 'justify-end' : ''}`}>
-                  {message.role === 'assistant' && (
-                    <div className="mt-1 flex h-8 w-8 shrink-0 items-center justify-center rounded-xl border border-cyan-300/20 bg-cyan-300/8 text-cyan-200">
-                      <Bot className="h-4 w-4" />
-                    </div>
-                  )}
-                  <button
-                    type="button"
-                    onClick={() => inspectMessage(message)}
-                    className={`min-w-0 max-w-[88%] text-left ${message.role === 'user' ? 'rounded-2xl rounded-tr-md bg-gradient-to-br from-[#163a59] to-[#102a43] px-4 py-3 text-sm text-slate-100 shadow-lg shadow-black/10' : 'flex-1 rounded-2xl border border-white/8 bg-[#0a192d]/70 px-4 py-4 text-sm leading-7 text-slate-300 sm:px-5'}`}
-                  >
-                    {message.role === 'assistant' ? (
-                      <>
-                        {message.content ? <MarkdownMessage content={message.content} /> : message.pending ? (
-                          <div className="flex items-center gap-2 text-slate-500"><LoaderCircle className="h-4 w-4 animate-spin" /> HIVE is thinking</div>
-                        ) : null}
-                        {message.error && <p className="mt-3 rounded-lg border border-rose-400/20 bg-rose-400/8 px-3 py-2 text-xs text-rose-200">{message.error}</p>}
-                        {!message.pending && (message.model || (message.usage?.cost ?? message.cost_usd) != null) && (
-                          <div className="mt-4 flex flex-wrap items-center gap-2 border-t border-white/6 pt-3 text-[10px] uppercase tracking-[0.12em] text-slate-600">
-                            {message.model && <span>{message.model}</span>}
-                            {(message.usage?.total_tokens ?? message.token_total) != null && <span>· {message.usage?.total_tokens ?? message.token_total} tokens</span>}
-                            {(message.usage?.cost ?? message.cost_usd) != null && <span>· {formatCost(message.usage?.cost ?? message.cost_usd)}</span>}
-                          </div>
-                        )}
-                        {message.sourceCitation?.object_key && (
-                          <div className="mt-3 flex items-center gap-2 rounded-lg border border-emerald-300/15 bg-emerald-300/5 px-3 py-2 text-xs text-emerald-200/80">
-                            <FileText className="h-3.5 w-3.5" /> {message.sourceCitation.label || message.sourceCitation.object_key}
-                          </div>
-                        )}
-                      </>
-                    ) : message.content}
-                  </button>
-                  {message.role === 'user' && (
-                    <div className="mt-1 flex h-8 w-8 shrink-0 items-center justify-center rounded-xl border border-white/10 bg-white/5 text-slate-300">
-                      <UserRound className="h-4 w-4" />
-                    </div>
-                  )}
-                </article>
+                <ChatMessage key={message.id} message={message} onInspect={inspectMessage} />
               ))}
               <div ref={endRef} />
             </div>
@@ -392,6 +356,7 @@ export function ChatPage() {
               onChange={(event) => { setPrompt(event.target.value); resizeTextarea() }}
               onKeyDown={handleKeyDown}
               placeholder={attachedFile ? 'Ask about the attached file…' : 'Message HIVE…'}
+              aria-label={attachedFile ? 'Ask about the attached file' : 'Message HIVE'}
               className="block min-h-12 max-h-[180px] w-full resize-none bg-transparent px-3 py-3 text-sm leading-6 text-white outline-none placeholder:text-slate-600"
             />
             <div className="flex flex-wrap items-center justify-between gap-2 border-t border-white/6 px-1 pt-2">
@@ -448,7 +413,10 @@ export function ChatPage() {
               )}
             </div>
           </div>
-          <p className="mt-2 text-center text-[10px] text-slate-700">Enter sends · Shift + Enter adds a line · Inspector reveals model and cost details</p>
+          <p className="mt-2 text-center text-[10px] text-slate-700">
+            Enter sends · Shift + Enter adds a line
+            {conversationUsage.tokens > 0 && <> · {conversationUsage.tokens.toLocaleString()} tokens · {formatCost(conversationUsage.cost)}</>}
+          </p>
         </form>
       </div>
     </div>
