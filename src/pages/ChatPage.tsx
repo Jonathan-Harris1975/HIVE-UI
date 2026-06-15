@@ -1,4 +1,5 @@
 import {
+  ArrowDown,
   Bot,
   BrainCircuit,
   ChevronDown,
@@ -73,6 +74,7 @@ export function ChatPage() {
   const { setPayload, setOpen } = useInspector()
   const [searchParams, setSearchParams] = useSearchParams()
   const attachedFile = searchParams.get('file')
+  const draft = searchParams.get('draft')
   const [prompt, setPrompt] = useState('')
   const [mode, setMode] = useState<ChatMode>(attachedFile ? 'file_analysis' : 'auto')
   const [model, setModel] = useState('')
@@ -81,8 +83,10 @@ export function ChatPage() {
   const [workflowPreset, setWorkflowPreset] = useState('')
   const [streaming, setStreaming] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [showScrollButton, setShowScrollButton] = useState(false)
   const abortRef = useRef<AbortController | null>(null)
   const endRef = useRef<HTMLDivElement | null>(null)
+  const scrollRef = useRef<HTMLDivElement | null>(null)
   const textareaRef = useRef<HTMLTextAreaElement | null>(null)
 
   useEffect(() => {
@@ -95,8 +99,17 @@ export function ChatPage() {
   }, [])
 
   useEffect(() => {
-    endRef.current?.scrollIntoView({ behavior: streaming ? 'auto' : 'smooth', block: 'end' })
-  }, [messages, streaming])
+    if (!showScrollButton) endRef.current?.scrollIntoView({ behavior: streaming ? 'auto' : 'smooth', block: 'end' })
+  }, [messages, streaming, showScrollButton])
+
+  useEffect(() => {
+    if (!draft) return
+    setPrompt(draft)
+    const next = new URLSearchParams(searchParams)
+    next.delete('draft')
+    setSearchParams(next, { replace: true })
+    window.setTimeout(() => textareaRef.current?.focus(), 0)
+  }, [draft, searchParams, setSearchParams])
 
   useEffect(() => {
     if (attachedFile) setMode('file_analysis')
@@ -257,9 +270,21 @@ export function ChatPage() {
     abortRef.current?.abort()
   }
 
+  function handleScroll() {
+    const element = scrollRef.current
+    if (!element) return
+    const distanceFromBottom = element.scrollHeight - element.scrollTop - element.clientHeight
+    setShowScrollButton(distanceFromBottom > 180)
+  }
+
+  function scrollToLatest() {
+    endRef.current?.scrollIntoView({ behavior: 'smooth', block: 'end' })
+    setShowScrollButton(false)
+  }
+
   return (
-    <div className="flex h-full min-h-0 flex-col">
-      <div className="min-h-0 flex-1 overflow-y-auto">
+    <div className="relative flex h-full min-h-0 flex-col">
+      <div ref={scrollRef} onScroll={handleScroll} className="min-h-0 flex-1 overflow-y-auto">
         <div className="mx-auto flex min-h-full w-full max-w-4xl flex-col px-4 pb-6 pt-5 sm:px-8">
           {conversationLoading ? (
             <div className="flex flex-1 items-center justify-center text-slate-500">
@@ -337,6 +362,12 @@ export function ChatPage() {
           )}
         </div>
       </div>
+
+      {showScrollButton && (
+        <button type="button" onClick={scrollToLatest} className="absolute bottom-[126px] left-1/2 z-20 flex -translate-x-1/2 items-center gap-2 rounded-full border border-white/10 bg-[#0b1b31]/95 px-3 py-2 text-xs text-slate-300 shadow-xl shadow-black/30 backdrop-blur hover:border-cyan-300/25 hover:text-cyan-100">
+          <ArrowDown className="h-3.5 w-3.5" /> Latest message
+        </button>
+      )}
 
       <div className="shrink-0 border-t border-white/8 bg-[#071426]/95 px-3 pb-[max(12px,env(safe-area-inset-bottom))] pt-3 backdrop-blur-xl sm:px-6">
         <form onSubmit={handleSubmit} className="mx-auto max-w-4xl">

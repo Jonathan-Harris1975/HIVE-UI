@@ -2,11 +2,14 @@ import {
   BrainCircuit,
   Filter,
   LoaderCircle,
+  MessageSquareText,
   Search,
   Sparkles,
   WandSparkles,
 } from 'lucide-react'
 import { useCallback, useEffect, useMemo, useState, type FormEvent } from 'react'
+import { useNavigate } from 'react-router'
+import { StatusBadge } from '../components/StatusBadge'
 import { useInspector } from '../context/InspectorContext'
 import { apiFetch } from '../lib/api'
 import type { SkillItem, SkillListResponse } from '../types/api'
@@ -24,7 +27,13 @@ function field(item: SkillItem, key: string, fallback = ''): string {
   return value == null ? fallback : String(value)
 }
 
+function skillTitle(skill: SkillItem, index = 0): string {
+  const metadata = meta(skill)
+  return String(skill.title || skill.name || metadata.title || `Skill ${index + 1}`)
+}
+
 export function SkillsPage() {
+  const navigate = useNavigate()
   const { setPayload, setOpen } = useInspector()
   const [skills, setSkills] = useState<SkillItem[]>([])
   const [loading, setLoading] = useState(true)
@@ -41,13 +50,13 @@ export function SkillsPage() {
   const loadSkills = useCallback(async () => {
     setLoading(true)
     setError(null)
-    const params = new URLSearchParams({ limit: '300' })
+    const params = new URLSearchParams({ limit: submittedQuery.trim() ? '100' : '300' })
     if (repo) params.set('repo', repo)
     if (risk) params.set('risk_level', risk)
     if (lane) params.set('hive_lane', lane)
     try {
       const response = submittedQuery.trim()
-        ? await apiFetch<SkillListResponse>(`/v1/skills/search?q=${encodeURIComponent(submittedQuery.trim())}&limit=100&${params}`)
+        ? await apiFetch<SkillListResponse>(`/v1/skills/search?q=${encodeURIComponent(submittedQuery.trim())}&${params}`)
         : await apiFetch<SkillListResponse>(`/v1/skills/list?${params}`)
       if (response.ok === false) throw new Error(response.error || 'Skill registry query failed.')
       setSkills(itemsFrom(response))
@@ -64,8 +73,8 @@ export function SkillsPage() {
   }, [loadSkills])
 
   const filters = useMemo(() => {
-    const repos = new Set<string>()
-    const risks = new Set<string>()
+    const repos = new Set<string>(['HIVE', 'AIMS', 'RAMS', 'Website'])
+    const risks = new Set<string>(['low', 'medium', 'high'])
     const lanes = new Set<string>()
     for (const skill of skills) {
       const skillRepo = field(skill, 'repo')
@@ -99,7 +108,9 @@ export function SkillsPage() {
           limit: 12,
         }),
       })
+      if (response.ok === false) throw new Error(response.error || 'Recommendations failed.')
       setSkills(itemsFrom(response))
+      setSubmittedQuery('')
       setShowRecommender(false)
     } catch (caught) {
       setError(caught instanceof Error ? caught.message : 'Recommendations failed.')
@@ -119,11 +130,19 @@ export function SkillsPage() {
         { label: 'Lane', value: field(skill, 'hive_lane', field(skill, 'lane', 'Unspecified')) },
         { label: 'Risk', value: field(skill, 'risk_level', 'Unspecified') },
         { label: 'Priority', value: field(skill, 'priority_tier', 'Unspecified') },
+        { label: 'Status', value: field(skill, 'status', 'Indexed') },
         { label: 'Score', value: skill.score == null ? 'Not scored' : String(skill.score) },
       ],
       json: skill,
     })
     setOpen(true)
+  }
+
+  function insertIntoChat(skill: SkillItem, index: number) {
+    const title = skillTitle(skill, index)
+    const skillId = String(skill.id || meta(skill).skill_id || title)
+    const draft = `Use the shared skill ${title} (${skillId}) as a planning reference for this task: `
+    navigate(`/chat?draft=${encodeURIComponent(draft)}`)
   }
 
   return (
@@ -134,7 +153,7 @@ export function SkillsPage() {
             <div>
               <p className="text-xs font-semibold uppercase tracking-[0.2em] text-cyan-300/70">Shared skill pool</p>
               <h2 className="mt-2 text-2xl font-semibold text-white">Find the right operational capability</h2>
-              <p className="mt-2 max-w-2xl text-sm leading-6 text-slate-500">Search is metadata-only and review-gated. Nothing is installed or executed from this screen.</p>
+              <p className="mt-2 max-w-2xl text-sm leading-6 text-slate-500">Search and recommendation are metadata-only and review-gated. Nothing is installed or executed from this screen.</p>
             </div>
             <button type="button" onClick={() => setShowRecommender((value) => !value)} className="flex h-10 items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-cyan-400 to-emerald-300 px-4 text-xs font-semibold text-[#052035]">
               <WandSparkles className="h-4 w-4" /> Recommend for task
@@ -185,24 +204,31 @@ export function SkillsPage() {
             <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
               {skills.map((skill, index) => {
                 const metadata = meta(skill)
-                const title = String(skill.title || skill.name || metadata.title || `Skill ${index + 1}`)
+                const title = skillTitle(skill, index)
                 const riskLevel = field(skill, 'risk_level', 'unknown')
+                const status = field(skill, 'status', 'indexed')
                 const score = skill.score == null ? null : Number(skill.score)
                 return (
-                  <button key={String(skill.id || metadata.skill_id || `${title}-${index}`)} type="button" onClick={() => inspect(skill)} className="rounded-2xl border border-white/8 bg-[#0a192d]/70 p-4 text-left transition hover:border-cyan-300/20 hover:bg-[#0d2038]">
-                    <div className="flex items-center justify-between gap-3">
-                      <div className="flex h-9 w-9 items-center justify-center rounded-xl border border-cyan-300/15 bg-cyan-300/7 text-cyan-200"><BrainCircuit className="h-4.5 w-4.5" /></div>
-                      <div className="flex gap-1.5">
-                        {score != null && <span className="rounded-full border border-cyan-300/15 bg-cyan-300/7 px-2 py-1 text-[10px] text-cyan-200">{score.toFixed(2)}</span>}
-                        <span className="rounded-full border border-white/8 bg-white/[0.035] px-2 py-1 text-[10px] uppercase tracking-[0.1em] text-slate-500">{riskLevel}</span>
+                  <article key={String(skill.id || metadata.skill_id || `${title}-${index}`)} className="rounded-2xl border border-white/8 bg-[#0a192d]/70 p-4 transition hover:border-cyan-300/20 hover:bg-[#0d2038]">
+                    <button type="button" onClick={() => inspect(skill)} className="block w-full text-left">
+                      <div className="flex items-center justify-between gap-3">
+                        <div className="flex h-9 w-9 items-center justify-center rounded-xl border border-cyan-300/15 bg-cyan-300/7 text-cyan-200"><BrainCircuit className="h-4.5 w-4.5" /></div>
+                        <div className="flex flex-wrap justify-end gap-1.5">
+                          {score != null && Number.isFinite(score) && <span className="rounded-full border border-cyan-300/15 bg-cyan-300/7 px-2 py-1 text-[10px] text-cyan-200">{score.toFixed(2)}</span>}
+                          <StatusBadge status={riskLevel} compact />
+                          <StatusBadge status={status} compact />
+                        </div>
                       </div>
-                    </div>
-                    <h3 className="mt-4 text-sm font-semibold text-white">{title}</h3>
-                    <p className="mt-2 line-clamp-3 min-h-[60px] text-xs leading-5 text-slate-500">{String(skill.description || metadata.description || 'No description supplied.')}</p>
-                    <div className="mt-4 flex flex-wrap gap-1.5 border-t border-white/6 pt-3 text-[10px] text-slate-600">
-                      <span>{field(skill, 'repo', 'Shared')}</span><span>·</span><span>{field(skill, 'hive_lane', field(skill, 'lane', 'General'))}</span>
-                    </div>
-                  </button>
+                      <h3 className="mt-4 text-sm font-semibold text-white">{title}</h3>
+                      <p className="mt-2 line-clamp-3 min-h-[60px] text-xs leading-5 text-slate-500">{String(skill.description || metadata.description || 'No description supplied.')}</p>
+                      <div className="mt-4 flex flex-wrap gap-1.5 border-t border-white/6 pt-3 text-[10px] text-slate-600">
+                        <span>{field(skill, 'repo', 'Shared')}</span><span>·</span><span>{field(skill, 'hive_lane', field(skill, 'lane', 'General'))}</span>
+                      </div>
+                    </button>
+                    <button type="button" onClick={() => insertIntoChat(skill, index)} className="mt-3 flex h-9 w-full items-center justify-center gap-2 rounded-xl border border-emerald-300/15 bg-emerald-300/6 text-xs font-medium text-emerald-100 transition hover:bg-emerald-300/10">
+                      <MessageSquareText className="h-4 w-4" /> Use in chat
+                    </button>
+                  </article>
                 )
               })}
             </div>

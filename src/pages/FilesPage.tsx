@@ -8,12 +8,23 @@ import {
   Search,
   UploadCloud,
 } from 'lucide-react'
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import {
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  type DragEvent,
+  type FormEvent,
+} from 'react'
 import { useNavigate } from 'react-router'
+import { StatusBadge } from '../components/StatusBadge'
 import { useInspector } from '../context/InspectorContext'
 import { apiFetch } from '../lib/api'
 import { formatBytes, formatDate } from '../lib/format'
 import type { FileListResponse, FileObject } from '../types/api'
+
+type UploadMode = 'file' | 'text'
 
 function fileKey(file: FileObject): string {
   return String(file.object_key || file.key || '')
@@ -37,8 +48,13 @@ export function FilesPage() {
   const [storage, setStorage] = useState('storage')
   const [loading, setLoading] = useState(true)
   const [uploading, setUploading] = useState(false)
+  const [dragActive, setDragActive] = useState(false)
+  const [uploadMode, setUploadMode] = useState<UploadMode>('file')
+  const [textFilename, setTextFilename] = useState('hive-note.txt')
+  const [textContent, setTextContent] = useState('')
   const [query, setQuery] = useState('')
   const [error, setError] = useState<string | null>(null)
+  const [notice, setNotice] = useState<string | null>(null)
   const inputRef = useRef<HTMLInputElement | null>(null)
 
   const loadFiles = useCallback(async () => {
@@ -66,13 +82,18 @@ export function FilesPage() {
     return files.filter((file) => `${fileName(file)} ${fileKey(file)}`.toLowerCase().includes(needle))
   }, [files, query])
 
-  async function uploadFile(file: File) {
+  async function uploadFiles(selected: File[]) {
+    if (!selected.length) return
     setUploading(true)
     setError(null)
-    const formData = new FormData()
-    formData.append('upload', file)
+    setNotice(null)
     try {
-      await apiFetch('/v1/files/upload', { method: 'POST', body: formData })
+      for (const file of selected) {
+        const formData = new FormData()
+        formData.append('upload', file)
+        await apiFetch('/v1/files/upload', { method: 'POST', body: formData })
+      }
+      setNotice(`${selected.length} file${selected.length === 1 ? '' : 's'} uploaded successfully.`)
       await loadFiles()
     } catch (caught) {
       setError(caught instanceof Error ? caught.message : 'Upload failed.')
@@ -80,6 +101,37 @@ export function FilesPage() {
       setUploading(false)
       if (inputRef.current) inputRef.current.value = ''
     }
+  }
+
+  async function uploadText(event: FormEvent) {
+    event.preventDefault()
+    if (!textFilename.trim() || !textContent.trim()) return
+    setUploading(true)
+    setError(null)
+    setNotice(null)
+    try {
+      await apiFetch('/v1/files/upload-text', {
+        method: 'POST',
+        body: JSON.stringify({
+          filename: textFilename.trim(),
+          content: textContent,
+          content_type: 'text/plain; charset=utf-8',
+        }),
+      })
+      setNotice(`${textFilename.trim()} uploaded successfully.`)
+      setTextContent('')
+      await loadFiles()
+    } catch (caught) {
+      setError(caught instanceof Error ? caught.message : 'Text upload failed.')
+    } finally {
+      setUploading(false)
+    }
+  }
+
+  function handleDrop(event: DragEvent<HTMLDivElement>) {
+    event.preventDefault()
+    setDragActive(false)
+    void uploadFiles(Array.from(event.dataTransfer.files))
   }
 
   function inspect(file: FileObject) {
@@ -107,24 +159,56 @@ export function FilesPage() {
     <div className="h-full overflow-y-auto p-4 sm:p-6 lg:p-8">
       <div className="mx-auto max-w-6xl">
         <section className="rounded-3xl border border-white/8 bg-[#0a192d]/75 p-5 shadow-xl shadow-black/10 sm:p-7">
-          <div className="flex flex-col gap-5 sm:flex-row sm:items-center sm:justify-between">
+          <div className="flex flex-col gap-5 lg:flex-row lg:items-start lg:justify-between">
             <div>
               <p className="text-xs font-semibold uppercase tracking-[0.2em] text-cyan-300/70">Shared file lane</p>
               <h2 className="mt-2 text-2xl font-semibold text-white">Bring evidence into the conversation</h2>
               <p className="mt-2 max-w-2xl text-sm leading-6 text-slate-500">
-                Upload once, inspect the stored metadata, then open the file inside the same HIVE chat interface.
+                Upload files or paste text, inspect stored metadata, then open the source inside the same HIVE chat interface.
               </p>
             </div>
-            <div className="flex gap-2">
-              <button type="button" onClick={() => void loadFiles()} className="flex h-10 items-center gap-2 rounded-xl border border-white/8 bg-white/[0.035] px-3 text-xs text-slate-300 hover:bg-white/[0.06]">
-                <RefreshCw className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`} /> Refresh
-              </button>
-              <button type="button" onClick={() => inputRef.current?.click()} disabled={uploading} className="flex h-10 items-center gap-2 rounded-xl bg-gradient-to-r from-cyan-400 to-emerald-300 px-4 text-xs font-semibold text-[#052035] disabled:opacity-50">
-                {uploading ? <LoaderCircle className="h-4 w-4 animate-spin" /> : <UploadCloud className="h-4 w-4" />}
-                Upload file
-              </button>
-              <input ref={inputRef} type="file" className="hidden" onChange={(event) => { const file = event.target.files?.[0]; if (file) void uploadFile(file) }} />
+            <button type="button" onClick={() => void loadFiles()} className="flex h-10 items-center justify-center gap-2 rounded-xl border border-white/8 bg-white/[0.035] px-3 text-xs text-slate-300 hover:bg-white/[0.06]">
+              <RefreshCw className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`} /> Refresh
+            </button>
+          </div>
+
+          <div className="mt-6 border-t border-white/8 pt-5">
+            <div className="flex w-fit gap-1 rounded-xl border border-white/8 bg-[#071426] p-1">
+              <button type="button" onClick={() => setUploadMode('file')} className={`rounded-lg px-3 py-1.5 text-xs transition ${uploadMode === 'file' ? 'bg-cyan-300/10 text-cyan-100' : 'text-slate-500 hover:text-slate-300'}`}>File upload</button>
+              <button type="button" onClick={() => setUploadMode('text')} className={`rounded-lg px-3 py-1.5 text-xs transition ${uploadMode === 'text' ? 'bg-cyan-300/10 text-cyan-100' : 'text-slate-500 hover:text-slate-300'}`}>Paste text</button>
             </div>
+
+            {uploadMode === 'file' ? (
+              <div
+                onDragEnter={(event) => { event.preventDefault(); setDragActive(true) }}
+                onDragOver={(event) => event.preventDefault()}
+                onDragLeave={(event) => { if (event.currentTarget === event.target) setDragActive(false) }}
+                onDrop={handleDrop}
+                className={`mt-4 rounded-2xl border border-dashed p-6 text-center transition ${dragActive ? 'border-cyan-300/45 bg-cyan-300/[0.06]' : 'border-white/10 bg-[#071426]/70'}`}
+              >
+                {uploading ? <LoaderCircle className="mx-auto h-8 w-8 animate-spin text-cyan-300" /> : <UploadCloud className="mx-auto h-8 w-8 text-cyan-300/70" />}
+                <p className="mt-3 text-sm font-medium text-slate-200">Drop one or more files here</p>
+                <p className="mt-1 text-xs text-slate-600">ZIPs, documents, text, spreadsheets and other formats supported by HIVE ingestion.</p>
+                <button type="button" onClick={() => inputRef.current?.click()} disabled={uploading} className="mt-4 inline-flex h-9 items-center gap-2 rounded-xl bg-gradient-to-r from-cyan-400 to-emerald-300 px-4 text-xs font-semibold text-[#052035] disabled:opacity-50">
+                  <FileUp className="h-4 w-4" /> Choose files
+                </button>
+                <input ref={inputRef} multiple type="file" className="hidden" onChange={(event) => void uploadFiles(Array.from(event.target.files ?? []))} />
+              </div>
+            ) : (
+              <form onSubmit={uploadText} className="mt-4 grid gap-3 rounded-2xl border border-white/8 bg-[#071426]/70 p-4">
+                <label className="text-xs font-medium text-slate-400">Filename
+                  <input value={textFilename} onChange={(event) => setTextFilename(event.target.value)} className="mt-2 h-10 w-full rounded-xl border border-white/8 bg-[#061126] px-3 text-sm text-slate-200 outline-none focus:border-cyan-300/30" />
+                </label>
+                <label className="text-xs font-medium text-slate-400">Text content
+                  <textarea value={textContent} onChange={(event) => setTextContent(event.target.value)} rows={7} placeholder="Paste notes, logs, transcripts or source text…" className="mt-2 w-full resize-y rounded-xl border border-white/8 bg-[#061126] px-3 py-3 text-sm leading-6 text-slate-200 outline-none placeholder:text-slate-600 focus:border-cyan-300/30" />
+                </label>
+                <div className="flex justify-end">
+                  <button type="submit" disabled={uploading || !textFilename.trim() || !textContent.trim()} className="flex h-9 items-center gap-2 rounded-xl bg-gradient-to-r from-cyan-400 to-emerald-300 px-4 text-xs font-semibold text-[#052035] disabled:opacity-50">
+                    {uploading ? <LoaderCircle className="h-4 w-4 animate-spin" /> : <UploadCloud className="h-4 w-4" />} Upload text
+                  </button>
+                </div>
+              </form>
+            )}
           </div>
 
           <div className="mt-6 flex flex-col gap-3 border-t border-white/8 pt-5 sm:flex-row sm:items-center sm:justify-between">
@@ -132,10 +216,11 @@ export function FilesPage() {
               <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-600" />
               <input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Search stored files" className="h-10 w-full rounded-xl border border-white/8 bg-[#071426] pl-10 pr-3 text-sm text-slate-200 outline-none placeholder:text-slate-600 focus:border-cyan-300/30" />
             </label>
-            <div className="text-xs text-slate-600">{files.length} objects · {storage}</div>
+            <div className="flex items-center gap-2 text-xs text-slate-600"><StatusBadge status={storage === 'r2' ? 'active' : 'readonly'} label={storage} compact /> {files.length} objects</div>
           </div>
         </section>
 
+        {notice && <div className="mt-4 rounded-xl border border-emerald-400/20 bg-emerald-400/8 px-4 py-3 text-sm text-emerald-200">{notice}</div>}
         {error && <div className="mt-4 rounded-xl border border-rose-400/20 bg-rose-400/8 px-4 py-3 text-sm text-rose-200">{error}</div>}
 
         <section className="mt-5">
@@ -158,7 +243,7 @@ export function FilesPage() {
                     <button type="button" onClick={() => inspect(file)} className="block w-full text-left">
                       <div className="flex items-start justify-between gap-3">
                         <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-cyan-300/15 bg-cyan-300/7 text-cyan-200"><FileIcon name={name} /></div>
-                        <span className="rounded-full border border-white/8 bg-white/[0.035] px-2 py-1 text-[10px] uppercase tracking-[0.12em] text-slate-600">{String(file.storage || storage)}</span>
+                        <StatusBadge status={String(file.storage || storage)} label={String(file.storage || storage)} compact />
                       </div>
                       <h3 className="mt-4 truncate text-sm font-semibold text-white">{name}</h3>
                       <p className="mt-1 line-clamp-2 min-h-10 break-all text-xs leading-5 text-slate-600">{key}</p>
