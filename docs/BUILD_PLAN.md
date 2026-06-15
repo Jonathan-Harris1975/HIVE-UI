@@ -52,9 +52,15 @@
 - Evidence-pack inspection.
 - Approve, reject and needs-changes review decisions.
 
-## Session 6: polish and deployment — next
+## Session 6: polish and deployment — complete
 
-- Production Cloudflare Pages deployment.
-- Deployed API and CORS validation.
-- Browser regression tests.
-- Final mobile QA and telemetry refinement.
+- Branded favicon and install icons.
+- Global error recovery and offline state.
+- Accessible message controls, focus states and reduced motion.
+- Conversation-level cost and token totals.
+- R2 ecosystem storage map with honest registry-only status.
+- Cloudflare security headers, no-index controls and caching policy.
+- GitHub Actions CI and built-distribution verification.
+- Deployment and future multi-bucket access documentation.
+
+The remaining operator step is live Cloudflare Pages and Koyeb smoke validation after deployment.

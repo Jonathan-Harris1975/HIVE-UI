@@ -30,32 +30,20 @@ The backend bearer token must never be compiled into the React bundle.
   "model": null,
   "conversation_id": null,
   "use_persisted_history": true,
-  "db_history_limit": 30
+  "db_history_limit": 40
 }
 ```
 
 ### SSE sequence
 
-HIVE-UI accepts named or unnamed SSE frames. The Session 0 backend emits an early conversation frame before model tokens:
+The backend emits an early conversation frame before model tokens:
 
 ```text
 event: meta
 data: {"type":"conversation","conversation_id":"..."}
 ```
 
-Token frames append assistant content. The final frame includes at least:
-
-```json
-{
-  "conversation_id": "...",
-  "db_recorded": true,
-  "db_error": null,
-  "model_used": "provider/model",
-  "usage": {}
-}
-```
-
-The interface refreshes the conversation list after completion.
+Token frames append assistant content. The final frame contains conversation identity, persistence status, model/provider metadata and usage where available.
 
 ## Conversation operations
 
@@ -76,12 +64,16 @@ Rename body:
 
 ```text
 GET  /v1/files/list?prefix=uploads%2F&limit=200
+GET  /v1/files/r2-lanes
 POST /v1/files/upload
+POST /v1/files/upload-text
 GET  /v1/workflow-presets
 POST /v1/chat/with-file
 ```
 
-The `/files` route never creates a second chat implementation. It links to `/chat?file=<object_key>&name=<filename>` and the shared composer submits to `/v1/chat/with-file`.
+The `/files` route links to `/chat?file=<object_key>&name=<filename>` and the shared composer submits to `/v1/chat/with-file`.
+
+`GET /v1/files/r2-lanes` is registry metadata. It does not grant arbitrary multi-bucket access. The UI labels non-upload lanes as registry-only.
 
 ## Models
 
@@ -102,10 +94,14 @@ POST /v1/skills/recommend
 ## Operations
 
 ```text
-GET /health
-GET /v1/system/repo-hygiene
-GET /v1/workflow-graphs/templates
-GET /v1/execution-reviews
+GET  /health
+GET  /v1/system/repo-hygiene
+GET  /v1/workflow-graphs/templates
+POST /v1/workflow-graphs/build
+POST /v1/execution-preview
+GET  /v1/execution-reviews
+GET  /v1/execution-reviews/{id}/evidence
+POST /v1/execution-reviews/{id}/decision
 ```
 
-The first UI release treats Ops data as read-only. Review decisions and execution-preview creation are reserved for a later gated slice.
+The UI creates plans, previews and review decisions only. It does not enable live execution adapters or mutate repositories.
