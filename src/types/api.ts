@@ -191,3 +191,131 @@ export interface HealthResponse {
   storage_flags?: Record<string, unknown>
   [key: string]: unknown
 }
+
+export interface WorkflowTemplate {
+  label?: string
+  description?: string
+  recommended_presets?: string[]
+  default_repo?: string
+  free_tier_safe?: boolean
+  [key: string]: unknown
+}
+
+export interface WorkflowTemplatesResponse {
+  ok: boolean
+  count?: number
+  templates?: Record<string, WorkflowTemplate>
+  note?: string
+  error?: string
+}
+
+export interface WorkflowNode {
+  id: string
+  type?: string
+  label?: string
+  status?: string
+  summary?: string
+  skill_ids?: string[]
+  [key: string]: unknown
+}
+
+export interface WorkflowEdge {
+  from: string
+  to: string
+  type?: string
+  [key: string]: unknown
+}
+
+export interface WorkflowGraphResponse {
+  ok: boolean
+  graph_id?: string
+  template?: string
+  task?: string
+  repo?: string
+  workflow_preset?: string | null
+  execution_mode?: string
+  can_execute_now?: boolean
+  requires_approval?: boolean
+  node_count?: number
+  edge_count?: number
+  nodes?: WorkflowNode[]
+  edges?: WorkflowEdge[]
+  risk_summary?: Record<string, unknown>
+  candidate_skills?: SkillItem[]
+  message?: string
+  error_code?: string
+  [key: string]: unknown
+}
+
+export interface ExecutionStepStatus {
+  node_id: string
+  label?: string
+  type?: string
+  status?: string
+  can_run?: boolean
+  blocker?: string | null
+  summary?: string
+  [key: string]: unknown
+}
+
+export interface ExecutionPreviewResponse {
+  ok: boolean
+  preview_id?: string
+  task?: string
+  repo?: string
+  template?: string
+  approval_state?: string
+  execution_mode?: string
+  can_execute_now?: boolean
+  adapter_execution_enabled?: boolean
+  step_count?: number
+  blocked_count?: number
+  step_statuses?: ExecutionStepStatus[]
+  workflow_graph?: WorkflowGraphResponse
+  next_required_actions?: string[]
+  message?: string
+  error_code?: string
+  [key: string]: unknown
+}
+
+export interface RepoHygieneResponse {
+  ok: boolean
+  file_count?: number
+  scanned_file_count?: number
+  duplicate_content_group_count?: number
+  orphan_candidate_count?: number
+  generated_artifact_count?: number
+  deletion_manifest?: {
+    dry_run?: boolean
+    recommended_delete_count?: number
+    recommended_delete_paths?: string[]
+    [key: string]: unknown
+  }
+  [key: string]: unknown
+}
+
+export interface ExecutionReviewItem {
+  plan_id?: string
+  id?: string
+  title?: string
+  status?: string
+  task?: string
+  repo?: string
+  workflow_preset?: string | null
+  requested_by?: string
+  created_at?: string
+  updated_at?: string
+  can_execute_now?: boolean
+  requires_approval?: boolean
+  [key: string]: unknown
+}
+
+export interface ExecutionReviewsResponse {
+  ok: boolean
+  enabled?: boolean
+  count?: number
+  open_count?: number
+  items?: ExecutionReviewItem[]
+  error_code?: string
+  [key: string]: unknown
+}
