@@ -9,7 +9,6 @@ import {
   PanelRightOpen,
   Plus,
   Search,
-  Settings2,
   Trash2,
   Pencil,
   X,
@@ -282,9 +281,6 @@ export function AppShell() {
               title="Toggle inspector"
             >
               {open ? <PanelRightClose className="h-4.5 w-4.5" /> : <PanelRightOpen className="h-4.5 w-4.5" />}
-            </button>
-            <button type="button" className="rounded-xl border border-white/8 bg-white/[0.035] p-2.5 text-slate-500" title="Settings planned for polish session">
-              <Settings2 className="h-4.5 w-4.5" />
             </button>
           </div>
         </header>
