@@ -1,0 +1,108 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  * { box-sizing: border-box; }
+
+  ::-webkit-scrollbar { width: 6px; height: 6px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb {
+    background: #364e6b;
+    border-radius: 3px;
+  }
+  ::-webkit-scrollbar-thumb:hover { background: #4f6a8a; }
+
+  ::selection {
+    background: rgba(124,117,237,0.35);
+    color: #dde5f0;
+  }
+}
+
+@layer components {
+  /* Streaming cursor */
+  .stream-cursor::after {
+    content: '▋';
+    animation: blink 0.9s step-end infinite;
+    color: #7c75ed;
+    margin-left: 1px;
+  }
+
+  /* Prose inside messages */
+  .message-prose {
+    @apply text-hive-text leading-relaxed;
+  }
+  .message-prose p  { @apply mb-3 last:mb-0; }
+  .message-prose ul { @apply mb-3 ml-4 list-disc space-y-1; }
+  .message-prose ol { @apply mb-3 ml-4 list-decimal space-y-1; }
+  .message-prose li { @apply text-hive-text; }
+  .message-prose h1 { @apply text-lg font-semibold text-hive-blue mb-2 mt-4 first:mt-0; }
+  .message-prose h2 { @apply text-base font-semibold text-hive-blue mb-2 mt-3 first:mt-0; }
+  .message-prose h3 { @apply text-sm font-semibold text-hive-blueDim mb-1 mt-2 first:mt-0; }
+  .message-prose strong { @apply font-semibold text-hive-blue; }
+  .message-prose em { @apply italic text-hive-textSoft; }
+  .message-prose a {
+    @apply text-hive-accent underline decoration-dotted hover:decoration-solid transition-all;
+  }
+  .message-prose code {
+    @apply font-mono text-xs bg-hive-surfaceHi text-hive-blue px-1.5 py-0.5 rounded;
+  }
+  .message-prose pre {
+    @apply rounded-hive bg-hive-surfaceHi border border-hive-border p-4 overflow-x-auto mb-3;
+  }
+  .message-prose pre code {
+    @apply bg-transparent p-0 text-hive-text;
+  }
+  .message-prose blockquote {
+    @apply border-l-2 border-hive-accent pl-3 text-hive-textSoft italic mb-3;
+  }
+  .message-prose hr {
+    @apply border-hive-border my-4;
+  }
+  .message-prose table { @apply w-full text-sm mb-3; }
+  .message-prose th {
+    @apply text-left text-hive-blueDim font-medium pb-1 border-b border-hive-border;
+  }
+  .message-prose td { @apply py-1 border-b border-hive-border/40; }
+
+  /* Input base */
+  .hive-input {
+    @apply w-full bg-hive-surfaceHi border border-hive-border rounded-hive px-3 py-2
+           text-sm text-hive-text placeholder-hive-textDim
+           focus:outline-none focus:border-hive-accent focus:ring-1 focus:ring-hive-accentSoft
+           transition-colors;
+  }
+
+  /* Button base */
+  .hive-btn {
+    @apply inline-flex items-center gap-1.5 rounded-hive px-3 py-1.5
+           text-sm font-medium transition-all focus:outline-none focus:ring-2
+           focus:ring-hive-accent focus:ring-offset-1 focus:ring-offset-hive-bg;
+  }
+  .hive-btn-primary {
+    @apply hive-btn bg-hive-accent text-white hover:bg-hive-accentHov active:scale-95;
+  }
+  .hive-btn-ghost {
+    @apply hive-btn bg-transparent text-hive-textSoft
+           hover:bg-hive-surfaceHi hover:text-hive-text active:scale-95;
+  }
+  .hive-btn-surface {
+    @apply hive-btn bg-hive-surface border border-hive-border text-hive-text
+           hover:bg-hive-surfaceHi hover:border-hive-accent active:scale-95;
+  }
+
+  /* Badge */
+  .hive-badge {
+    @apply inline-flex items-center gap-1 text-2xs font-medium px-1.5 py-0.5 rounded-full;
+  }
+
+  /* Card */
+  .hive-card {
+    @apply bg-hive-surface border border-hive-border rounded-hive p-4 shadow-hive-sm;
+  }
+
+  /* Section header */
+  .hive-section-title {
+    @apply text-2xs font-semibold uppercase tracking-widest text-hive-textDim;
+  }
+}
