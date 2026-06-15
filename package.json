@@ -1,7 +1,7 @@
 {
   "name": "hive-ui",
   "private": true,
-  "version": "0.5.1",
+  "version": "0.6.0",
   "type": "module",
   "scripts": {
     "dev": "vite",
@@ -9,7 +9,8 @@
     "lint": "eslint .",
     "preview": "vite preview",
     "typecheck": "tsc -b --pretty false && tsc -p tsconfig.functions.json --pretty false",
-    "check": "npm run typecheck && npm run lint && npm run build"
+    "check": "npm run typecheck && npm run lint && npm run build && npm run verify:dist",
+    "verify:dist": "node scripts/verify-dist.mjs"
   },
   "dependencies": {
     "lucide-react": "^1.18.0",
