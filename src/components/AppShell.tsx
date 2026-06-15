@@ -13,12 +13,14 @@ import {
   Pencil,
   X,
 } from 'lucide-react'
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { NavLink, Outlet, useLocation, useNavigate } from 'react-router'
 import { useAuth } from '../context/AuthContext'
 import { useChat } from '../context/ChatContext'
 import { useInspector } from '../context/InspectorContext'
+import { HIVE_UI_BUILD, HIVE_UI_VERSION } from '../lib/build'
 import { formatDate } from '../lib/format'
+import { useOnlineStatus } from '../hooks/useOnlineStatus'
 import { HiveLogo } from './HiveLogo'
 
 const navigation = [
@@ -185,6 +187,7 @@ function SidebarContent({ closeMobile }: { closeMobile?: () => void }) {
       {pathname === '/chat' ? <ConversationSection closeMobile={closeMobile} /> : <div className="flex-1" />}
 
       <div className="mt-4 border-t border-white/8 pt-4">
+        <p className="mb-2 px-3 text-[10px] uppercase tracking-[0.14em] text-slate-700" title={HIVE_UI_BUILD}>UI {HIVE_UI_VERSION}</p>
         <button
           type="button"
           onClick={logout}
@@ -238,12 +241,18 @@ function InspectorPanel() {
 export function AppShell() {
   const { pathname } = useLocation()
   const { health } = useAuth()
+  const online = useOnlineStatus()
   const { open, toggle } = useInspector()
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
   const meta = pageMeta[pathname] ?? { title: 'HIVE', subtitle: 'Private operations console' }
 
+  useEffect(() => {
+    document.title = `${meta.title} · HIVE`
+  }, [meta.title])
+
   return (
     <div className="flex h-screen overflow-hidden bg-[#061126] text-slate-100">
+      <a href="#hive-main-content" className="sr-only z-[100] rounded-lg bg-cyan-300 px-3 py-2 font-semibold text-[#052035] focus:not-sr-only focus:fixed focus:left-3 focus:top-3">Skip to main content</a>
       <aside className="hidden w-[280px] shrink-0 border-r border-white/8 bg-[#0a192d] lg:block">
         <SidebarContent />
       </aside>
@@ -258,6 +267,11 @@ export function AppShell() {
       )}
 
       <div className="flex min-w-0 flex-1 flex-col">
+        {!online && (
+          <div role="status" className="shrink-0 border-b border-amber-300/20 bg-amber-300/8 px-4 py-2 text-center text-xs text-amber-100">
+            Browser offline. Stored pages remain visible, but HIVE requests will wait for the connection to return.
+          </div>
+        )}
         <header className="flex h-[73px] shrink-0 items-center justify-between border-b border-white/8 bg-[#071426]/85 px-4 backdrop-blur-xl sm:px-6">
           <div className="flex min-w-0 items-center gap-3">
             <button type="button" onClick={() => setMobileMenuOpen(true)} className="rounded-lg p-2 text-slate-400 hover:bg-white/5 hover:text-white lg:hidden">
@@ -285,7 +299,7 @@ export function AppShell() {
           </div>
         </header>
 
-        <main className="min-h-0 flex-1 overflow-hidden">
+        <main id="hive-main-content" className="min-h-0 flex-1 overflow-hidden" tabIndex={-1}>
           <Outlet />
         </main>
       </div>
