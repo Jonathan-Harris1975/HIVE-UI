@@ -1,25 +1,31 @@
-import { defineConfig } from 'vite'
+import tailwindcss from '@tailwindcss/vite'
 import react from '@vitejs/plugin-react'
-import path from 'path'
+import { defineConfig, loadEnv, type ProxyOptions } from 'vite'
 
-export default defineConfig({
-  plugins: [react()],
-  resolve: {
-    alias: {
-      '@': path.resolve(__dirname, './src'),
-    },
-  },
-  server: {
-    port: 5173,
-    proxy: {
-      '/v1': {
-        target: process.env.VITE_HIVE_API_URL || 'http://localhost:8000',
-        changeOrigin: true,
-      },
-      '/health': {
-        target: process.env.VITE_HIVE_API_URL || 'http://localhost:8000',
-        changeOrigin: true,
+function hiveProxy(target: string, token: string): Record<string, string | ProxyOptions> | undefined {
+  if (!target) return undefined
+
+  return {
+    '/api': {
+      target: target.replace(/\/$/, ''),
+      changeOrigin: true,
+      rewrite: (path) => path.replace(/^\/api/, ''),
+      configure(proxy) {
+        proxy.on('proxyReq', (proxyRequest) => {
+          if (token) proxyRequest.setHeader('Authorization', `Bearer ${token}`)
+        })
       },
     },
-  },
+  }
+}
+
+export default defineConfig(({ mode }) => {
+  const env = loadEnv(mode, process.cwd(), '')
+  const proxy = hiveProxy(env.HIVE_API_BASE_URL ?? '', env.HIVE_ADMIN_TOKEN ?? '')
+
+  return {
+    plugins: [react(), tailwindcss()],
+    server: { proxy },
+    preview: { proxy },
+  }
 })
