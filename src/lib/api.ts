@@ -32,11 +32,21 @@ export async function apiFetch<T>(path: string, init: RequestInit = {}): Promise
     headers.set('content-type', 'application/json')
   }
 
-  const response = await fetch(`${API_PREFIX}${path}`, { ...init, headers })
+  let response: Response
+  try {
+    response = await fetch(`${API_PREFIX}${path}`, { ...init, headers, cache: 'no-store', credentials: 'omit' })
+  } catch (caught) {
+    const message = navigator.onLine ? 'The HIVE service could not be reached.' : 'The browser is offline.'
+    throw new ApiError(message, 0, caught)
+  }
+
   const contentType = response.headers.get('content-type') ?? ''
-  const payload = contentType.includes('application/json')
-    ? await response.json()
-    : await response.text()
+  let payload: unknown
+  try {
+    payload = contentType.includes('application/json') ? await response.json() : await response.text()
+  } catch {
+    payload = null
+  }
 
   if (!response.ok) {
     const detail = typeof payload === 'object' && payload && 'detail' in payload
@@ -78,12 +88,21 @@ export async function streamChat(
   handlers: StreamHandlers,
   signal?: AbortSignal,
 ): Promise<void> {
-  const response = await fetch(`${API_PREFIX}/v1/chat/stream`, {
-    method: 'POST',
-    headers: requestHeaders({ 'content-type': 'application/json', accept: 'text/event-stream' }),
-    body: JSON.stringify(payload),
-    signal,
-  })
+  let response: Response
+  try {
+    response = await fetch(`${API_PREFIX}/v1/chat/stream`, {
+      method: 'POST',
+      headers: requestHeaders({ 'content-type': 'application/json', accept: 'text/event-stream' }),
+      body: JSON.stringify(payload),
+      signal,
+      cache: 'no-store',
+      credentials: 'omit',
+    })
+  } catch (caught) {
+    if (caught instanceof DOMException && caught.name === 'AbortError') throw caught
+    const message = navigator.onLine ? 'The HIVE chat stream could not be reached.' : 'The browser is offline.'
+    throw new ApiError(message, 0, caught)
+  }
 
   if (!response.ok || !response.body) {
     let detail = `Chat stream failed with status ${response.status}`
