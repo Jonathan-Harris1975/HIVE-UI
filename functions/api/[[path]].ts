@@ -4,10 +4,23 @@ interface Env {
   HIVE_UI_ACCESS_KEY?: string
 }
 
+const UI_VERSION = '0.6.0'
+
+function hardenHeaders(headers: Headers): Headers {
+  headers.set('cache-control', 'no-store')
+  headers.set('x-content-type-options', 'nosniff')
+  headers.set('x-frame-options', 'DENY')
+  headers.set('referrer-policy', 'no-referrer')
+  headers.set('permissions-policy', 'camera=(), microphone=(), geolocation=(), payment=(), usb=()')
+  headers.set('x-robots-tag', 'noindex, nofollow, noarchive, nosnippet')
+  headers.set('x-hive-ui-version', UI_VERSION)
+  return headers
+}
+
 function textResponse(message: string, status: number): Response {
   return new Response(JSON.stringify({ ok: false, detail: message }), {
     status,
-    headers: { 'content-type': 'application/json; charset=utf-8', 'cache-control': 'no-store' },
+    headers: hardenHeaders(new Headers({ 'content-type': 'application/json; charset=utf-8' })),
   })
 }
 
@@ -44,14 +57,18 @@ export const onRequest: PagesFunction<Env> = async ({ request, env, params }) =>
   }
   if (!['GET', 'HEAD'].includes(request.method)) init.body = request.body
 
-  const upstream = await fetch(upstreamUrl.toString(), init)
-  const responseHeaders = new Headers(upstream.headers)
-  responseHeaders.set('cache-control', 'no-store')
-  responseHeaders.delete('set-cookie')
+  try {
+    const upstream = await fetch(upstreamUrl.toString(), init)
+    const responseHeaders = hardenHeaders(new Headers(upstream.headers))
+    responseHeaders.delete('set-cookie')
 
-  return new Response(upstream.body, {
-    status: upstream.status,
-    statusText: upstream.statusText,
-    headers: responseHeaders,
-  })
+    return new Response(upstream.body, {
+      status: upstream.status,
+      statusText: upstream.statusText,
+      headers: responseHeaders,
+    })
+  } catch (error) {
+    console.error('HIVE proxy request failed', { path, error })
+    return textResponse('HIVE backend could not be reached', 502)
+  }
 }
