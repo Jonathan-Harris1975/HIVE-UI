@@ -6,7 +6,7 @@ HIVE remains the Python/FastAPI backend on Koyeb. This repository contains the b
 
 ## Current milestone
 
-**Build:** `0.5.0-sessions-1-to-5`
+**Build:** `0.5.1-sessions-1-to-5-cf-install-fix`
 
 Sessions 1 to 5 are implemented:
 
@@ -72,6 +72,8 @@ Build command: npm run build
 Build output directory: dist
 Root directory: /
 ```
+
+The committed lockfile uses the public npm registry and `.npmrc` pins dependency downloads to `https://registry.npmjs.org/`. This prevents Cloudflare Pages from attempting to fetch packages from a build-environment-only registry.
 
 Configure these Pages environment variables or secrets:
 
