@@ -1,0 +1,130 @@
+@import "tailwindcss";
+@import "highlight.js/styles/github-dark.css";
+
+@theme {
+  --font-sans: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  --font-mono: "SFMono-Regular", Consolas, "Liberation Mono", monospace;
+}
+
+:root {
+  color: #eaf7ff;
+  background: #061126;
+  font-family: var(--font-sans);
+  font-synthesis: none;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+* {
+  box-sizing: border-box;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(148, 163, 184, 0.2) transparent;
+}
+
+html,
+body,
+#root {
+  min-width: 320px;
+  min-height: 100%;
+  margin: 0;
+}
+
+body {
+  min-height: 100vh;
+  overflow: hidden;
+}
+
+button,
+input,
+textarea,
+select {
+  font: inherit;
+}
+
+button {
+  cursor: pointer;
+}
+
+button:disabled {
+  cursor: default;
+}
+
+select option {
+  background: #0b1b31;
+  color: #eaf7ff;
+}
+
+::selection {
+  color: #04111f;
+  background: rgba(69, 230, 176, 0.8);
+}
+
+.prose-hive > :first-child {
+  margin-top: 0;
+}
+
+.prose-hive > :last-child {
+  margin-bottom: 0;
+}
+
+.prose-hive p,
+.prose-hive ul,
+.prose-hive ol,
+.prose-hive blockquote {
+  margin: 0.75rem 0;
+}
+
+.prose-hive h1,
+.prose-hive h2,
+.prose-hive h3,
+.prose-hive h4 {
+  margin: 1.35rem 0 0.6rem;
+  color: #f8fdff;
+  font-weight: 650;
+  line-height: 1.3;
+}
+
+.prose-hive h1 { font-size: 1.35rem; }
+.prose-hive h2 { font-size: 1.15rem; }
+.prose-hive h3 { font-size: 1rem; }
+
+.prose-hive ul,
+.prose-hive ol {
+  padding-left: 1.35rem;
+}
+
+.prose-hive ul {
+  list-style: disc;
+}
+
+.prose-hive ol {
+  list-style: decimal;
+}
+
+.prose-hive li + li {
+  margin-top: 0.25rem;
+}
+
+.prose-hive blockquote {
+  border-left: 3px solid rgba(36, 200, 240, 0.35);
+  padding-left: 1rem;
+  color: #91afc3;
+}
+
+.prose-hive hr {
+  margin: 1.25rem 0;
+  border: 0;
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.prose-hive pre code.hljs {
+  padding: 0;
+  background: transparent;
+}
+
+@media (max-width: 1023px) {
+  body {
+    overflow: hidden;
+  }
+}
