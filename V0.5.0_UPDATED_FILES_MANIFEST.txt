@@ -1,0 +1,23 @@
+HIVE-UI 0.5.0 — Sessions 1 to 5
+
+Updated:
+- README.md
+- docs/BUILD_PLAN.md
+- package.json
+- package-lock.json
+- src/components/AppShell.tsx
+- src/pages/ChatPage.tsx
+- src/pages/FilesPage.tsx
+- src/pages/SkillsPage.tsx
+- src/pages/OpsPage.tsx
+- src/types/api.ts
+
+Added:
+- docs/SESSIONS_1_TO_5.md
+- src/components/StatusBadge.tsx
+- src/components/WorkflowGraph.tsx
+
+Verification:
+- npm run check: passed
+- npm audit: 0 vulnerabilities
+- HIVE backend pytest: 119 passed

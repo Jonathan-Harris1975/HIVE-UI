@@ -2,27 +2,34 @@
 
 Private Cloudflare Pages frontend for **HIVE (Harris Intelligent Virtual Entity)**.
 
-HIVE remains the Python/FastAPI backend on Koyeb. This repository contains the browser interface, a Cloudflare Pages Function that protects the backend bearer token, and the first operator-console screens.
+HIVE remains the Python/FastAPI backend on Koyeb. This repository contains the browser interface and a Cloudflare Pages Function that keeps the backend bearer token server-side.
 
 ## Current milestone
 
-**Build:** `0.1.0-foundation`
+**Build:** `0.5.0-sessions-1-to-5`
 
-Implemented:
+Sessions 1 to 5 are implemented:
 
 - Vite, React, TypeScript and Tailwind foundation.
 - Four primary routes: `/chat`, `/files`, `/skills`, and `/ops`.
-- Private access-key screen.
+- Private UI access-key screen.
 - Cloudflare Pages proxy that injects the HIVE backend bearer token server-side.
 - Conversation sidebar with search, create, rename and delete actions.
-- Streaming chat with stop-generation support.
+- Persistent streaming chat with stop-generation and scroll-to-latest controls.
 - Auto route followed by explicit models from `GET /v1/models`.
 - Shared chat interface for normal chat and file chat.
-- File upload, listing, metadata inspection and workflow preset selection.
-- Skill search, registry filters and task recommendations.
-- Health flags, repository hygiene, workflow templates and review-queue data.
+- Multipart file upload, drag-and-drop, pasted-text upload and file metadata inspection.
+- File workflow presets and source citation display.
+- Skill search, repo/lane/risk filters, task recommendations, scores and status badges.
+- Skill-to-chat hand-off using the shared composer.
+- Health flags and repository hygiene summaries.
+- Interactive workflow graph builder using HIVE plan-only endpoints.
+- Controlled execution-preview step statuses.
+- Execution review queue with evidence-pack drill-down and review decisions.
 - Collapsible right-hand inspector, closed by default.
 - Markdown, tables, code blocks, copy controls, loading states and responsive navigation.
+
+HIVE-UI does not directly execute skills, mutate repositories or start background jobs. Ops actions create plans, previews and review records only.
 
 ## Repository layout
 
@@ -30,7 +37,7 @@ Implemented:
 HIVE-UI/
 ├── functions/api/[[path]].ts   Cloudflare Pages Function proxy
 ├── public/                     logo, icons and SPA redirect rule
-├── src/components/             shell, login and message components
+├── src/components/             shell, status, graph and message components
 ├── src/context/                auth, chat and inspector state
 ├── src/lib/                    typed API/SSE helpers and formatting
 ├── src/pages/                  chat, files, skills and ops routes
@@ -42,20 +49,19 @@ HIVE-UI/
 
 ```bash
 cp .env.example .env.local
-# Add the Koyeb HIVE URL and backend bearer token to .env.local
 npm install
 npm run dev
 ```
 
-Open the local Vite URL and enter any non-empty UI access key. In local mode, Vite proxies `/api/*` to HIVE and inserts `HIVE_ADMIN_TOKEN` on the development server. The bearer token is not exposed through a `VITE_` browser variable.
-
-### Local environment
+Configure:
 
 ```env
 HIVE_API_BASE_URL=https://your-hive-service.koyeb.app
 HIVE_ADMIN_TOKEN=your-private-backend-bearer-token
 VITE_APP_NAME=HIVE
 ```
+
+In local development, Vite proxies `/api/*` to HIVE and inserts `HIVE_ADMIN_TOKEN` on the development server. The bearer token is never exposed through a `VITE_` browser variable.
 
 ## Cloudflare Pages deployment
 
@@ -67,7 +73,7 @@ Build output directory: dist
 Root directory: /
 ```
 
-Configure these Pages environment variables/secrets:
+Configure these Pages environment variables or secrets:
 
 ```text
 HIVE_API_BASE_URL   Public base URL of the Koyeb HIVE service
@@ -75,20 +81,24 @@ HIVE_ADMIN_TOKEN    Private HIVE backend bearer token
 HIVE_UI_ACCESS_KEY  Separate password entered on the HIVE-UI login screen
 ```
 
-The browser sends only `X-HIVE-UI-Key` to the Pages Function. The Function validates that key, removes it before forwarding, then injects `Authorization: Bearer <HIVE_ADMIN_TOKEN>` server-side. Do not create a `VITE_HIVE_ADMIN_TOKEN` variable.
+The browser sends only `X-HIVE-UI-Key` to the Pages Function. The Function validates that key, removes it before forwarding, then injects `Authorization: Bearer <HIVE_ADMIN_TOKEN>` server-side.
+
+Do not create a `VITE_HIVE_ADMIN_TOKEN` variable.
 
 ## Required backend contract
 
 The companion HIVE Session 0 backend update provides:
 
 - Persistent `POST /v1/chat/stream` conversations.
-- An initial SSE conversation metadata event.
-- A final SSE event containing persistence status.
+- Initial SSE conversation metadata.
+- Final SSE persistence status.
 - Automatic first-message conversation titles.
 - `PATCH /v1/db/conversations/{conversation_id}` for rename.
 - `DELETE /v1/db/conversations/{conversation_id}` for removal.
 
-See [`docs/API_CONTRACT.md`](docs/API_CONTRACT.md).
+The existing HIVE backend also provides file, skill, workflow graph, execution preview, review queue and repository hygiene endpoints used by Sessions 3 to 5.
+
+See [`docs/API_CONTRACT.md`](docs/API_CONTRACT.md) and [`docs/SESSIONS_1_TO_5.md`](docs/SESSIONS_1_TO_5.md).
 
 ## Commands
 
@@ -101,10 +111,8 @@ npm run preview    # preview the production bundle
 npm run check      # typecheck, lint and build
 ```
 
-## Next build slices
+## Remaining Session 6 work
 
-1. Wire execution graph previews into an interactive node view.
-2. Add review decisions and evidence-pack drill-down to Ops.
-3. Add conversation clone/export and slash-command search.
-4. Add richer source cards and file chunk inspection.
-5. Run browser-level tests against the deployed HIVE contract.
+- Deployed Cloudflare Pages and Koyeb integration check.
+- Browser-level regression tests against the live HIVE contract.
+- Final mobile-device QA and production telemetry refinements.
