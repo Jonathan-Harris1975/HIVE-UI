@@ -50,7 +50,7 @@ export function ChatMessage({ message, onInspect }: ChatMessageProps) {
               )}
               {message.sourceCitation?.object_key && (
                 <div className="mt-3 flex items-center justify-between gap-2 rounded-lg border border-emerald-300/15 bg-emerald-300/5 px-3 py-2 text-xs text-emerald-200/80">
-                  <span className="flex min-w-0 items-center gap-2"><FileText className="h-3.5 w-3.5 shrink-0" /><span className="truncate">{message.sourceCitation.label || message.sourceCitation.object_key}</span></span>
+                  <span className="flex min-w-0 items-center gap-2"><FileText className="h-3.5 w-3.5 shrink-0" /><span className="truncate">{message.sourceCitation.label || message.sourceCitation.object_key}</span>{message.sourceCitation.lane && <span className="shrink-0 rounded-full bg-black/15 px-1.5 py-0.5 text-[9px] uppercase tracking-wide text-emerald-100/60">{message.sourceCitation.lane.replace(/_/g, ' ')}</span>}</span>
                   {message.sourceCitation.public_url && (
                     <a href={message.sourceCitation.public_url} target="_blank" rel="noreferrer" className="shrink-0 rounded-md p-1 text-emerald-200/70 hover:bg-white/8 hover:text-emerald-100" aria-label="Open cited source">
                       <ExternalLink className="h-3.5 w-3.5" />

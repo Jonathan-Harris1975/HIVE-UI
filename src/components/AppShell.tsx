@@ -32,7 +32,7 @@ const navigation = [
 
 const pageMeta: Record<string, { title: string; subtitle: string }> = {
   '/chat': { title: 'Chat', subtitle: 'Private model routing and persistent conversations' },
-  '/files': { title: 'Files', subtitle: 'Upload, inspect and bring files into the shared chat' },
+  '/files': { title: 'Files', subtitle: 'Browse authenticated R2 lanes and bring evidence into chat' },
   '/skills': { title: 'Skills', subtitle: 'Search the shared HIVE skill registry' },
   '/ops': { title: 'Operations', subtitle: 'Health, workflow previews and review gates' },
 }

@@ -1,0 +1,245 @@
+import {
+  BrainCircuit,
+  Check,
+  ChevronDown,
+  Image,
+  LockKeyhole,
+  Search,
+  Sparkles,
+  Video,
+  X,
+} from 'lucide-react'
+import { useEffect, useId, useMemo, useRef, useState } from 'react'
+import type { ModelSummary } from '../types/api'
+
+interface ModelPickerProps {
+  models: ModelSummary[]
+  value: string
+  onChange: (value: string) => void
+  loading?: boolean
+}
+
+const GROUP_ORDER = [
+  'configured',
+  'free',
+  'reasoning',
+  'coding',
+  'documents',
+  'vision',
+  'video_analysis',
+  'general',
+  'audio',
+  'image_generation',
+  'video_generation',
+  'other',
+]
+
+const GROUP_LABELS: Record<string, string> = {
+  configured: 'HIVE configured',
+  free: 'Free',
+  reasoning: 'Reasoning',
+  coding: 'Coding',
+  documents: 'Long context & documents',
+  vision: 'Vision / image analysis',
+  video_analysis: 'Video analysis',
+  general: 'General chat',
+  audio: 'Audio & speech',
+  image_generation: 'Image generation',
+  video_generation: 'Video generation',
+  other: 'Other models',
+}
+
+function modelLabel(model: ModelSummary): string {
+  return model.name || model.id
+}
+
+function compactContext(value: number | undefined): string | null {
+  if (!value || value < 1) return null
+  if (value >= 1_000_000) return `${Math.round(value / 100_000) / 10}M context`
+  if (value >= 1_000) return `${Math.round(value / 1_000)}K context`
+  return `${value} context`
+}
+
+function groupIcon(group: string) {
+  if (group === 'image_generation') return <Image className="h-3.5 w-3.5" />
+  if (group === 'video_generation' || group === 'video_analysis') return <Video className="h-3.5 w-3.5" />
+  return <Sparkles className="h-3.5 w-3.5" />
+}
+
+export function ModelPicker({ models, value, onChange, loading = false }: ModelPickerProps) {
+  const [open, setOpen] = useState(false)
+  const [query, setQuery] = useState('')
+  const wrapperRef = useRef<HTMLDivElement | null>(null)
+  const searchRef = useRef<HTMLInputElement | null>(null)
+  const listId = useId()
+
+  const visibleModels = useMemo(
+    () => models.filter((model) => model.visible_in_chat_picker !== false),
+    [models],
+  )
+  const selected = useMemo(
+    () => visibleModels.find((model) => model.id === value) ?? null,
+    [value, visibleModels],
+  )
+
+  const grouped = useMemo(() => {
+    const needle = query.trim().toLowerCase()
+    const matches = visibleModels.filter((model) => {
+      if (!needle) return true
+      return [
+        model.id,
+        model.name,
+        model.description,
+        ...(model.configured_roles ?? []),
+        ...(model.groups ?? []),
+        ...(model.input_modalities ?? []),
+        ...(model.output_modalities ?? []),
+      ].filter(Boolean).join(' ').toLowerCase().includes(needle)
+    })
+
+    const groups = new Map<string, ModelSummary[]>()
+    for (const model of matches) {
+      const group = model.primary_group || 'other'
+      const current = groups.get(group) ?? []
+      current.push(model)
+      groups.set(group, current)
+    }
+    for (const items of groups.values()) {
+      items.sort((a, b) => modelLabel(a).localeCompare(modelLabel(b)))
+    }
+    return GROUP_ORDER
+      .filter((group) => groups.has(group))
+      .map((group) => ({ group, models: groups.get(group) ?? [] }))
+  }, [query, visibleModels])
+
+  useEffect(() => {
+    if (!open) return
+    const closeOnOutsideClick = (event: MouseEvent) => {
+      if (!wrapperRef.current?.contains(event.target as Node)) setOpen(false)
+    }
+    const closeOnEscape = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') setOpen(false)
+    }
+    document.addEventListener('mousedown', closeOnOutsideClick)
+    document.addEventListener('keydown', closeOnEscape)
+    window.setTimeout(() => searchRef.current?.focus(), 0)
+    return () => {
+      document.removeEventListener('mousedown', closeOnOutsideClick)
+      document.removeEventListener('keydown', closeOnEscape)
+    }
+  }, [open])
+
+  function selectModel(model: ModelSummary | null) {
+    if (model && model.chat_selectable === false) return
+    onChange(model?.id ?? '')
+    setOpen(false)
+    setQuery('')
+  }
+
+  return (
+    <div ref={wrapperRef} className="relative min-w-0">
+      <button
+        type="button"
+        onClick={() => setOpen((current) => !current)}
+        aria-expanded={open}
+        aria-controls={listId}
+        className="flex h-8 max-w-[260px] items-center gap-2 rounded-lg border border-white/8 bg-white/[0.035] px-2.5 text-left text-xs text-slate-300 outline-none transition hover:bg-white/[0.055]"
+      >
+        <BrainCircuit className="h-3.5 w-3.5 shrink-0 text-cyan-300/70" />
+        <span className="min-w-0 flex-1 truncate">{selected ? modelLabel(selected) : loading ? 'Loading models…' : 'Auto route'}</span>
+        {selected?.is_free && <span className="hidden rounded bg-emerald-300/10 px-1.5 py-0.5 text-[9px] font-semibold uppercase tracking-wide text-emerald-200 sm:inline">Free</span>}
+        <ChevronDown className={`h-3.5 w-3.5 shrink-0 text-slate-600 transition ${open ? 'rotate-180' : ''}`} />
+      </button>
+
+      {open && (
+        <div className="absolute bottom-[calc(100%+8px)] left-0 z-50 w-[min(92vw,420px)] overflow-hidden rounded-2xl border border-white/10 bg-[#09182b]/98 shadow-2xl shadow-black/50 backdrop-blur-xl">
+          <div className="border-b border-white/8 p-3">
+            <div className="relative">
+              <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-600" />
+              <input
+                ref={searchRef}
+                value={query}
+                onChange={(event) => setQuery(event.target.value)}
+                placeholder="Search models, providers or capabilities"
+                aria-label="Search models"
+                className="h-10 w-full rounded-xl border border-white/8 bg-[#061126] pl-9 pr-9 text-xs text-slate-200 outline-none placeholder:text-slate-600 focus:border-cyan-300/30"
+              />
+              {query && (
+                <button type="button" onClick={() => setQuery('')} className="absolute right-2 top-1/2 -translate-y-1/2 rounded-md p-1 text-slate-600 hover:bg-white/5 hover:text-slate-300" aria-label="Clear model search">
+                  <X className="h-3.5 w-3.5" />
+                </button>
+              )}
+            </div>
+          </div>
+
+          <div id={listId} role="listbox" aria-label="HIVE models" className="max-h-[min(62vh,520px)] overflow-y-auto p-2">
+            <button
+              type="button"
+              role="option"
+              aria-selected={!value}
+              onClick={() => selectModel(null)}
+              className="flex w-full items-start gap-3 rounded-xl px-3 py-2.5 text-left transition hover:bg-cyan-300/[0.06]"
+            >
+              <div className="mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-lg border border-cyan-300/15 bg-cyan-300/7 text-cyan-200"><BrainCircuit className="h-4 w-4" /></div>
+              <div className="min-w-0 flex-1">
+                <div className="flex items-center gap-2 text-xs font-semibold text-white">Auto route {!value && <Check className="h-3.5 w-3.5 text-emerald-300" />}</div>
+                <p className="mt-1 text-[11px] leading-4 text-slate-600">Let HIVE choose the configured model for the task and fallback policy.</p>
+              </div>
+            </button>
+
+            {grouped.map(({ group, models: groupModels }) => (
+              <section key={group} className="mt-2" aria-label={GROUP_LABELS[group] || group}>
+                <div className="sticky top-0 z-10 flex items-center justify-between bg-[#09182b]/95 px-3 py-2 text-[10px] font-semibold uppercase tracking-[0.15em] text-slate-500 backdrop-blur">
+                  <span className="flex items-center gap-1.5">{groupIcon(group)} {GROUP_LABELS[group] || group}</span>
+                  <span>{groupModels.length}</span>
+                </div>
+                <div className="space-y-0.5">
+                  {groupModels.map((item) => {
+                    const disabled = item.chat_selectable === false
+                    const active = item.id === value
+                    const context = compactContext(item.context_length)
+                    return (
+                      <button
+                        key={item.id}
+                        type="button"
+                        role="option"
+                        aria-selected={active}
+                        aria-disabled={disabled}
+                        disabled={disabled}
+                        title={disabled ? item.disabled_reason || 'Unavailable in standard chat' : item.description || item.id}
+                        onClick={() => selectModel(item)}
+                        className="group/model flex w-full items-start gap-3 rounded-xl px-3 py-2.5 text-left transition hover:bg-white/[0.045] disabled:cursor-not-allowed disabled:opacity-55"
+                      >
+                        <div className={`mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-lg border ${disabled ? 'border-amber-300/15 bg-amber-300/5 text-amber-200/70' : 'border-white/8 bg-white/[0.035] text-slate-400'}`}>
+                          {disabled ? <LockKeyhole className="h-3.5 w-3.5" /> : <BrainCircuit className="h-3.5 w-3.5" />}
+                        </div>
+                        <div className="min-w-0 flex-1">
+                          <div className="flex min-w-0 items-center gap-2">
+                            <span className="truncate text-xs font-medium text-slate-200 group-hover/model:text-white">{modelLabel(item)}</span>
+                            {active && <Check className="h-3.5 w-3.5 shrink-0 text-emerald-300" />}
+                          </div>
+                          <p className="mt-0.5 truncate text-[10px] text-slate-600">{item.id}</p>
+                          <div className="mt-1.5 flex flex-wrap gap-1">
+                            {item.is_free && <span className="rounded bg-emerald-300/8 px-1.5 py-0.5 text-[9px] font-semibold uppercase text-emerald-200">Free</span>}
+                            {(item.configured_roles ?? []).slice(0, 3).map((role) => <span key={role} className="rounded bg-cyan-300/7 px-1.5 py-0.5 text-[9px] text-cyan-200/80">{role}</span>)}
+                            {context && <span className="rounded bg-white/[0.035] px-1.5 py-0.5 text-[9px] text-slate-500">{context}</span>}
+                            {disabled && <span className="rounded bg-amber-300/7 px-1.5 py-0.5 text-[9px] text-amber-200/80">Discovery only</span>}
+                          </div>
+                          {disabled && item.disabled_reason && <p className="mt-1.5 text-[10px] leading-4 text-amber-100/55">{item.disabled_reason}</p>}
+                        </div>
+                      </button>
+                    )
+                  })}
+                </div>
+              </section>
+            ))}
+
+            {grouped.length === 0 && (
+              <div className="px-4 py-10 text-center text-xs text-slate-600">No matching models found.</div>
+            )}
+          </div>
+        </div>
+      )}
+    </div>
+  )
+}
