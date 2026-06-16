@@ -46,16 +46,24 @@ export function LoginScreen() {
             </span>
             <input
               type="password"
+              name="hive-access-key"
               autoComplete="current-password"
+              autoFocus
+              spellCheck={false}
+              aria-invalid={Boolean(localError || error)}
+              aria-describedby={localError || error ? 'hive-login-error' : undefined}
               value={accessKey}
-              onChange={(event) => setAccessKey(event.target.value)}
+              onChange={(event) => {
+                setAccessKey(event.target.value)
+                setLocalError(null)
+              }}
               placeholder="Enter access key"
               className="h-12 w-full rounded-xl border border-white/10 bg-[#071426] px-4 text-sm text-white outline-none transition placeholder:text-slate-600 focus:border-cyan-300/60 focus:ring-4 focus:ring-cyan-300/10"
             />
           </label>
 
           {(localError || error) && (
-            <div className="rounded-xl border border-rose-400/20 bg-rose-400/10 px-4 py-3 text-sm text-rose-200">
+            <div id="hive-login-error" role="alert" className="rounded-xl border border-rose-400/20 bg-rose-400/10 px-4 py-3 text-sm text-rose-200">
               {localError || error}
             </div>
           )}
@@ -72,7 +80,7 @@ export function LoginScreen() {
         </form>
 
         <p className="mt-6 text-center text-xs leading-5 text-slate-500">
-          The Cloudflare proxy keeps the HIVE backend bearer token out of the browser bundle.
+          Your access key is exchanged once for a signed, HttpOnly session cookie. Neither the UI key nor the HIVE backend bearer token is stored in the browser bundle.
         </p>
       </section>
     </main>
