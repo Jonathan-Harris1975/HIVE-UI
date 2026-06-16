@@ -201,14 +201,17 @@ export async function streamChat(
 }
 
 export function chatWithFile(
+  lane: string,
   objectKey: string,
   payload: ChatRequestPayload & { workflow_preset?: string | null },
   signal?: AbortSignal,
 ): Promise<FileChatResponse> {
+  const uploadsLane = lane === 'uploads'
   return apiFetch<FileChatResponse>('/v1/chat/with-file', {
     method: 'POST',
     signal,
     body: JSON.stringify({
+      lane,
       object_key: objectKey,
       message: payload.message,
       mode: payload.mode === 'auto' ? 'file_analysis' : payload.mode,
@@ -216,10 +219,10 @@ export function chatWithFile(
       conversation_id: payload.conversation_id,
       history: payload.history ?? [],
       workflow_preset: payload.workflow_preset ?? null,
-      use_chunks: true,
-      use_vectorize: true,
+      use_chunks: uploadsLane,
+      use_vectorize: uploadsLane,
       vectorize_fallback_sql: true,
-      auto_chunk: true,
+      auto_chunk: uploadsLane,
     }),
   })
 }
