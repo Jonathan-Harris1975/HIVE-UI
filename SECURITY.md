@@ -1,38 +1,10 @@
-# Security policy
+# HIVE-UI security policy
 
-HIVE-UI is a private operations console.
+**Status:** Production-controlled  
+**Last reviewed:** 16 June 2026
 
-## Supported release
+HIVE-UI uses a Cloudflare Pages Function to protect HIVE credentials. The browser submits the UI access key during login; the function validates it and issues a signed `HttpOnly`, `Secure`, `SameSite=Strict` session cookie. The backend bearer token is injected only inside the server-side proxy.
 
-| Version | Supported |
-|---|---|
-| 0.7.x | Yes |
-| 0.6.x and earlier | No |
+Production controls include login throttling, constant-time credential comparison, canonical session encoding, strict proxy path allow-listing, request and response header sanitisation, path-traversal rejection, restrictive browser headers and source/distribution secret scans.
 
-## Secret handling
-
-Never commit or expose:
-
-- `HIVE_ADMIN_TOKEN`
-- `HIVE_UI_ACCESS_KEY`
-- Koyeb, R2, D1, Vectorize or OpenRouter credentials
-
-Never prefix server secrets with `VITE_`. Vite-prefixed values may be compiled into browser assets.
-
-Configure production secrets inside Cloudflare Pages Variables and Secrets. Configure backend secrets separately inside Koyeb.
-
-## Incident response
-
-For suspected UI access compromise:
-
-1. Rotate `HIVE_UI_ACCESS_KEY` in Cloudflare Pages.
-2. Redeploy the Pages project. Existing signed sessions become invalid.
-3. Review Cloudflare Function logs using request IDs.
-
-For suspected backend-token compromise:
-
-1. Rotate the HIVE admin bearer token at its source.
-2. Update both Koyeb `ADMIN_BEARER_TOKEN` and Cloudflare `HIVE_ADMIN_TOKEN`.
-3. Redeploy both services and verify `/api/health` through HIVE-UI.
-
-Do not place credentials, access keys or live tokens in bug reports, screenshots or repository issues.
+Do not add `HIVE_ADMIN_TOKEN`, provider secrets or R2 credentials to Vite variables, source files or browser storage. Report suspected bypasses or token exposure privately to the repository owner.

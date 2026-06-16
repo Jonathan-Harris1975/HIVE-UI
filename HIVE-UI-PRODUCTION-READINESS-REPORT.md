@@ -1,3 +1,7 @@
+> **Document status:** Historical implementation record  
+> **Last reviewed:** 16 June 2026  
+> **Operational authority:** Current repository README, SECURITY policy and operations guide.
+
 # HIVE-UI v0.7.0 production-readiness report
 
 **Release date:** 16 June 2026  
