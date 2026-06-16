@@ -1,5 +1,6 @@
 import {
   ArrowDown,
+  BrainCircuit,
   ChevronDown,
   CircleStop,
   LoaderCircle,
@@ -31,7 +32,6 @@ import type {
   WorkflowPreset,
 } from '../types/api'
 import { ChatMessage } from '../components/ChatMessage'
-import { ModelPicker } from '../components/ModelPicker'
 
 const modeOptions: Array<{ value: ChatMode; label: string }> = [
   { value: 'auto', label: 'Auto route' },
@@ -71,13 +71,11 @@ export function ChatPage() {
   const { setPayload, setOpen } = useInspector()
   const [searchParams, setSearchParams] = useSearchParams()
   const attachedFile = searchParams.get('file')
-  const attachedLane = searchParams.get('lane') || 'uploads'
   const draft = searchParams.get('draft')
   const [prompt, setPrompt] = useState('')
   const [mode, setMode] = useState<ChatMode>(attachedFile ? 'file_analysis' : 'auto')
   const [model, setModel] = useState('')
   const [models, setModels] = useState<ModelSummary[]>([])
-  const [modelsLoading, setModelsLoading] = useState(true)
   const [workflowPresets, setWorkflowPresets] = useState<WorkflowPreset[]>([])
   const [workflowPreset, setWorkflowPreset] = useState('')
   const [streaming, setStreaming] = useState(false)
@@ -92,7 +90,6 @@ export function ChatPage() {
     void apiFetch<ModelsResponse>('/v1/models')
       .then((response) => setModels(response.models ?? []))
       .catch(() => setModels([]))
-      .finally(() => setModelsLoading(false))
     void apiFetch<{ presets?: WorkflowPreset[] }>('/v1/workflow-presets')
       .then((response) => setWorkflowPresets(response.presets ?? []))
       .catch(() => setWorkflowPresets([]))
@@ -115,6 +112,7 @@ export function ChatPage() {
     if (attachedFile) setMode('file_analysis')
   }, [attachedFile])
 
+  const sortedModels = useMemo(() => [...models].sort((a, b) => (a.name || a.id).localeCompare(b.name || b.id)), [models])
   const conversationUsage = useMemo(() => messages.reduce((total, message) => ({
     tokens: total.tokens + Number(message.usage?.total_tokens ?? message.token_total ?? 0),
     cost: total.cost + Number(message.usage?.cost ?? message.cost_usd ?? 0),
@@ -124,7 +122,6 @@ export function ChatPage() {
     const next = new URLSearchParams(searchParams)
     next.delete('file')
     next.delete('name')
-    next.delete('lane')
     setSearchParams(next, { replace: true })
     setMode('auto')
     setWorkflowPreset('')
@@ -216,7 +213,7 @@ export function ChatPage() {
 
     try {
       if (attachedFile) {
-        const response = await chatWithFile(attachedLane, attachedFile, { ...payload, workflow_preset: workflowPreset || null }, controller.signal)
+        const response = await chatWithFile(attachedFile, { ...payload, workflow_preset: workflowPreset || null }, controller.signal)
         if (!response.ok) throw new Error(response.message || response.error_code || 'File chat failed.')
         if (response.conversation_id) setCurrentConversationId(response.conversation_id)
         setMessages((current) => current.map((message) =>
@@ -344,7 +341,6 @@ export function ChatPage() {
                 <div className="flex max-w-full items-center gap-2 rounded-full border border-emerald-300/20 bg-emerald-300/8 px-3 py-1.5 text-xs text-emerald-100">
                   <Paperclip className="h-3.5 w-3.5" />
                   <span className="max-w-[260px] truncate">{searchParams.get('name') || attachedFile}</span>
-                  <span className="rounded-full bg-black/15 px-1.5 py-0.5 text-[9px] uppercase tracking-wide text-emerald-100/65">{attachedLane.replace(/_/g, ' ')}</span>
                   <button type="button" onClick={removeAttachment} className="rounded-full p-0.5 hover:bg-white/10"><X className="h-3.5 w-3.5" /></button>
                 </div>
               )}
@@ -375,7 +371,18 @@ export function ChatPage() {
                   </select>
                   <ChevronDown className="pointer-events-none absolute right-2 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-slate-600" />
                 </label>
-                <ModelPicker models={models} value={model} onChange={setModel} loading={modelsLoading} />
+                <label className="relative max-w-[230px]">
+                  <BrainCircuit className="pointer-events-none absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-cyan-300/60" />
+                  <select
+                    value={model}
+                    onChange={(event) => setModel(event.target.value)}
+                    className="h-8 w-full appearance-none truncate rounded-lg border border-white/8 bg-white/[0.035] pl-8 pr-8 text-xs text-slate-300 outline-none hover:bg-white/[0.055]"
+                  >
+                    <option value="">Auto route</option>
+                    {sortedModels.map((item) => <option key={item.id} value={item.id}>{item.name || item.id}</option>)}
+                  </select>
+                  <ChevronDown className="pointer-events-none absolute right-2 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-slate-600" />
+                </label>
                 {attachedFile && workflowPresets.length > 0 && (
                   <label className="relative max-w-[210px]">
                     <select

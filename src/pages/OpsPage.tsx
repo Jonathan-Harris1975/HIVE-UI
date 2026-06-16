@@ -5,7 +5,9 @@ import {
   GitBranch,
   HardDrive,
   LoaderCircle,
+  Monitor,
   Network,
+  ServerCog,
   PlayCircle,
   RefreshCw,
   Save,
@@ -25,6 +27,8 @@ import type {
   ExecutionReviewItem,
   ExecutionReviewsResponse,
   HealthResponse,
+  RepoHealthItem,
+  RepoHealthResponse,
   RepoHygieneResponse,
   WorkflowGraphResponse,
   WorkflowNode,
@@ -43,16 +47,59 @@ interface FlagProps {
 
 function Flag({ label, active, detail, icon: Icon }: FlagProps) {
   return (
-    <article className="rounded-2xl border border-white/8 bg-[#0a192d]/70 p-4">
-      <div className="flex items-start justify-between gap-3">
-        <div className={`flex h-9 w-9 items-center justify-center rounded-xl border ${active ? 'border-emerald-300/15 bg-emerald-300/7 text-emerald-200' : 'border-amber-300/15 bg-amber-300/7 text-amber-200'}`}>
-          <Icon className="h-4.5 w-4.5" />
+    <article className="min-w-0 rounded-xl border border-white/8 bg-[#0a192d]/70 p-3">
+      <div className="flex items-center gap-2.5">
+        <div className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-lg border ${active ? 'border-emerald-300/15 bg-emerald-300/7 text-emerald-200' : 'border-amber-300/15 bg-amber-300/7 text-amber-200'}`}>
+          <Icon className="h-3.5 w-3.5" />
+        </div>
+        <div className="min-w-0 flex-1">
+          <h3 className="truncate text-xs font-semibold text-white">{label}</h3>
+          <p className="mt-0.5 truncate text-[10px] text-slate-500" title={detail}>{detail}</p>
         </div>
         <StatusBadge status={active ? 'healthy' : 'warning'} compact />
       </div>
-      <h3 className="mt-4 text-sm font-semibold text-white">{label}</h3>
-      <p className="mt-1 text-xs leading-5 text-slate-500">{detail}</p>
     </article>
+  )
+}
+
+function RepoIcon({ category }: { category?: string }) {
+  if (category === 'frontend') return <Monitor className="h-3.5 w-3.5" />
+  if (category === 'static_service') return <HardDrive className="h-3.5 w-3.5" />
+  if (category === 'background_api') return <ServerCog className="h-3.5 w-3.5" />
+  return <Activity className="h-3.5 w-3.5" />
+}
+
+function RepoHealthCard({ item, onInspect }: { item: RepoHealthItem; onInspect: () => void }) {
+  const latency = item.liveness?.latency_ms
+  const operationalStatus = item.operational?.status
+  const category = item.category === 'background_api'
+    ? 'Background API'
+    : item.category === 'static_service'
+      ? 'Public service'
+      : item.category === 'frontend'
+        ? 'Frontend'
+        : 'Core API'
+
+  return (
+    <button type="button" onClick={onInspect} className="min-w-0 rounded-xl border border-white/8 bg-[#071426] p-3 text-left transition hover:border-cyan-300/20 hover:bg-[#0b1b31]">
+      <div className="flex items-center gap-2.5">
+        <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg border border-cyan-300/12 bg-cyan-300/6 text-cyan-200">
+          <RepoIcon category={item.category} />
+        </div>
+        <div className="min-w-0 flex-1">
+          <div className="flex items-center gap-1.5">
+            <h4 className="truncate text-xs font-semibold text-white">{item.label || item.repo}</h4>
+            <span className="truncate text-[9px] uppercase tracking-[0.12em] text-slate-600">{category}</span>
+          </div>
+          <p className="mt-0.5 truncate text-[10px] text-slate-500" title={item.detail || item.description}>{item.detail || item.description || 'No health detail returned.'}</p>
+        </div>
+        <StatusBadge status={item.status} compact />
+      </div>
+      <div className="mt-2 flex items-center gap-2 text-[9px] text-slate-600">
+        <span>{typeof latency === 'number' ? `${latency} ms` : 'No latency'}</span>
+        {operationalStatus && <span>Operational: {operationalStatus.replace(/_/g, ' ')}</span>}
+      </div>
+    </button>
   )
 }
 
@@ -74,6 +121,7 @@ export function OpsPage() {
   const [tab, setTab] = useState<OpsTab>('overview')
   const [health, setHealth] = useState<HealthResponse | null>(null)
   const [hygiene, setHygiene] = useState<RepoHygieneResponse | null>(null)
+  const [repoHealth, setRepoHealth] = useState<RepoHealthResponse | null>(null)
   const [templates, setTemplates] = useState<Record<string, WorkflowTemplate>>({})
   const [reviews, setReviews] = useState<ExecutionReviewItem[]>([])
   const [openReviewCount, setOpenReviewCount] = useState(0)
@@ -92,18 +140,20 @@ export function OpsPage() {
   const [savingReview, setSavingReview] = useState(false)
   const [decisionBusy, setDecisionBusy] = useState<string | null>(null)
 
-  const loadOps = useCallback(async () => {
+  const loadOps = useCallback(async (forceRepoHealth = false) => {
     setLoading(true)
     setError(null)
     try {
-      const [healthResult, hygieneResult, templateResult, reviewResult] = await Promise.all([
+      const [healthResult, hygieneResult, templateResult, reviewResult, repoHealthResult] = await Promise.all([
         apiFetch<HealthResponse>('/health'),
         apiFetch<RepoHygieneResponse>('/v1/system/repo-hygiene?include_hashes=false&max_files=5000'),
         apiFetch<WorkflowTemplatesResponse>('/v1/workflow-graphs/templates'),
         apiFetch<ExecutionReviewsResponse>('/v1/execution-reviews?limit=50'),
+        apiFetch<RepoHealthResponse>(`/v1/system/repo-health?force_refresh=${forceRepoHealth}`).catch(() => null),
       ])
       setHealth(healthResult)
       setHygiene(hygieneResult)
+      setRepoHealth(repoHealthResult)
       setTemplates(templateResult.templates ?? {})
       setReviews(reviewResult.items ?? [])
       setOpenReviewCount(Number(reviewResult.open_count ?? 0))
@@ -116,7 +166,7 @@ export function OpsPage() {
   }, [refreshHealth])
 
   useEffect(() => {
-    void loadOps()
+    void loadOps(false)
   }, [loadOps])
 
   const flags: FlagProps[] = [
@@ -278,7 +328,7 @@ export function OpsPage() {
             <h2 className="mt-2 text-2xl font-semibold text-white">Operational health and controlled workflow planning</h2>
             <p className="mt-2 text-sm text-slate-500">Build {health?.build ?? 'unknown'} · {health?.env ?? 'environment unknown'} · execution adapters remain disabled</p>
           </div>
-          <button type="button" onClick={() => void loadOps()} className="flex h-10 items-center justify-center gap-2 rounded-xl border border-white/8 bg-white/[0.04] px-4 text-xs text-slate-300 hover:bg-white/[0.07]">
+          <button type="button" onClick={() => void loadOps(true)} className="flex h-10 items-center justify-center gap-2 rounded-xl border border-white/8 bg-white/[0.04] px-4 text-xs text-slate-300 hover:bg-white/[0.07]">
             <RefreshCw className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`} /> Refresh status
           </button>
         </section>
@@ -297,7 +347,26 @@ export function OpsPage() {
           <div className="flex items-center justify-center py-20 text-slate-500"><LoaderCircle className="mr-2 h-5 w-5 animate-spin" /> Loading operational state</div>
         ) : tab === 'overview' ? (
           <>
-            <section className="mt-5 grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
+            <section className="mt-5 rounded-2xl border border-white/8 bg-[#0a192d]/60 p-3 sm:p-4">
+              <div className="flex items-center justify-between gap-3">
+                <div>
+                  <h3 className="text-sm font-semibold text-white">Repository and service health</h3>
+                  <p className="mt-0.5 text-[10px] text-slate-500">Liveness plus operational readiness for background APIs where available.</p>
+                </div>
+                <StatusBadge status={repoHealth?.overall_status || 'not_configured'} compact />
+              </div>
+              {repoHealth?.repos?.length ? (
+                <div className="mt-3 grid grid-cols-2 gap-2">
+                  {repoHealth.repos.map((item) => (
+                    <RepoHealthCard key={item.repo} item={item} onInspect={() => inspect(`${item.repo} health`, item, item.description)} />
+                  ))}
+                </div>
+              ) : (
+                <div className="mt-3 rounded-xl border border-dashed border-white/10 px-3 py-5 text-center text-xs text-slate-600">Repository health is not configured on this HIVE backend yet.</div>
+              )}
+            </section>
+
+            <section className="mt-3 grid grid-cols-2 gap-2">
               {flags.map((flag) => <Flag key={flag.label} {...flag} />)}
             </section>
 
