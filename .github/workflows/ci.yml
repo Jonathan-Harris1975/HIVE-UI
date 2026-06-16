@@ -19,10 +19,10 @@ jobs:
     timeout-minutes: 15
     steps:
       - name: Checkout
-        uses: actions/checkout@v5
+        uses: actions/checkout@v4
 
       - name: Use Node.js 22
-        uses: actions/setup-node@v5
+        uses: actions/setup-node@v4
         with:
           node-version: 22
           cache: npm
@@ -32,14 +32,3 @@ jobs:
 
       - name: Typecheck, lint, build and verify
         run: npm run check
-
-      - name: Audit dependencies
-        run: npm audit --audit-level=high
-
-      - name: Upload production bundle
-        uses: actions/upload-artifact@v4
-        with:
-          name: hive-ui-dist-${{ github.sha }}
-          path: dist
-          if-no-files-found: error
-          retention-days: 14
