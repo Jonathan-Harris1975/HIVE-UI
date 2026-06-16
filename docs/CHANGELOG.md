@@ -1,5 +1,27 @@
 # HIVE-UI changelog
 
+## 0.8.0 - 2026-06-16
+
+### Files and R2
+
+- Added authenticated browsing across every readable R2 lane.
+- Added prefix navigation, bounded server-side filename search and cursor pagination.
+- Added authoritative metadata, text/document preview and authenticated download controls.
+- Added file chat from non-upload buckets while preserving read-only enforcement.
+- Kept upload and paste-text controls limited to the primary HIVE uploads lane.
+
+### Models
+
+- Replaced the flat model select with a searchable grouped picker.
+- Added HIVE configured, free, reasoning, coding, documents, vision, video analysis, general, audio, image generation and video generation groups.
+- Image/video generation models are visible but disabled in standard chat pending a dedicated creation workspace.
+
+### Security and CI
+
+- Added canonical Base64URL validation for signed UI sessions.
+- Updated GitHub checkout and setup-node actions to their Node 24-capable major releases.
+- Preserved the browser-secret source gate that caught the earlier legacy access-key string.
+
 ## 0.7.0 - 2026-06-16
 
 ### Security

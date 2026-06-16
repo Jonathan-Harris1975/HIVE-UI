@@ -120,15 +120,18 @@ Rename body:
 ## Files and shared chat
 
 ```text
-GET  /v1/files/list?prefix=uploads%2F&limit=200
 GET  /v1/files/r2-lanes
+GET  /v1/files/r2/{lane}/objects?prefix=&limit=100&cursor=&search=
+GET  /v1/files/r2/{lane}/metadata?key=
+GET  /v1/files/r2/{lane}/read?key=&max_chars=40000
+GET  /v1/files/r2/{lane}/download?key=
 POST /v1/files/upload
 POST /v1/files/upload-text
 GET  /v1/workflow-presets
 POST /v1/chat/with-file
 ```
 
-The `/files` route links to `/chat?file=<object_key>&name=<filename>`. Other R2 lanes remain registry-only until scoped backend endpoints are introduced.
+The `/files` route links to `/chat?lane=<lane>&file=<object_key>&name=<filename>`. The chat request includes the lane. Persisted chunk/Vectorize retrieval is enabled only for the uploads lane; read-only lanes use a bounded direct read.
 
 ## Models
 
@@ -136,7 +139,7 @@ The `/files` route links to `/chat?file=<object_key>&name=<filename>`. Other R2 
 GET /v1/models
 ```
 
-The picker always displays `Auto route` first. Selecting it sends no explicit model override.
+The response includes model groups, modalities, configured roles, free-model status, `chat_selectable` and a disabled reason. The picker always displays `Auto route` first. Image/video generation models are visible but disabled for ordinary chat in this release.
 
 ## Skills
 
