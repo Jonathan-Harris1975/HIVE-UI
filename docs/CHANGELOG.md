@@ -4,6 +4,13 @@
 
 # HIVE-UI changelog
 
+## 0.9.1 — 16 June 2026
+
+- Hardened model-picker parsing against loose or partially deployed API model metadata.
+- Ensured model capability arrays, group names, descriptions and flags are narrowed before rendering.
+- Updated GitHub Actions checkout and setup-node actions to v6.
+- Reverified TypeScript, ESLint, production build and dependency audit.
+
 ## 0.9.0 — 16 June 2026
 
 - Added public Cloudflare Pages health function.
