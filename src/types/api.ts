@@ -60,16 +60,41 @@ export interface ConversationResponse {
 export interface ModelSummary {
   id: string
   name?: string
+  description?: string | null
   context_length?: number
+  max_completion_tokens?: number | null
   prompt_price?: number | string | null
   completion_price?: number | string | null
-  architecture?: string | Record<string, unknown> | null
+  image_price?: number | string | null
+  request_price?: number | string | null
+  architecture?: Record<string, unknown> | null
+  input_modalities?: string[]
+  output_modalities?: string[]
+  supported_parameters?: string[]
+  is_free?: boolean
+  configured_roles?: string[]
+  groups?: string[]
+  primary_group?: string
+  group_label?: string
+  chat_selectable?: boolean
+  visible_in_chat_picker?: boolean
+  disabled_reason?: string | null
   [key: string]: unknown
+}
+
+export interface ModelGroupSummary {
+  id: string
+  label: string
+  count: number
+  chat_selectable_count?: number
 }
 
 export interface ModelsResponse {
   count: number
+  visible_count?: number
   models: ModelSummary[]
+  groups?: ModelGroupSummary[]
+  policy?: Record<string, unknown>
 }
 
 export interface ChatRequestPayload {
@@ -103,6 +128,7 @@ export interface SourceCitation {
   label?: string
   object_key?: string
   public_url?: string | null
+  lane?: string
 }
 
 export interface FileObject {
@@ -123,9 +149,40 @@ export interface FileListResponse {
   ok: boolean
   count?: number
   storage?: string
+  lane?: string
+  bucket?: string
+  access_mode?: string
+  prefix?: string
+  search?: string | null
+  prefix_count?: number
+  prefixes?: string[]
   files?: FileObject[]
-  error?: string
+  next_cursor?: string | null
+  scanned_count?: number
+  truncated?: boolean
+  error?: string | { message?: string; hint?: string }
   message?: string
+}
+
+
+export interface FileMetadataResponse {
+  ok: boolean
+  lane?: string
+  access_mode?: string
+  metadata?: FileObject
+  preview_supported?: boolean
+  chat_supported?: boolean
+  error?: string | { message?: string; hint?: string }
+}
+
+export interface FileReadResponse {
+  ok: boolean
+  lane?: string
+  access_mode?: string
+  file?: FileObject
+  content?: string
+  extraction?: Record<string, unknown>
+  error?: string
 }
 
 export interface FileChatResponse {
@@ -365,6 +422,10 @@ export interface R2Lane {
   configured?: boolean
   description?: string
   primary_upload_lane?: boolean
+  readable?: boolean
+  writable?: boolean
+  access_mode?: 'read_write' | 'read_only' | 'registry_only' | 'unavailable' | string
+  chat_supported?: boolean
 }
 
 export interface R2LanesResponse {
@@ -372,6 +433,8 @@ export interface R2LanesResponse {
   count?: number
   configured_count?: number
   primary_upload_lane?: string
+  multi_bucket_read_enabled?: boolean
+  read_credentials_configured?: boolean
   lanes?: R2Lane[]
   note?: string
   error?: string
