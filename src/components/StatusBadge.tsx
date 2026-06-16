@@ -9,13 +9,13 @@ function tone(status: string): string {
   if (['complete', 'completed', 'approved', 'healthy', 'ready', 'ok', 'active'].includes(value)) {
     return 'border-emerald-300/20 bg-emerald-300/8 text-emerald-200'
   }
-  if (['blocked', 'rejected', 'failed', 'error', 'high'].includes(value)) {
+  if (['blocked', 'rejected', 'failed', 'error', 'high', 'down'].includes(value)) {
     return 'border-rose-300/20 bg-rose-300/8 text-rose-200'
   }
-  if (['review_required', 'pending_review', 'needs_changes', 'medium', 'warning'].includes(value)) {
+  if (['review_required', 'pending_review', 'needs_changes', 'medium', 'warning', 'degraded'].includes(value)) {
     return 'border-amber-300/20 bg-amber-300/8 text-amber-200'
   }
-  if (['planned', 'queued', 'readonly', 'low'].includes(value)) {
+  if (['planned', 'queued', 'readonly', 'low', 'not_configured', 'disabled'].includes(value)) {
     return 'border-cyan-300/20 bg-cyan-300/8 text-cyan-200'
   }
   return 'border-white/10 bg-white/[0.04] text-slate-400'
