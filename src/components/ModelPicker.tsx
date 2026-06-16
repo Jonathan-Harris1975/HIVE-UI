@@ -49,15 +49,28 @@ const GROUP_LABELS: Record<string, string> = {
   other: 'Other models',
 }
 
-function modelLabel(model: ModelSummary): string {
-  return model.name || model.id
+function stringValue(value: unknown): string | null {
+  return typeof value === 'string' && value.trim() ? value : null
 }
 
-function compactContext(value: number | undefined): string | null {
-  if (!value || value < 1) return null
-  if (value >= 1_000_000) return `${Math.round(value / 100_000) / 10}M context`
-  if (value >= 1_000) return `${Math.round(value / 1_000)}K context`
-  return `${value} context`
+function stringArray(value: unknown): string[] {
+  return Array.isArray(value) ? value.filter((item): item is string => typeof item === 'string') : []
+}
+
+function numberValue(value: unknown): number | undefined {
+  return typeof value === 'number' && Number.isFinite(value) ? value : undefined
+}
+
+function modelLabel(model: ModelSummary): string {
+  return stringValue(model.name) ?? model.id
+}
+
+function compactContext(value: unknown): string | null {
+  const parsed = numberValue(value)
+  if (!parsed || parsed < 1) return null
+  if (parsed >= 1_000_000) return `${Math.round(parsed / 100_000) / 10}M context`
+  if (parsed >= 1_000) return `${Math.round(parsed / 1_000)}K context`
+  return `${parsed} context`
 }
 
 function groupIcon(group: string) {
@@ -90,16 +103,16 @@ export function ModelPicker({ models, value, onChange, loading = false }: ModelP
         model.id,
         model.name,
         model.description,
-        ...(model.configured_roles ?? []),
-        ...(model.groups ?? []),
-        ...(model.input_modalities ?? []),
-        ...(model.output_modalities ?? []),
+        ...stringArray(model.configured_roles),
+        ...stringArray(model.groups),
+        ...stringArray(model.input_modalities),
+        ...stringArray(model.output_modalities),
       ].filter(Boolean).join(' ').toLowerCase().includes(needle)
     })
 
     const groups = new Map<string, ModelSummary[]>()
     for (const model of matches) {
-      const group = model.primary_group || 'other'
+      const group = stringValue(model.primary_group) ?? 'other'
       const current = groups.get(group) ?? []
       current.push(model)
       groups.set(group, current)
@@ -147,7 +160,7 @@ export function ModelPicker({ models, value, onChange, loading = false }: ModelP
       >
         <BrainCircuit className="h-3.5 w-3.5 shrink-0 text-cyan-300/70" />
         <span className="min-w-0 flex-1 truncate">{selected ? modelLabel(selected) : loading ? 'Loading models…' : 'Auto route'}</span>
-        {selected?.is_free && <span className="hidden rounded bg-emerald-300/10 px-1.5 py-0.5 text-[9px] font-semibold uppercase tracking-wide text-emerald-200 sm:inline">Free</span>}
+        {selected?.is_free === true && <span className="hidden rounded bg-emerald-300/10 px-1.5 py-0.5 text-[9px] font-semibold uppercase tracking-wide text-emerald-200 sm:inline">Free</span>}
         <ChevronDown className={`h-3.5 w-3.5 shrink-0 text-slate-600 transition ${open ? 'rotate-180' : ''}`} />
       </button>
 
@@ -206,7 +219,9 @@ export function ModelPicker({ models, value, onChange, loading = false }: ModelP
                         aria-selected={active}
                         aria-disabled={disabled}
                         disabled={disabled}
-                        title={disabled ? item.disabled_reason || 'Unavailable in standard chat' : item.description || item.id}
+                        title={disabled
+                          ? stringValue(item.disabled_reason) ?? 'Unavailable in standard chat'
+                          : stringValue(item.description) ?? item.id}
                         onClick={() => selectModel(item)}
                         className="group/model flex w-full items-start gap-3 rounded-xl px-3 py-2.5 text-left transition hover:bg-white/[0.045] disabled:cursor-not-allowed disabled:opacity-55"
                       >
@@ -220,12 +235,16 @@ export function ModelPicker({ models, value, onChange, loading = false }: ModelP
                           </div>
                           <p className="mt-0.5 truncate text-[10px] text-slate-600">{item.id}</p>
                           <div className="mt-1.5 flex flex-wrap gap-1">
-                            {item.is_free && <span className="rounded bg-emerald-300/8 px-1.5 py-0.5 text-[9px] font-semibold uppercase text-emerald-200">Free</span>}
-                            {(item.configured_roles ?? []).slice(0, 3).map((role) => <span key={role} className="rounded bg-cyan-300/7 px-1.5 py-0.5 text-[9px] text-cyan-200/80">{role}</span>)}
+                            {item.is_free === true && <span className="rounded bg-emerald-300/8 px-1.5 py-0.5 text-[9px] font-semibold uppercase text-emerald-200">Free</span>}
+                            {stringArray(item.configured_roles).slice(0, 3).map((role) => <span key={role} className="rounded bg-cyan-300/7 px-1.5 py-0.5 text-[9px] text-cyan-200/80">{role}</span>)}
                             {context && <span className="rounded bg-white/[0.035] px-1.5 py-0.5 text-[9px] text-slate-500">{context}</span>}
                             {disabled && <span className="rounded bg-amber-300/7 px-1.5 py-0.5 text-[9px] text-amber-200/80">Discovery only</span>}
                           </div>
-                          {disabled && item.disabled_reason && <p className="mt-1.5 text-[10px] leading-4 text-amber-100/55">{item.disabled_reason}</p>}
+                          {disabled && stringValue(item.disabled_reason) && (
+                            <p className="mt-1.5 text-[10px] leading-4 text-amber-100/55">
+                              {stringValue(item.disabled_reason)}
+                            </p>
+                          )}
                         </div>
                       </button>
                     )
