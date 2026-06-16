@@ -7,8 +7,14 @@ import {
   useState,
   type ReactNode,
 } from 'react'
-import { apiFetch } from '../lib/api'
-import { clearAccessKey, getAccessKey, setAccessKey } from '../lib/session'
+import {
+  ApiError,
+  apiFetch,
+  getUiSession,
+  loginUi,
+  logoutUi,
+} from '../lib/api'
+import { clearDevSession, getDevSession, setDevSession } from '../lib/session'
 import type { HealthResponse } from '../types/api'
 
 type AuthStatus = 'checking' | 'signed-out' | 'signed-in'
@@ -29,54 +35,100 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [health, setHealth] = useState<HealthResponse | null>(null)
   const [error, setError] = useState<string | null>(null)
 
-  const logout = useCallback(() => {
-    clearAccessKey()
+  const clearLocalAuthState = useCallback(() => {
+    clearDevSession()
     setHealth(null)
     setError(null)
     setStatus('signed-out')
   }, [])
 
+  const logout = useCallback(() => {
+    clearLocalAuthState()
+    if (!import.meta.env.DEV) {
+      void logoutUi().catch(() => {
+        // The local UI state is already cleared. An expired or unreachable server session needs no further action.
+      })
+    }
+  }, [clearLocalAuthState])
+
   const refreshHealth = useCallback(async () => {
     const result = await apiFetch<HealthResponse>('/health')
     setHealth(result)
+    setError(null)
   }, [])
 
   const login = useCallback(async (accessKey: string) => {
     const cleanKey = accessKey.trim()
     if (!cleanKey) throw new Error('Enter the HIVE UI access key.')
-    setAccessKey(cleanKey)
     setError(null)
+
     try {
-      const result = await apiFetch<HealthResponse>('/health')
-      setHealth(result)
+      if (import.meta.env.DEV) {
+        setDevSession()
+      } else {
+        await loginUi(cleanKey)
+      }
       setStatus('signed-in')
+
+      try {
+        await refreshHealth()
+      } catch (caught) {
+        const message = caught instanceof Error ? caught.message : 'HIVE could not be reached.'
+        setError(message)
+      }
     } catch (caught) {
-      clearAccessKey()
-      const message = caught instanceof Error ? caught.message : 'HIVE could not be reached.'
+      clearDevSession()
+      const message = caught instanceof Error ? caught.message : 'HIVE access could not be verified.'
       setError(message)
       setStatus('signed-out')
       throw caught
     }
-  }, [])
+  }, [refreshHealth])
 
   useEffect(() => {
-    const handleUnauthorised = () => logout()
+    const handleUnauthorised = () => clearLocalAuthState()
     window.addEventListener('hive:unauthorised', handleUnauthorised)
     return () => window.removeEventListener('hive:unauthorised', handleUnauthorised)
-  }, [logout])
+  }, [clearLocalAuthState])
 
   useEffect(() => {
-    if (!getAccessKey()) {
-      setStatus('signed-out')
-      return
+    let cancelled = false
+
+    async function restoreSession() {
+      if (import.meta.env.DEV) {
+        if (!getDevSession()) {
+          if (!cancelled) setStatus('signed-out')
+          return
+        }
+      } else {
+        try {
+          await getUiSession()
+        } catch (caught) {
+          if (!cancelled) {
+            if (!(caught instanceof ApiError && caught.status === 401)) {
+              setError(caught instanceof Error ? caught.message : 'The HIVE UI session could not be restored.')
+            }
+            setStatus('signed-out')
+          }
+          return
+        }
+      }
+
+      if (cancelled) return
+      setStatus('signed-in')
+      try {
+        await refreshHealth()
+      } catch (caught) {
+        if (!cancelled) {
+          setError(caught instanceof Error ? caught.message : 'HIVE could not be reached.')
+        }
+      }
     }
-    void refreshHealth()
-      .then(() => setStatus('signed-in'))
-      .catch((caught: unknown) => {
-        clearAccessKey()
-        setError(caught instanceof Error ? caught.message : 'HIVE could not be reached.')
-        setStatus('signed-out')
-      })
+
+    void restoreSession()
+    return () => {
+      cancelled = true
+    }
   }, [refreshHealth])
 
   const value = useMemo<AuthContextValue>(() => ({
