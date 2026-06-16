@@ -1,3 +1,4 @@
+import { getAccessKey } from './session'
 import type {
   ChatRequestPayload,
   FileChatResponse,
@@ -9,89 +10,20 @@ const API_PREFIX = '/api'
 export class ApiError extends Error {
   status: number
   payload: unknown
-  requestId: string | null
 
-  constructor(message: string, status: number, payload: unknown, requestId: string | null = null) {
+  constructor(message: string, status: number, payload: unknown) {
     super(message)
     this.name = 'ApiError'
     this.status = status
     this.payload = payload
-    this.requestId = requestId
   }
-}
-
-export interface UiSessionResponse {
-  ok: boolean
-  authenticated: boolean
-  expires_at?: string
 }
 
 function requestHeaders(headers?: HeadersInit): Headers {
-  return new Headers(headers)
-}
-
-function isSessionInvalid(response: Response): boolean {
-  return response.headers.get('x-hive-auth-state') === 'session-invalid'
-}
-
-async function parseResponsePayload(response: Response): Promise<unknown> {
-  const contentType = response.headers.get('content-type') ?? ''
-  try {
-    return contentType.includes('application/json') ? await response.json() : await response.text()
-  } catch {
-    return null
-  }
-}
-
-function responseDetail(response: Response, payload: unknown): string {
-  if (typeof payload === 'object' && payload && 'detail' in payload) {
-    return String((payload as { detail: unknown }).detail)
-  }
-  return `Request failed with status ${response.status}`
-}
-
-async function sameOriginFetch(path: string, init: RequestInit = {}): Promise<Response> {
-  try {
-    return await fetch(`${API_PREFIX}${path}`, {
-      ...init,
-      headers: requestHeaders(init.headers),
-      cache: 'no-store',
-      credentials: 'same-origin',
-    })
-  } catch (caught) {
-    const message = navigator.onLine ? 'The HIVE service could not be reached.' : 'The browser is offline.'
-    throw new ApiError(message, 0, caught)
-  }
-}
-
-async function authFetch<T>(path: string, init: RequestInit = {}): Promise<T> {
-  const response = await sameOriginFetch(path, init)
-  const payload = await parseResponsePayload(response)
-  if (!response.ok) {
-    throw new ApiError(
-      responseDetail(response, payload),
-      response.status,
-      payload,
-      response.headers.get('x-request-id'),
-    )
-  }
-  return payload as T
-}
-
-export function loginUi(accessKey: string): Promise<UiSessionResponse> {
-  return authFetch<UiSessionResponse>('/auth/login', {
-    method: 'POST',
-    headers: { 'content-type': 'application/json' },
-    body: JSON.stringify({ access_key: accessKey }),
-  })
-}
-
-export function getUiSession(): Promise<UiSessionResponse> {
-  return authFetch<UiSessionResponse>('/auth/session')
-}
-
-export function logoutUi(): Promise<UiSessionResponse> {
-  return authFetch<UiSessionResponse>('/auth/logout', { method: 'POST' })
+  const result = new Headers(headers)
+  const accessKey = getAccessKey()
+  if (accessKey) result.set('X-HIVE-UI-Key', accessKey)
+  return result
 }
 
 export async function apiFetch<T>(path: string, init: RequestInit = {}): Promise<T> {
@@ -100,19 +32,30 @@ export async function apiFetch<T>(path: string, init: RequestInit = {}): Promise
     headers.set('content-type', 'application/json')
   }
 
-  const response = await sameOriginFetch(path, { ...init, headers })
-  const payload = await parseResponsePayload(response)
+  let response: Response
+  try {
+    response = await fetch(`${API_PREFIX}${path}`, { ...init, headers, cache: 'no-store', credentials: 'omit' })
+  } catch (caught) {
+    const message = navigator.onLine ? 'The HIVE service could not be reached.' : 'The browser is offline.'
+    throw new ApiError(message, 0, caught)
+  }
+
+  const contentType = response.headers.get('content-type') ?? ''
+  let payload: unknown
+  try {
+    payload = contentType.includes('application/json') ? await response.json() : await response.text()
+  } catch {
+    payload = null
+  }
 
   if (!response.ok) {
-    if (isSessionInvalid(response)) {
+    const detail = typeof payload === 'object' && payload && 'detail' in payload
+      ? String((payload as { detail: unknown }).detail)
+      : `Request failed with status ${response.status}`
+    if (response.status === 401 || response.status === 403) {
       window.dispatchEvent(new CustomEvent('hive:unauthorised'))
     }
-    throw new ApiError(
-      responseDetail(response, payload),
-      response.status,
-      payload,
-      response.headers.get('x-request-id'),
-    )
+    throw new ApiError(detail, response.status, payload)
   }
   return payload as T
 }
@@ -153,7 +96,7 @@ export async function streamChat(
       body: JSON.stringify(payload),
       signal,
       cache: 'no-store',
-      credentials: 'same-origin',
+      credentials: 'omit',
     })
   } catch (caught) {
     if (caught instanceof DOMException && caught.name === 'AbortError') throw caught
@@ -163,19 +106,16 @@ export async function streamChat(
 
   if (!response.ok || !response.body) {
     let detail = `Chat stream failed with status ${response.status}`
-    let payload: unknown = null
     try {
-      payload = await response.json()
-      if (typeof payload === 'object' && payload && 'detail' in payload) {
-        detail = String((payload as { detail: unknown }).detail)
-      }
+      const error = await response.json() as { detail?: unknown }
+      if (error.detail) detail = String(error.detail)
     } catch {
       // Keep the status-based message.
     }
-    if (isSessionInvalid(response)) {
+    if (response.status === 401 || response.status === 403) {
       window.dispatchEvent(new CustomEvent('hive:unauthorised'))
     }
-    throw new ApiError(detail, response.status, payload, response.headers.get('x-request-id'))
+    throw new ApiError(detail, response.status, null)
   }
 
   const reader = response.body.getReader()
@@ -201,17 +141,14 @@ export async function streamChat(
 }
 
 export function chatWithFile(
-  lane: string,
   objectKey: string,
   payload: ChatRequestPayload & { workflow_preset?: string | null },
   signal?: AbortSignal,
 ): Promise<FileChatResponse> {
-  const uploadsLane = lane === 'uploads'
   return apiFetch<FileChatResponse>('/v1/chat/with-file', {
     method: 'POST',
     signal,
     body: JSON.stringify({
-      lane,
       object_key: objectKey,
       message: payload.message,
       mode: payload.mode === 'auto' ? 'file_analysis' : payload.mode,
@@ -219,10 +156,10 @@ export function chatWithFile(
       conversation_id: payload.conversation_id,
       history: payload.history ?? [],
       workflow_preset: payload.workflow_preset ?? null,
-      use_chunks: uploadsLane,
-      use_vectorize: uploadsLane,
+      use_chunks: true,
+      use_vectorize: true,
       vectorize_fallback_sql: true,
-      auto_chunk: uploadsLane,
+      auto_chunk: true,
     }),
   })
 }

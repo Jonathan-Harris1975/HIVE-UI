@@ -1,13 +1,13 @@
-const DEV_SESSION_STORAGE = 'hive-ui-dev-session'
+const ACCESS_KEY_STORAGE = 'hive-ui-access-key'
 
-export function getDevSession(): boolean {
-  return sessionStorage.getItem(DEV_SESSION_STORAGE) === '1'
+export function getAccessKey(): string {
+  return sessionStorage.getItem(ACCESS_KEY_STORAGE) ?? ''
 }
 
-export function setDevSession(): void {
-  sessionStorage.setItem(DEV_SESSION_STORAGE, '1')
+export function setAccessKey(value: string): void {
+  sessionStorage.setItem(ACCESS_KEY_STORAGE, value.trim())
 }
 
-export function clearDevSession(): void {
-  sessionStorage.removeItem(DEV_SESSION_STORAGE)
+export function clearAccessKey(): void {
+  sessionStorage.removeItem(ACCESS_KEY_STORAGE)
 }
