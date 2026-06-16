@@ -6,16 +6,16 @@ HIVE remains the Python/FastAPI backend on Koyeb. This repository contains the R
 
 ## Current release
 
-**Version:** `0.7.0`  
-**Build:** `production-grade-cloudflare-session`
+**Version:** `0.8.0`  
+**Build:** `multi-bucket-r2-model-groups`
 
 The production release includes:
 
 - Four primary routes: `/chat`, `/files`, `/skills`, and `/ops`.
 - Shared chat interface for ordinary chat and file chat.
 - Persistent streamed conversations with rename and delete support.
-- Auto route followed by explicit models from `GET /v1/models`.
-- File upload, extraction workflows, citations and an R2 storage registry.
+- Searchable grouped model discovery from `GET /v1/models`, with Auto route first.
+- Authenticated multi-bucket R2 browsing, metadata, previews, downloads, file chat and upload-lane writes.
 - Skill search, recommendations, filters and status badges.
 - Health, workflow graph, execution preview, repo hygiene and review views.
 - Branded favicon, install icons and responsive HIVE styling.
@@ -122,9 +122,14 @@ See [`docs/DEPLOYMENT_CHECKLIST.md`](docs/DEPLOYMENT_CHECKLIST.md) and [`docs/PR
 
 ## File storage boundary
 
-The Files route currently performs read/write operations only against the primary HIVE uploads lane. Other configured R2 buckets remain registry-only until scoped backend endpoints are introduced.
+The Files route uses two separate backend credential scopes:
 
-See [`docs/STORAGE_SOURCES_ROADMAP.md`](docs/STORAGE_SOURCES_ROADMAP.md).
+- `uploads`: read/write through the existing HIVE R2 credential.
+- every other readable lane: list, prefix browse, search, metadata, preview, download and supported file chat through the dedicated read-only credential.
+
+Non-upload lanes expose no upload, overwrite or delete control. Image-generation and video-generation models are visible in the model picker as discovery-only and cannot be selected for standard chat.
+
+See [`docs/MULTI_BUCKET_R2_AND_MODEL_GROUPS.md`](docs/MULTI_BUCKET_R2_AND_MODEL_GROUPS.md).
 
 ## Commands
 
