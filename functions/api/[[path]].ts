@@ -29,7 +29,7 @@ interface LoginAttempt {
   resetAt: number
 }
 
-const UI_VERSION = '0.7.0'
+const UI_VERSION = '0.8.0'
 const LOGIN_WINDOW_MS = 10 * 60 * 1000
 const LOGIN_MAX_FAILURES = 5
 const loginAttempts = new Map<string, LoginAttempt>()
