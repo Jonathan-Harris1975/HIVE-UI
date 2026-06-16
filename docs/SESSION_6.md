@@ -1,3 +1,7 @@
+> **Document status:** Historical implementation record  
+> **Last reviewed:** 16 June 2026  
+> **Operational authority:** Current repository README, SECURITY policy and operations guide.
+
 # HIVE-UI Session 6: polish and deployment
 
 Session 6 turns the Sessions 1 to 5 interface into a deploy-ready Cloudflare Pages release.

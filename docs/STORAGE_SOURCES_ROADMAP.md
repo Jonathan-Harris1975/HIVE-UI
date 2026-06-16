@@ -1,3 +1,7 @@
+> **Document status:** Production reference  
+> **Last reviewed:** 16 June 2026  
+> **Operational authority:** Current repository README, SECURITY policy and operations guide.
+
 # Future HIVE multi-bucket file access
 
 HIVE already exposes a credential-free R2 lane registry through `GET /v1/files/r2-lanes`. Session 6 surfaces that registry in the Files view without enabling broader object access.

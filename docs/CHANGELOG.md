@@ -1,4 +1,15 @@
+> **Document status:** Production reference  
+> **Last reviewed:** 16 June 2026  
+> **Operational authority:** Current repository README, SECURITY policy and operations guide.
+
 # HIVE-UI changelog
+
+## 0.9.0 — 16 June 2026
+
+- Added public Cloudflare Pages health function.
+- Added compact two-column repository and operational health cards.
+- Integrated HIVE ecosystem health into the Ops inspector.
+- Refreshed production, security and operations documentation.
 
 ## 0.8.0 - 2026-06-16
 

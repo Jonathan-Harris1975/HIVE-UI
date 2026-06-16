@@ -1,21 +1,84 @@
-# HIVE-UI API Contract
+> **Document status:** Production reference  
+> **Last reviewed:** 16 June 2026  
+> **Operational authority:** Current repository README, SECURITY policy and operations guide.
 
-HIVE-UI calls the backend through `/api/*`. In production, the Cloudflare Pages Function maps that prefix to the configured Koyeb HIVE service and adds the backend bearer token.
+# HIVE-UI API contract
+
+HIVE-UI calls the backend through same-origin `/api/*` requests. In production, the Cloudflare Pages Function maps approved paths to the Koyeb HIVE service and adds the backend bearer token.
 
 ## Authentication boundary
 
+### Login
+
+```text
+POST /api/auth/login
+Content-Type: application/json
+
+{ "access_key": "..." }
+```
+
+A successful login returns `200` and creates:
+
+```text
+__Host-hive_session
+Path=/
+HttpOnly
+Secure
+SameSite=Strict
+```
+
+The session is HMAC-signed using the configured UI access secret. The raw access key is not stored in browser storage and is not forwarded to HIVE.
+
+### Session restore
+
+```text
+GET /api/auth/session
+```
+
+### Logout
+
+```text
+POST /api/auth/logout
+```
+
+### Proxy authentication flow
+
 ```text
 Browser
-  X-HIVE-UI-Key
+  signed __Host-hive_session cookie
       ↓
 Cloudflare Pages Function
-  validates HIVE_UI_ACCESS_KEY
+  verifies expiry and signature
+  restricts the route
+  sanitises headers
   injects Authorization: Bearer HIVE_ADMIN_TOKEN
       ↓
 HIVE backend on Koyeb
 ```
 
-The backend bearer token must never be compiled into the React bundle.
+The Function forwards only:
+
+```text
+/health
+/livez
+/readyz
+/v1/*
+```
+
+Unknown, traversal-like and absolute URL paths are rejected at the edge.
+
+When the UI session is invalid, the Function returns:
+
+```text
+HTTP 401
+X-HIVE-Auth-State: session-invalid
+```
+
+A Koyeb/HIVE `401` is passed through without that session-invalid marker, allowing the UI to distinguish an expired UI session from a backend-token problem.
+
+## Request tracing
+
+Every proxy response includes `X-Request-ID`. A safe client-supplied request ID is preserved; otherwise the Function creates one and forwards it to HIVE.
 
 ## Streaming chat
 
@@ -33,8 +96,6 @@ The backend bearer token must never be compiled into the React bundle.
   "db_history_limit": 40
 }
 ```
-
-### SSE sequence
 
 The backend emits an early conversation frame before model tokens:
 
@@ -63,17 +124,18 @@ Rename body:
 ## Files and shared chat
 
 ```text
-GET  /v1/files/list?prefix=uploads%2F&limit=200
 GET  /v1/files/r2-lanes
+GET  /v1/files/r2/{lane}/objects?prefix=&limit=100&cursor=&search=
+GET  /v1/files/r2/{lane}/metadata?key=
+GET  /v1/files/r2/{lane}/read?key=&max_chars=40000
+GET  /v1/files/r2/{lane}/download?key=
 POST /v1/files/upload
 POST /v1/files/upload-text
 GET  /v1/workflow-presets
 POST /v1/chat/with-file
 ```
 
-The `/files` route links to `/chat?file=<object_key>&name=<filename>` and the shared composer submits to `/v1/chat/with-file`.
-
-`GET /v1/files/r2-lanes` is registry metadata. It does not grant arbitrary multi-bucket access. The UI labels non-upload lanes as registry-only.
+The `/files` route links to `/chat?lane=<lane>&file=<object_key>&name=<filename>`. The chat request includes the lane. Persisted chunk/Vectorize retrieval is enabled only for the uploads lane; read-only lanes use a bounded direct read.
 
 ## Models
 
@@ -81,7 +143,7 @@ The `/files` route links to `/chat?file=<object_key>&name=<filename>` and the sh
 GET /v1/models
 ```
 
-The picker always displays `Auto route` first. Selecting it sends no explicit model override.
+The response includes model groups, modalities, configured roles, free-model status, `chat_selectable` and a disabled reason. The picker always displays `Auto route` first. Image/video generation models are visible but disabled for ordinary chat in this release.
 
 ## Skills
 
