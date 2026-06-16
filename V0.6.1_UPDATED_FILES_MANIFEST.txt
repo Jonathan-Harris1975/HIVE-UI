@@ -1,0 +1,20 @@
+HIVE-UI v0.6.1 compact ecosystem health update
+
+Modified:
+- package.json
+- package-lock.json
+- src/components/StatusBadge.tsx
+- src/lib/build.ts
+- src/pages/OpsPage.tsx
+- src/types/api.ts
+
+Added:
+- docs/REPOSITORY_HEALTH_DASHBOARD.md
+- V0.6.1_UPDATED_FILES_MANIFEST.txt
+
+Verification:
+- TypeScript passed
+- Cloudflare Functions typecheck passed
+- ESLint passed
+- Production build passed
+- Distribution verification passed
