@@ -1,10 +1,10 @@
 # HIVE-UI production operations
 
-**Status:** Production-controlled  
-**Last reviewed:** 16 June 2026
+**Status:** Cloudflare Pages production interface  
+**Last reviewed:** 17 June 2026
 
-Deploy from `main` to Cloudflare Pages with `npm ci --no-audit --no-fund && npm run check` and output directory `dist`. Configure `HIVE_API_BASE_URL`, `HIVE_ADMIN_TOKEN` and `HIVE_UI_ACCESS_KEY` as encrypted production variables.
+The authenticated `/ops` route displays HIVE runtime flags, repository health, workflows, review state and recent operational events. MAST appears as a Background Worker and is assessed through HIVE's R2 heartbeat probe.
 
-After deployment, verify `/health`, sign in, load `/chat`, browse one R2 lane, inspect model groups and open `/ops`. Repository health cards should render in a compact two-column grid on supported widths and collapse cleanly on mobile.
+HIVE-UI contains no provider tokens. The Cloudflare Pages Function proxy holds the HIVE admin token server-side and fetches `/v1/system/ops-events`. See [`OPERATIONAL_ALERTS.md`](OPERATIONAL_ALERTS.md).
 
-Roll back from Cloudflare Pages Deployments or revert the commit. Rotating the UI access key invalidates new logins; changing the session-signing input deliberately expires existing sessions.
+After deployment, verify signed login, the four primary routes, alert cards, degraded-state rendering and inspector redaction on desktop and mobile.
