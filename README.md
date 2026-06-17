@@ -52,3 +52,7 @@ Required encrypted variables:
 Optional: `HIVE_UI_SESSION_TTL_SECONDS`.
 
 The access key belongs in Cloudflare Pages Variables and Secrets, not only in GitHub Secrets. See [`docs/DEPLOYMENT_CHECKLIST.md`](docs/DEPLOYMENT_CHECKLIST.md) and [`SECURITY.md`](SECURITY.md).
+
+## Operational alerts
+
+The Ops route now displays recent redacted provider and runtime events supplied by HIVE, including GitHub CI, Koyeb deployment and Cloudflare Pages failures. See [`docs/OPERATIONAL_ALERTS.md`](docs/OPERATIONAL_ALERTS.md).
