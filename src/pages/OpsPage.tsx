@@ -1,5 +1,6 @@
 import {
   Activity,
+  BellRing,
   Database,
   FileWarning,
   GitBranch,
@@ -26,6 +27,8 @@ import type {
   ExecutionPreviewResponse,
   ExecutionReviewItem,
   ExecutionReviewsResponse,
+  OpsEventItem,
+  OpsEventsResponse,
   HealthResponse,
   RepoHealthItem,
   RepoHealthResponse,
@@ -65,15 +68,17 @@ function Flag({ label, active, detail, icon: Icon }: FlagProps) {
 function RepoIcon({ category }: { category?: string }) {
   if (category === 'frontend') return <Monitor className="h-3.5 w-3.5" />
   if (category === 'static_service') return <HardDrive className="h-3.5 w-3.5" />
-  if (category === 'background_api') return <ServerCog className="h-3.5 w-3.5" />
+  if (category === 'background_api' || category === 'background_worker') return <ServerCog className="h-3.5 w-3.5" />
   return <Activity className="h-3.5 w-3.5" />
 }
 
 function RepoHealthCard({ item, onInspect }: { item: RepoHealthItem; onInspect: () => void }) {
   const latency = item.liveness?.latency_ms
   const operationalStatus = item.operational?.status
-  const category = item.category === 'background_api'
-    ? 'Background API'
+  const category = item.category === 'background_worker'
+    ? 'Background Worker'
+    : item.category === 'background_api'
+      ? 'Background API'
     : item.category === 'static_service'
       ? 'Public service'
       : item.category === 'frontend'
@@ -103,6 +108,26 @@ function RepoHealthCard({ item, onInspect }: { item: RepoHealthItem; onInspect: 
   )
 }
 
+function OpsEventCard({ item, onInspect }: { item: OpsEventItem; onInspect: () => void }) {
+  const severity = item.severity || 'warning'
+  const border = severity === 'critical' ? 'border-rose-300/20' : severity === 'warning' ? 'border-amber-300/20' : 'border-cyan-300/15'
+  return (
+    <button type="button" onClick={onInspect} className={`w-full rounded-xl border ${border} bg-[#071426] p-3 text-left transition hover:bg-[#0b1b31]`}>
+      <div className="flex items-start gap-3">
+        <BellRing className={`mt-0.5 h-4 w-4 shrink-0 ${severity === 'critical' ? 'text-rose-300' : severity === 'warning' ? 'text-amber-300' : 'text-cyan-300'}`} />
+        <div className="min-w-0 flex-1">
+          <div className="flex flex-wrap items-center gap-2">
+            <h4 className="truncate text-xs font-semibold text-white">{item.title || item.event_type || 'Operational event'}</h4>
+            <StatusBadge status={severity} compact />
+          </div>
+          <p className="mt-1 line-clamp-2 text-[11px] leading-5 text-slate-500">{item.summary || 'No event summary returned.'}</p>
+          <p className="mt-2 text-[9px] uppercase tracking-[0.12em] text-slate-600">{item.service || 'unknown service'} · {formatDate(item.occurred_at || item.received_at)}</p>
+        </div>
+      </div>
+    </button>
+  )
+}
+
 function metric(value: unknown): string {
   return typeof value === 'number' || typeof value === 'string' ? String(value) : '0'
 }
@@ -122,6 +147,7 @@ export function OpsPage() {
   const [health, setHealth] = useState<HealthResponse | null>(null)
   const [hygiene, setHygiene] = useState<RepoHygieneResponse | null>(null)
   const [repoHealth, setRepoHealth] = useState<RepoHealthResponse | null>(null)
+  const [opsEvents, setOpsEvents] = useState<OpsEventsResponse | null>(null)
   const [templates, setTemplates] = useState<Record<string, WorkflowTemplate>>({})
   const [reviews, setReviews] = useState<ExecutionReviewItem[]>([])
   const [openReviewCount, setOpenReviewCount] = useState(0)
@@ -144,16 +170,18 @@ export function OpsPage() {
     setLoading(true)
     setError(null)
     try {
-      const [healthResult, hygieneResult, templateResult, reviewResult, repoHealthResult] = await Promise.all([
+      const [healthResult, hygieneResult, templateResult, reviewResult, repoHealthResult, opsEventsResult] = await Promise.all([
         apiFetch<HealthResponse>('/health'),
         apiFetch<RepoHygieneResponse>('/v1/system/repo-hygiene?include_hashes=false&max_files=5000'),
         apiFetch<WorkflowTemplatesResponse>('/v1/workflow-graphs/templates'),
         apiFetch<ExecutionReviewsResponse>('/v1/execution-reviews?limit=50'),
         apiFetch<RepoHealthResponse>(`/v1/system/repo-health?force_refresh=${forceRepoHealth}`).catch(() => null),
+        apiFetch<OpsEventsResponse>('/v1/system/ops-events?limit=30').catch(() => null),
       ])
       setHealth(healthResult)
       setHygiene(hygieneResult)
       setRepoHealth(repoHealthResult)
+      setOpsEvents(opsEventsResult)
       setTemplates(templateResult.templates ?? {})
       setReviews(reviewResult.items ?? [])
       setOpenReviewCount(Number(reviewResult.open_count ?? 0))
@@ -363,6 +391,25 @@ export function OpsPage() {
                 </div>
               ) : (
                 <div className="mt-3 rounded-xl border border-dashed border-white/10 px-3 py-5 text-center text-xs text-slate-600">Repository health is not configured on this HIVE backend yet.</div>
+              )}
+            </section>
+
+            <section className="mt-5 rounded-3xl border border-white/8 bg-[#0a192d]/70 p-5 sm:p-6">
+              <div className="flex items-center justify-between gap-3">
+                <div>
+                  <h3 className="text-base font-semibold text-white">Operational alerts</h3>
+                  <p className="mt-1 text-xs text-slate-500">Central, redacted events from runtime services and deployment watchers.</p>
+                </div>
+                <StatusBadge status={(opsEvents?.items?.some((item) => item.severity === 'critical') ? 'critical' : opsEvents?.items?.length ? 'warning' : 'healthy')} label={`${opsEvents?.count ?? 0} events`} compact />
+              </div>
+              {opsEvents?.items?.length ? (
+                <div className="mt-4 grid gap-2 lg:grid-cols-2">
+                  {opsEvents.items.slice(0, 6).map((item) => (
+                    <OpsEventCard key={item.event_id} item={item} onInspect={() => inspect(item.title || 'Operational event', item, item.summary)} />
+                  ))}
+                </div>
+              ) : (
+                <div className="mt-4 rounded-xl border border-dashed border-white/10 px-3 py-5 text-center text-xs text-slate-600">No operational events are currently recorded.</div>
               )}
             </section>
 
