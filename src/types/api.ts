@@ -262,12 +262,38 @@ export interface RepoHealthProbe {
 export interface RepoHealthItem {
   repo: string
   label?: string
-  category?: 'core_api' | 'frontend' | 'background_api' | 'static_service' | string
+  category?: 'core_api' | 'frontend' | 'background_api' | 'background_worker' | 'static_service' | string
   description?: string
   status: 'healthy' | 'degraded' | 'down' | 'not_configured' | string
   detail?: string
   liveness?: RepoHealthProbe | null
   operational?: RepoHealthProbe | null
+}
+
+export interface OpsEventItem {
+  event_id: string
+  source?: string
+  service?: string
+  environment?: string
+  severity?: 'info' | 'warning' | 'critical' | string
+  event_type?: string
+  title?: string
+  summary?: string
+  status?: string
+  release_id?: string | null
+  occurred_at?: string | null
+  received_at?: string | null
+  url?: string | null
+  details?: Record<string, unknown> | null
+}
+
+export interface OpsEventsResponse {
+  ok: boolean
+  enabled?: boolean
+  persistent_store?: boolean
+  persistent_store_error?: string | null
+  count?: number
+  items?: OpsEventItem[]
 }
 
 export interface RepoHealthResponse {
