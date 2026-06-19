@@ -417,26 +417,26 @@ export function OpsPage() {
               {flags.map((flag) => <Flag key={flag.label} {...flag} />)}
             </section>
 
-            <section className="mt-5 grid grid-cols-2 gap-2 sm:gap-3 lg:grid-cols-4">
-              <button type="button" onClick={() => inspect('Repository hygiene', hygiene)} className="min-w-0 rounded-2xl border border-white/8 bg-[#0a192d]/70 p-4 text-left transition hover:border-cyan-300/20 hover:bg-[#0d2038] sm:p-5">
+            <section className="mt-5 grid grid-cols-2 gap-3">
+              <button type="button" onClick={() => inspect('Repository hygiene', hygiene)} className="rounded-2xl border border-white/8 bg-[#0a192d]/70 p-5 text-left transition hover:border-cyan-300/20 hover:bg-[#0d2038]">
                 <GitBranch className="h-5 w-5 text-cyan-300" />
                 <p className="mt-4 text-2xl font-semibold text-white">{metric(hygiene?.scanned_file_count)}</p>
-                <h3 className="mt-1 text-[0.65rem] font-medium uppercase tracking-[0.1em] text-slate-500 sm:text-xs sm:tracking-[0.14em]">Files scanned</h3>
+                <h3 className="mt-1 text-xs font-medium uppercase tracking-[0.14em] text-slate-500">Files scanned</h3>
               </button>
-              <button type="button" onClick={() => inspect('Duplicate content groups', hygiene?.duplicate_content ?? [])} className="min-w-0 rounded-2xl border border-white/8 bg-[#0a192d]/70 p-4 text-left transition hover:border-cyan-300/20 hover:bg-[#0d2038] sm:p-5">
+              <button type="button" onClick={() => inspect('Duplicate content groups', hygiene?.duplicate_content ?? [])} className="rounded-2xl border border-white/8 bg-[#0a192d]/70 p-5 text-left transition hover:border-cyan-300/20 hover:bg-[#0d2038]">
                 <FileWarning className="h-5 w-5 text-amber-300" />
                 <p className="mt-4 text-2xl font-semibold text-white">{metric(hygiene?.duplicate_content_group_count)}</p>
-                <h3 className="mt-1 text-[0.65rem] font-medium uppercase tracking-[0.1em] text-slate-500 sm:text-xs sm:tracking-[0.14em]">Duplicate groups</h3>
+                <h3 className="mt-1 text-xs font-medium uppercase tracking-[0.14em] text-slate-500">Duplicate groups</h3>
               </button>
-              <button type="button" onClick={() => inspect('Orphan candidates', hygiene?.orphan_candidates ?? [])} className="min-w-0 rounded-2xl border border-white/8 bg-[#0a192d]/70 p-4 text-left transition hover:border-cyan-300/20 hover:bg-[#0d2038] sm:p-5">
+              <button type="button" onClick={() => inspect('Orphan candidates', hygiene?.orphan_candidates ?? [])} className="rounded-2xl border border-white/8 bg-[#0a192d]/70 p-5 text-left transition hover:border-cyan-300/20 hover:bg-[#0d2038]">
                 <XCircle className="h-5 w-5 text-rose-300" />
                 <p className="mt-4 text-2xl font-semibold text-white">{metric(hygiene?.orphan_candidate_count)}</p>
-                <h3 className="mt-1 text-[0.65rem] font-medium uppercase tracking-[0.1em] text-slate-500 sm:text-xs sm:tracking-[0.14em]">Orphan candidates</h3>
+                <h3 className="mt-1 text-xs font-medium uppercase tracking-[0.14em] text-slate-500">Orphan candidates</h3>
               </button>
-              <button type="button" onClick={() => setTab('reviews')} className="min-w-0 rounded-2xl border border-white/8 bg-[#0a192d]/70 p-4 text-left transition hover:border-cyan-300/20 hover:bg-[#0d2038] sm:p-5">
+              <button type="button" onClick={() => setTab('reviews')} className="rounded-2xl border border-white/8 bg-[#0a192d]/70 p-5 text-left transition hover:border-cyan-300/20 hover:bg-[#0d2038]">
                 <ShieldCheck className="h-5 w-5 text-violet-300" />
                 <p className="mt-4 text-2xl font-semibold text-white">{openReviewCount}</p>
-                <h3 className="mt-1 text-[0.65rem] font-medium uppercase tracking-[0.1em] text-slate-500 sm:text-xs sm:tracking-[0.14em]">Open reviews</h3>
+                <h3 className="mt-1 text-xs font-medium uppercase tracking-[0.14em] text-slate-500">Open reviews</h3>
               </button>
             </section>
 
