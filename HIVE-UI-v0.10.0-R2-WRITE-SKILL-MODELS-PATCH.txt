@@ -1,0 +1,19 @@
+HIVE-UI v0.10.0 R2 write, skill and model picker patch
+
+Changes:
+- Model picker now has a model-type dropdown so categories can be selected directly instead of scrolling through the whole list.
+- All model types are selectable, including image, video, audio and infrastructure-style models.
+- Files page sends uploads to the selected writable lane and displays readable R2 keys.
+- File cards now include Preview, View, Download, Chat and Add skill actions.
+- View opens the new backend inline R2 route so supported files can be opened without forced download.
+- Add skill registers an uploaded/selected file into the HIVE skill catalogue via /v1/skills/from-file.
+- Chat empty state now includes direct Files and Skills quick-access buttons.
+
+Verification:
+- npm run verify:lock: passed
+- npm run verify:source: passed
+- npm run test:security: passed
+- npm run typecheck: passed
+- npm run lint: passed
+- npm run build: passed
+- npm run verify:dist: passed
