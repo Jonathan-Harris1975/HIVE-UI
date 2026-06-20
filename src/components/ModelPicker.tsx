@@ -169,6 +169,7 @@ export function ModelPicker({ models, value, onChange, loading = false }: ModelP
         onClick={() => setOpen((current) => !current)}
         aria-expanded={open}
         aria-controls={listId}
+        aria-label="Choose HIVE model"
         className="flex h-8 max-w-[260px] items-center gap-2 rounded-lg border border-white/8 bg-white/[0.035] px-2.5 text-left text-xs text-slate-300 outline-none transition hover:bg-white/[0.055]"
       >
         <BrainCircuit className="h-3.5 w-3.5 shrink-0 text-cyan-300/70" />
@@ -235,16 +236,19 @@ export function ModelPicker({ models, value, onChange, loading = false }: ModelP
                   {groupModels.map((item) => {
                     const active = item.id === value
                     const context = compactContext(item.context_length)
-                    const advisory = item.chat_selectable === false ? stringValue(item.disabled_reason) : null
+                    const chatSelectable = item.chat_selectable !== false
+                    const advisory = chatSelectable ? null : stringValue(item.disabled_reason)
                     return (
                       <button
                         key={item.id}
                         type="button"
                         role="option"
                         aria-selected={active}
-                        title={stringValue(item.description) ?? item.id}
-                        onClick={() => selectModel(item)}
-                        className="group/model flex w-full items-start gap-3 rounded-xl px-3 py-2.5 text-left transition hover:bg-white/[0.045]"
+                        aria-disabled={!chatSelectable}
+                        disabled={!chatSelectable}
+                        title={advisory || stringValue(item.description) || item.id}
+                        onClick={() => { if (chatSelectable) selectModel(item) }}
+                        className={`group/model flex w-full items-start gap-3 rounded-xl px-3 py-2.5 text-left transition ${chatSelectable ? 'hover:bg-white/[0.045]' : 'cursor-not-allowed opacity-70'}`}
                       >
                         <div className="mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-lg border border-white/8 bg-white/[0.035] text-slate-400">
                           <BrainCircuit className="h-3.5 w-3.5" />
@@ -256,13 +260,14 @@ export function ModelPicker({ models, value, onChange, loading = false }: ModelP
                           </div>
                           <p className="mt-0.5 truncate text-[10px] text-slate-400">{item.id}</p>
                           <div className="mt-1.5 flex flex-wrap gap-1">
+                            {!chatSelectable && <span className="rounded bg-amber-300/10 px-1.5 py-0.5 text-[9px] font-semibold uppercase text-amber-100">Discovery only</span>}
                             {item.is_free === true && <span className="rounded bg-emerald-300/8 px-1.5 py-0.5 text-[9px] font-semibold uppercase text-emerald-200">Free</span>}
                             {stringArray(item.configured_roles).slice(0, 3).map((role) => <span key={role} className="rounded bg-cyan-300/7 px-1.5 py-0.5 text-[9px] text-cyan-200/80">{role}</span>)}
                             {context && <span className="rounded bg-white/[0.035] px-1.5 py-0.5 text-[9px] text-slate-400">{context}</span>}
                             {stringArray(item.output_modalities).slice(0, 3).map((mode) => <span key={mode} className="rounded bg-violet-300/7 px-1.5 py-0.5 text-[9px] text-violet-100/75">{mode}</span>)}
                           </div>
                           {advisory && (
-                            <p className="mt-1.5 text-[10px] leading-4 text-amber-100/55">{advisory}</p>
+                            <p className="mt-1.5 text-[10px] leading-4 text-amber-100/75">{advisory}</p>
                           )}
                         </div>
                       </button>

@@ -164,7 +164,7 @@ function SidebarContent({ closeMobile }: { closeMobile?: () => void }) {
       <div className="flex items-center justify-between px-1">
         <HiveLogo size="sm" />
         {closeMobile && (
-          <button type="button" onClick={closeMobile} className="rounded-lg p-2 text-slate-400 hover:bg-white/5 hover:text-white">
+          <button type="button" onClick={closeMobile} aria-label="Close navigation" className="rounded-lg p-2 text-slate-400 hover:bg-white/5 hover:text-white">
             <X className="h-5 w-5" />
           </button>
         )}
@@ -176,6 +176,8 @@ function SidebarContent({ closeMobile }: { closeMobile?: () => void }) {
             key={to}
             to={to}
             onClick={closeMobile}
+            aria-label={label}
+            title={label}
             className={({ isActive }) => `flex items-center justify-center gap-3 rounded-xl px-3 py-2.5 text-sm transition lg:justify-start ${isActive ? 'bg-white/8 text-white' : 'text-slate-400 hover:bg-white/[0.04] hover:text-slate-200'}`}
           >
             <Icon className="h-4.5 w-4.5" />
@@ -211,7 +213,7 @@ function InspectorPanel() {
             <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-cyan-300/80">{payload.eyebrow ?? 'Inspector'}</p>
             <h2 className="mt-1 text-sm font-semibold text-white">{payload.title}</h2>
           </div>
-          <button type="button" onClick={() => setOpen(false)} className="rounded-lg p-2 text-slate-400 hover:bg-white/5 hover:text-white">
+          <button type="button" onClick={() => setOpen(false)} aria-label="Close inspector" className="rounded-lg p-2 text-slate-400 hover:bg-white/5 hover:text-white">
             <PanelRightClose className="h-5 w-5" />
           </button>
         </div>
@@ -274,7 +276,7 @@ export function AppShell() {
         )}
         <header className="flex h-[73px] shrink-0 items-center justify-between border-b border-white/8 bg-[#071426]/85 px-4 backdrop-blur-xl sm:px-6">
           <div className="flex min-w-0 items-center gap-3">
-            <button type="button" onClick={() => setMobileMenuOpen(true)} className="rounded-lg p-2 text-slate-400 hover:bg-white/5 hover:text-white lg:hidden">
+            <button type="button" onClick={() => setMobileMenuOpen(true)} aria-label="Open navigation" className="rounded-lg p-2 text-slate-400 hover:bg-white/5 hover:text-white lg:hidden">
               <Menu className="h-5 w-5" />
             </button>
             <div className="min-w-0">
@@ -291,6 +293,7 @@ export function AppShell() {
               type="button"
               onClick={toggle}
               aria-pressed={open}
+              aria-label={open ? 'Close inspector' : 'Open inspector'}
               className={`rounded-xl border p-2.5 transition ${open ? 'border-cyan-300/30 bg-cyan-300/10 text-cyan-200' : 'border-white/8 bg-white/[0.035] text-slate-400 hover:text-white'}`}
               title="Toggle inspector"
             >
