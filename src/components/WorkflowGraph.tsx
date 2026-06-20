@@ -10,7 +10,7 @@ interface WorkflowGraphProps {
 
 function NodeIcon({ status }: { status?: string }) {
   const value = (status || '').toLowerCase()
-  if (value === 'complete' || value === 'approved') return <CheckCircle2 className="h-4 w-4 text-emerald-300" />
+  if (value === 'complete' || value === 'approved' || value === 'ready_for_execution') return <CheckCircle2 className="h-4 w-4 text-emerald-300" />
   if (value === 'blocked') return <LockKeyhole className="h-4 w-4 text-rose-300" />
   if (value.includes('review')) return <ShieldAlert className="h-4 w-4 text-amber-300" />
   return <CircleDot className="h-4 w-4 text-cyan-300" />

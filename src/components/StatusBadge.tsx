@@ -6,13 +6,13 @@ interface StatusBadgeProps {
 
 function tone(status: string): string {
   const value = status.toLowerCase().replace(/\s+/g, '_')
-  if (['complete', 'completed', 'approved', 'healthy', 'ready', 'ok', 'active'].includes(value)) {
+  if (['complete', 'completed', 'approved', 'healthy', 'ready', 'ready_for_execution', 'ok', 'active'].includes(value)) {
     return 'border-emerald-300/20 bg-emerald-300/8 text-emerald-200'
   }
   if (['blocked', 'rejected', 'failed', 'error', 'high', 'down'].includes(value)) {
     return 'border-rose-300/20 bg-rose-300/8 text-rose-200'
   }
-  if (['review_required', 'pending_review', 'needs_changes', 'medium', 'warning', 'degraded'].includes(value)) {
+  if (['review_required', 'pending_review', 'approved_handoff_pending', 'needs_changes', 'medium', 'warning', 'degraded'].includes(value)) {
     return 'border-amber-300/20 bg-amber-300/8 text-amber-200'
   }
   if (['planned', 'queued', 'readonly', 'low', 'not_configured', 'disabled'].includes(value)) {
