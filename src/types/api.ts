@@ -228,6 +228,35 @@ export interface SkillListResponse {
   error?: string
 }
 
+export interface SkillCleanupCandidate {
+  id?: string
+  title?: string
+  source_id?: string
+  object_key?: string
+  source_lane?: string
+  hive_lane?: string
+  created_at?: string
+  reasons?: string[]
+}
+
+export interface SkillCleanupResponse {
+  ok?: boolean
+  enabled?: boolean
+  dry_run?: boolean
+  checked_count?: number
+  candidate_count?: number
+  deleted_count?: number
+  candidates?: SkillCleanupCandidate[]
+  deleted_ids?: string[]
+  error_code?: string
+  message?: string
+  scope?: string
+  r2_deletes_attempted?: number
+  delete_result?: Record<string, unknown>
+  error?: string
+}
+
+
 export interface WorkflowPreset {
   id?: string
   name?: string
