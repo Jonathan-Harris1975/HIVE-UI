@@ -153,7 +153,7 @@ export function SkillsPage() {
             <div>
               <p className="text-xs font-semibold uppercase tracking-[0.2em] text-cyan-300/70">Shared skill pool</p>
               <h2 className="mt-2 text-2xl font-semibold text-white">Find the right operational capability</h2>
-              <p className="mt-2 max-w-2xl text-sm leading-6 text-slate-500">Search and recommendation are metadata-only and review-gated. Nothing is installed or executed from this screen.</p>
+              <p className="mt-2 max-w-2xl text-sm leading-6 text-slate-400">Search and recommendation are metadata-only and review-gated. Nothing is installed or executed from this screen.</p>
             </div>
             <button type="button" onClick={() => setShowRecommender((value) => !value)} className="flex h-10 items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-cyan-400 to-emerald-300 px-4 text-xs font-semibold text-[#052035]">
               <WandSparkles className="h-4 w-4" /> Recommend for task
@@ -163,7 +163,7 @@ export function SkillsPage() {
           {showRecommender && (
             <form onSubmit={recommend} className="mt-5 rounded-2xl border border-cyan-300/15 bg-cyan-300/[0.035] p-4">
               <label className="text-xs font-medium text-slate-300">Describe the task</label>
-              <textarea value={task} onChange={(event) => setTask(event.target.value)} rows={3} placeholder="For example: review a Koyeb deployment bundle and produce a safe patch plan" className="mt-2 w-full resize-none rounded-xl border border-white/8 bg-[#071426] px-3 py-3 text-sm text-white outline-none placeholder:text-slate-600 focus:border-cyan-300/30" />
+              <textarea value={task} onChange={(event) => setTask(event.target.value)} rows={3} placeholder="For example: review a Koyeb deployment bundle and produce a safe patch plan" className="mt-2 w-full resize-none rounded-xl border border-white/8 bg-[#071426] px-3 py-3 text-sm text-white outline-none placeholder:text-slate-400 focus:border-cyan-300/30" />
               <div className="mt-3 flex justify-end">
                 <button type="submit" disabled={!task.trim() || recommending} className="flex h-9 items-center gap-2 rounded-xl border border-cyan-300/20 bg-cyan-300/10 px-4 text-xs font-medium text-cyan-100 disabled:opacity-50">
                   {recommending ? <LoaderCircle className="h-4 w-4 animate-spin" /> : <Sparkles className="h-4 w-4" />} Generate recommendations
@@ -174,8 +174,8 @@ export function SkillsPage() {
 
           <form onSubmit={searchSkills} className="mt-6 grid gap-2 border-t border-white/8 pt-5 md:grid-cols-[minmax(220px,1fr)_160px_160px_180px_auto]">
             <label className="relative">
-              <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-600" />
-              <input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Search skills" className="h-10 w-full rounded-xl border border-white/8 bg-[#071426] pl-10 pr-3 text-sm text-slate-200 outline-none placeholder:text-slate-600 focus:border-cyan-300/30" />
+              <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+              <input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Search skills" className="h-10 w-full rounded-xl border border-white/8 bg-[#071426] pl-10 pr-3 text-sm text-slate-200 outline-none placeholder:text-slate-400 focus:border-cyan-300/30" />
             </label>
             <select value={repo} onChange={(event) => setRepo(event.target.value)} className="h-10 rounded-xl border border-white/8 bg-[#071426] px-3 text-xs text-slate-300 outline-none">
               <option value="">All repos</option>
@@ -197,9 +197,9 @@ export function SkillsPage() {
 
         <section className="mt-5">
           {loading ? (
-            <div className="flex items-center justify-center py-16 text-slate-500"><LoaderCircle className="mr-2 h-5 w-5 animate-spin" /> Loading skill registry</div>
+            <div className="flex items-center justify-center py-16 text-slate-400"><LoaderCircle className="mr-2 h-5 w-5 animate-spin" /> Loading skill registry</div>
           ) : skills.length === 0 ? (
-            <div className="rounded-3xl border border-dashed border-white/10 py-16 text-center text-slate-600"><BrainCircuit className="mx-auto h-9 w-9" /><p className="mt-3 text-sm">No skills match the current query.</p></div>
+            <div className="rounded-3xl border border-dashed border-white/10 py-16 text-center text-slate-400"><BrainCircuit className="mx-auto h-9 w-9" /><p className="mt-3 text-sm">No skills match the current query.</p></div>
           ) : (
             <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
               {skills.map((skill, index) => {
@@ -220,8 +220,8 @@ export function SkillsPage() {
                         </div>
                       </div>
                       <h3 className="mt-4 text-sm font-semibold text-white">{title}</h3>
-                      <p className="mt-2 line-clamp-3 min-h-[60px] text-xs leading-5 text-slate-500">{String(skill.description || metadata.description || 'No description supplied.')}</p>
-                      <div className="mt-4 flex flex-wrap gap-1.5 border-t border-white/6 pt-3 text-[10px] text-slate-600">
+                      <p className="mt-2 line-clamp-3 min-h-[60px] text-xs leading-5 text-slate-400">{String(skill.description || metadata.description || 'No description supplied.')}</p>
+                      <div className="mt-4 flex flex-wrap gap-1.5 border-t border-white/6 pt-3 text-[10px] text-slate-400">
                         <span>{field(skill, 'repo', 'Shared')}</span><span>·</span><span>{field(skill, 'hive_lane', field(skill, 'lane', 'General'))}</span>
                       </div>
                     </button>

@@ -57,7 +57,7 @@ function Flag({ label, active, detail, icon: Icon }: FlagProps) {
         </div>
         <div className="min-w-0 flex-1">
           <h3 className="truncate text-xs font-semibold text-white">{label}</h3>
-          <p className="mt-0.5 truncate text-[10px] text-slate-500" title={detail}>{detail}</p>
+          <p className="mt-0.5 truncate text-[10px] text-slate-400" title={detail}>{detail}</p>
         </div>
         <StatusBadge status={active ? 'healthy' : 'warning'} compact />
       </div>
@@ -94,13 +94,13 @@ function RepoHealthCard({ item, onInspect }: { item: RepoHealthItem; onInspect: 
         <div className="min-w-0 flex-1">
           <div className="flex items-center gap-1.5">
             <h4 className="truncate text-xs font-semibold text-white">{item.label || item.repo}</h4>
-            <span className="truncate text-[9px] uppercase tracking-[0.12em] text-slate-600">{category}</span>
+            <span className="truncate text-[9px] uppercase tracking-[0.12em] text-slate-400">{category}</span>
           </div>
-          <p className="mt-0.5 truncate text-[10px] text-slate-500" title={item.detail || item.description}>{item.detail || item.description || 'No health detail returned.'}</p>
+          <p className="mt-0.5 truncate text-[10px] text-slate-400" title={item.detail || item.description}>{item.detail || item.description || 'No health detail returned.'}</p>
         </div>
         <StatusBadge status={item.status} compact />
       </div>
-      <div className="mt-2 flex items-center gap-2 text-[9px] text-slate-600">
+      <div className="mt-2 flex items-center gap-2 text-[9px] text-slate-400">
         <span>{typeof latency === 'number' ? `${latency} ms` : 'No latency'}</span>
         {operationalStatus && <span>Operational: {operationalStatus.replace(/_/g, ' ')}</span>}
       </div>
@@ -120,8 +120,8 @@ function OpsEventCard({ item, onInspect }: { item: OpsEventItem; onInspect: () =
             <h4 className="truncate text-xs font-semibold text-white">{item.title || item.event_type || 'Operational event'}</h4>
             <StatusBadge status={severity} compact />
           </div>
-          <p className="mt-1 line-clamp-2 text-[11px] leading-5 text-slate-500">{item.summary || 'No event summary returned.'}</p>
-          <p className="mt-2 text-[9px] uppercase tracking-[0.12em] text-slate-600">{item.service || 'unknown service'} · {formatDate(item.occurred_at || item.received_at)}</p>
+          <p className="mt-1 line-clamp-2 text-[11px] leading-5 text-slate-400">{item.summary || 'No event summary returned.'}</p>
+          <p className="mt-2 text-[9px] uppercase tracking-[0.12em] text-slate-400">{item.service || 'unknown service'} · {formatDate(item.occurred_at || item.received_at)}</p>
         </div>
       </div>
     </button>
@@ -382,7 +382,7 @@ export function OpsPage() {
           <div>
             <p className="text-xs font-semibold uppercase tracking-[0.2em] text-cyan-300/70">Control plane</p>
             <h2 className="mt-2 text-2xl font-semibold text-white">Operational health and controlled workflow planning</h2>
-            <p className="mt-2 text-sm text-slate-500">Build {health?.build ?? 'unknown'} · {health?.env ?? 'environment unknown'} · {executionAdapterSummary}</p>
+            <p className="mt-2 text-sm text-slate-400">Build {health?.build ?? 'unknown'} · {health?.env ?? 'environment unknown'} · {executionAdapterSummary}</p>
           </div>
           <button type="button" onClick={() => void loadOps(true)} className="flex h-10 items-center justify-center gap-2 rounded-xl border border-white/8 bg-white/[0.04] px-4 text-xs text-slate-300 hover:bg-white/[0.07]">
             <RefreshCw className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`} /> Refresh status
@@ -391,7 +391,7 @@ export function OpsPage() {
 
         <div className="mt-4 flex gap-1 overflow-x-auto rounded-2xl border border-white/8 bg-[#071426] p-1.5">
           {tabs.map((item) => (
-            <button key={item.id} type="button" onClick={() => setTab(item.id)} className={`whitespace-nowrap rounded-xl px-4 py-2 text-xs font-medium transition ${tab === item.id ? 'bg-cyan-300/10 text-cyan-100' : 'text-slate-500 hover:bg-white/[0.04] hover:text-slate-300'}`}>
+            <button key={item.id} type="button" onClick={() => setTab(item.id)} className={`whitespace-nowrap rounded-xl px-4 py-2 text-xs font-medium transition ${tab === item.id ? 'bg-cyan-300/10 text-cyan-100' : 'text-slate-400 hover:bg-white/[0.04] hover:text-slate-300'}`}>
               {item.label}
             </button>
           ))}
@@ -400,14 +400,14 @@ export function OpsPage() {
         {error && <div className="mt-4 rounded-xl border border-rose-400/20 bg-rose-400/8 px-4 py-3 text-sm text-rose-200">{error}</div>}
 
         {loading && !health ? (
-          <div className="flex items-center justify-center py-20 text-slate-500"><LoaderCircle className="mr-2 h-5 w-5 animate-spin" /> Loading operational state</div>
+          <div className="flex items-center justify-center py-20 text-slate-400"><LoaderCircle className="mr-2 h-5 w-5 animate-spin" /> Loading operational state</div>
         ) : tab === 'overview' ? (
           <>
             <section className="mt-5 rounded-2xl border border-white/8 bg-[#0a192d]/60 p-3 sm:p-4">
               <div className="flex items-center justify-between gap-3">
                 <div>
                   <h3 className="text-sm font-semibold text-white">Repository and service health</h3>
-                  <p className="mt-0.5 text-[10px] text-slate-500">Liveness plus operational readiness for background APIs where available.</p>
+                  <p className="mt-0.5 text-[10px] text-slate-400">Liveness plus operational readiness for background APIs where available.</p>
                 </div>
                 <StatusBadge status={repoHealth?.overall_status || 'not_configured'} compact />
               </div>
@@ -418,7 +418,7 @@ export function OpsPage() {
                   ))}
                 </div>
               ) : (
-                <div className="mt-3 rounded-xl border border-dashed border-white/10 px-3 py-5 text-center text-xs text-slate-600">Repository health is not configured on this HIVE backend yet.</div>
+                <div className="mt-3 rounded-xl border border-dashed border-white/10 px-3 py-5 text-center text-xs text-slate-400">Repository health is not configured on this HIVE backend yet.</div>
               )}
             </section>
 
@@ -426,7 +426,7 @@ export function OpsPage() {
               <div className="flex items-center justify-between gap-3">
                 <div>
                   <h3 className="text-base font-semibold text-white">Operational alerts</h3>
-                  <p className="mt-1 text-xs text-slate-500">Central, redacted events from runtime services and deployment watchers.</p>
+                  <p className="mt-1 text-xs text-slate-400">Central, redacted events from runtime services and deployment watchers.</p>
                 </div>
                 <StatusBadge status={(opsEvents?.items?.some((item) => item.severity === 'critical') ? 'critical' : opsEvents?.items?.length ? 'warning' : 'healthy')} label={`${opsEvents?.count ?? 0} events`} compact />
               </div>
@@ -437,7 +437,7 @@ export function OpsPage() {
                   ))}
                 </div>
               ) : (
-                <div className="mt-4 rounded-xl border border-dashed border-white/10 px-3 py-5 text-center text-xs text-slate-600">No operational events are currently recorded.</div>
+                <div className="mt-4 rounded-xl border border-dashed border-white/10 px-3 py-5 text-center text-xs text-slate-400">No operational events are currently recorded.</div>
               )}
             </section>
 
@@ -449,22 +449,22 @@ export function OpsPage() {
               <button type="button" onClick={() => inspect('Repository hygiene', hygiene)} className="rounded-2xl border border-white/8 bg-[#0a192d]/70 p-5 text-left transition hover:border-cyan-300/20 hover:bg-[#0d2038]">
                 <GitBranch className="h-5 w-5 text-cyan-300" />
                 <p className="mt-4 text-2xl font-semibold text-white">{metric(hygiene?.scanned_file_count)}</p>
-                <h3 className="mt-1 text-xs font-medium uppercase tracking-[0.14em] text-slate-500">Files scanned</h3>
+                <h3 className="mt-1 text-xs font-medium uppercase tracking-[0.14em] text-slate-400">Files scanned</h3>
               </button>
               <button type="button" onClick={() => inspect('Duplicate content groups', hygiene?.duplicate_content ?? [])} className="rounded-2xl border border-white/8 bg-[#0a192d]/70 p-5 text-left transition hover:border-cyan-300/20 hover:bg-[#0d2038]">
                 <FileWarning className="h-5 w-5 text-amber-300" />
                 <p className="mt-4 text-2xl font-semibold text-white">{metric(hygiene?.duplicate_content_group_count)}</p>
-                <h3 className="mt-1 text-xs font-medium uppercase tracking-[0.14em] text-slate-500">Duplicate groups</h3>
+                <h3 className="mt-1 text-xs font-medium uppercase tracking-[0.14em] text-slate-400">Duplicate groups</h3>
               </button>
               <button type="button" onClick={() => inspect('Orphan candidates', hygiene?.orphan_candidates ?? [])} className="rounded-2xl border border-white/8 bg-[#0a192d]/70 p-5 text-left transition hover:border-cyan-300/20 hover:bg-[#0d2038]">
                 <XCircle className="h-5 w-5 text-rose-300" />
                 <p className="mt-4 text-2xl font-semibold text-white">{metric(hygiene?.orphan_candidate_count)}</p>
-                <h3 className="mt-1 text-xs font-medium uppercase tracking-[0.14em] text-slate-500">Orphan candidates</h3>
+                <h3 className="mt-1 text-xs font-medium uppercase tracking-[0.14em] text-slate-400">Orphan candidates</h3>
               </button>
               <button type="button" onClick={() => setTab('reviews')} className="rounded-2xl border border-white/8 bg-[#0a192d]/70 p-5 text-left transition hover:border-cyan-300/20 hover:bg-[#0d2038]">
                 <ShieldCheck className="h-5 w-5 text-violet-300" />
                 <p className="mt-4 text-2xl font-semibold text-white">{openReviewCount}</p>
-                <h3 className="mt-1 text-xs font-medium uppercase tracking-[0.14em] text-slate-500">Open reviews</h3>
+                <h3 className="mt-1 text-xs font-medium uppercase tracking-[0.14em] text-slate-400">Open reviews</h3>
               </button>
             </section>
 
@@ -472,7 +472,7 @@ export function OpsPage() {
               <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
                 <div>
                   <h3 className="text-base font-semibold text-white">Workflow templates</h3>
-                  <p className="mt-1 text-xs text-slate-500">Planning presets exposed by the backend. They build graphs but do not execute tools.</p>
+                  <p className="mt-1 text-xs text-slate-300">Planning presets exposed by the backend. They build graphs but do not execute tools.</p>
                 </div>
                 <button type="button" onClick={() => setTab('workflow')} className="flex h-9 items-center justify-center gap-2 rounded-xl border border-cyan-300/20 bg-cyan-300/8 px-3 text-xs text-cyan-100">
                   <Sparkles className="h-4 w-4" /> Open workflow lab
@@ -486,7 +486,7 @@ export function OpsPage() {
                       {item.free_tier_safe && <StatusBadge status="ready" label="Free-tier safe" compact />}
                     </div>
                     <h4 className="mt-4 text-sm font-semibold text-white">{item.label || id}</h4>
-                    <p className="mt-2 text-xs leading-5 text-slate-500">{item.description || 'Workflow planning template.'}</p>
+                    <p className="mt-2 text-xs leading-5 text-slate-400">{item.description || 'Workflow planning template.'}</p>
                   </button>
                 ))}
               </div>
@@ -511,7 +511,7 @@ export function OpsPage() {
                   </select>
                 </label>
                 <label className="text-xs font-medium text-slate-400">Workflow preset
-                  <input value={workflowPreset} onChange={(event) => setWorkflowPreset(event.target.value)} placeholder="Optional preset" className="mt-2 h-10 w-full rounded-xl border border-white/8 bg-[#071426] px-3 text-sm text-slate-300 outline-none placeholder:text-slate-600" />
+                  <input value={workflowPreset} onChange={(event) => setWorkflowPreset(event.target.value)} placeholder="Optional preset" className="mt-2 h-10 w-full rounded-xl border border-white/8 bg-[#071426] px-3 text-sm text-slate-300 outline-none placeholder:text-slate-400" />
                 </label>
                 <label className="text-xs font-medium text-slate-400">Approval state
                   <select value={approvalState} onChange={(event) => setApprovalState(event.target.value)} className="mt-2 h-10 w-full rounded-xl border border-white/8 bg-[#071426] px-3 text-sm text-slate-300 outline-none">
@@ -530,7 +530,7 @@ export function OpsPage() {
                   {savingReview ? <LoaderCircle className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />} Save to review queue
                 </button>
               </div>
-              <p className="mt-4 text-[11px] leading-5 text-slate-600">This screen builds plans, previews and review records. Approved plans can move to an allow-listed production handoff; operator-triggered execution stays separate from the approval click.</p>
+              <p className="mt-4 text-[11px] leading-5 text-slate-400">This screen builds plans, previews and review records. Approved plans can move to an allow-listed production handoff; operator-triggered execution stays separate from the approval click.</p>
             </form>
 
             <div className="space-y-5">
@@ -539,7 +539,7 @@ export function OpsPage() {
                   <div>
                     <p className="text-xs font-semibold uppercase tracking-[0.2em] text-emerald-300/70">Workflow graph</p>
                     <h3 className="mt-2 text-lg font-semibold text-white">{graph?.template ? templates[graph.template]?.label || graph.template : 'No graph built yet'}</h3>
-                    {graph?.risk_summary && <p className="mt-1 text-xs text-slate-500">Highest candidate risk: {String(graph.risk_summary.highest_risk || 'unknown')}</p>}
+                    {graph?.risk_summary && <p className="mt-1 text-xs text-slate-400">Highest candidate risk: {String(graph.risk_summary.highest_risk || 'unknown')}</p>}
                   </div>
                   {graph && <StatusBadge status={graph.requires_approval ? 'review_required' : 'planned'} />}
                 </div>
@@ -564,7 +564,7 @@ export function OpsPage() {
                       <button key={step.node_id} type="button" onClick={() => inspect(step.label || step.node_id, step, step.summary)} className="grid w-full gap-3 rounded-2xl border border-white/8 bg-[#071426] p-4 text-left sm:grid-cols-[minmax(0,1fr)_auto] sm:items-center">
                         <span>
                           <span className="block text-sm font-medium text-white">{step.label || step.node_id}</span>
-                          <span className="mt-1 block text-xs leading-5 text-slate-500">{step.summary || step.blocker || 'No additional detail.'}</span>
+                          <span className="mt-1 block text-xs leading-5 text-slate-400">{step.summary || step.blocker || 'No additional detail.'}</span>
                         </span>
                         <StatusBadge status={step.status} compact />
                       </button>
@@ -580,17 +580,17 @@ export function OpsPage() {
               <div>
                 <p className="text-xs font-semibold uppercase tracking-[0.2em] text-violet-300/70">Human gate</p>
                 <h3 className="mt-2 text-lg font-semibold text-white">Execution review queue</h3>
-                <p className="mt-1 text-xs text-slate-500">Approval marks an allow-listed production handoff as ready when backend execution adapters are enabled. It does not auto-run repository mutations or background jobs.</p>
+                <p className="mt-1 text-xs text-slate-300">Approval marks an allow-listed production handoff as ready when backend execution adapters are enabled. It does not auto-run repository mutations or background jobs.</p>
               </div>
               <button type="button" onClick={() => void loadOps()} className="flex h-9 items-center justify-center gap-2 rounded-xl border border-white/8 bg-white/[0.035] px-3 text-xs text-slate-300"><RefreshCw className="h-4 w-4" /> Refresh queue</button>
             </div>
 
             {reviews.length === 0 ? (
-              <div className="mt-5 rounded-2xl border border-dashed border-white/10 py-14 text-center text-sm text-slate-600">No execution review records are stored.</div>
+              <div className="mt-5 rounded-2xl border border-dashed border-white/10 py-14 text-center text-sm text-slate-400">No execution review records are stored.</div>
             ) : (
               <div className="mt-5 overflow-x-auto rounded-2xl border border-white/8">
                 <table className="w-full min-w-[900px] border-collapse text-left">
-                  <thead className="bg-[#071426] text-[10px] uppercase tracking-[0.14em] text-slate-600">
+                  <thead className="bg-[#071426] text-[10px] uppercase tracking-[0.14em] text-slate-400">
                     <tr>
                       <th className="px-4 py-3 font-medium">Task</th>
                       <th className="px-4 py-3 font-medium">Repo</th>
@@ -609,13 +609,13 @@ export function OpsPage() {
                           <td className="max-w-[420px] px-4 py-4">
                             <button type="button" onClick={() => inspect('Execution review', review, id)} className="text-left">
                               <span className="block text-sm font-medium text-white">{reviewTitle(review)}</span>
-                              <span className="mt-1 block text-[11px] text-slate-600">{id}</span>
+                              <span className="mt-1 block text-[11px] text-slate-400">{id}</span>
                             </button>
                           </td>
                           <td className="px-4 py-4 text-xs text-slate-400">{review.repo || 'Shared'}</td>
                           <td className="px-4 py-4"><StatusBadge status={review.status} compact /></td>
                           <td className="px-4 py-4"><StatusBadge status={reviewExecutionStatus(review)} compact /></td>
-                          <td className="px-4 py-4 text-xs text-slate-500">{formatDate(review.updated_at || review.created_at)}</td>
+                          <td className="px-4 py-4 text-xs text-slate-400">{formatDate(review.updated_at || review.created_at)}</td>
                           <td className="px-4 py-3">
                             <div className="flex flex-wrap gap-1.5">
                               <button type="button" disabled={busy} onClick={() => void openEvidence(review)} className="rounded-lg border border-white/8 bg-white/[0.035] px-2.5 py-1.5 text-[10px] text-slate-300 disabled:opacity-40">Evidence</button>
@@ -623,7 +623,7 @@ export function OpsPage() {
                               <button type="button" disabled={busy} onClick={() => void decideReview(review, 'needs_changes')} className="rounded-lg border border-amber-300/15 bg-amber-300/7 px-2.5 py-1.5 text-[10px] text-amber-200 disabled:opacity-40">Needs changes</button>
                               <button type="button" disabled={busy} onClick={() => void decideReview(review, 'rejected')} className="rounded-lg border border-rose-300/15 bg-rose-300/7 px-2.5 py-1.5 text-[10px] text-rose-200 disabled:opacity-40">Reject</button>
                             </div>
-                            {busy && <span className="mt-2 flex items-center gap-1.5 text-[10px] text-slate-600"><LoaderCircle className="h-3 w-3 animate-spin" /> Updating review</span>}
+                            {busy && <span className="mt-2 flex items-center gap-1.5 text-[10px] text-slate-400"><LoaderCircle className="h-3 w-3 animate-spin" /> Updating review</span>}
                           </td>
                         </tr>
                       )

@@ -293,7 +293,7 @@ export function ChatPage() {
       <div ref={scrollRef} onScroll={handleScroll} className="min-h-0 flex-1 overflow-y-auto">
         <div className="mx-auto flex min-h-full w-full max-w-4xl flex-col px-4 pb-6 pt-5 sm:px-8">
           {conversationLoading ? (
-            <div className="flex flex-1 items-center justify-center text-slate-500">
+            <div className="flex flex-1 items-center justify-center text-slate-400">
               <LoaderCircle className="mr-2 h-5 w-5 animate-spin" /> Loading conversation
             </div>
           ) : messages.length === 0 ? (
@@ -304,7 +304,7 @@ export function ChatPage() {
               </div>
               <p className="mt-7 text-xs font-semibold uppercase tracking-[0.24em] text-cyan-300/80">Shared intelligence layer</p>
               <h2 className="mt-3 text-3xl font-semibold tracking-tight text-white">What are we solving?</h2>
-              <p className="mt-3 max-w-xl text-sm leading-6 text-slate-500">
+              <p className="mt-3 max-w-xl text-sm leading-6 text-slate-300">
                 Auto route chooses the safest configured model policy. Select a specialist mode when you need tighter control.
               </p>
               <div className="mt-8 grid w-full max-w-2xl gap-3 sm:grid-cols-3">
@@ -371,7 +371,7 @@ export function ChatPage() {
               onKeyDown={handleKeyDown}
               placeholder={attachedFile ? 'Ask about the attached file…' : 'Message HIVE…'}
               aria-label={attachedFile ? 'Ask about the attached file' : 'Message HIVE'}
-              className="block min-h-12 max-h-[180px] w-full resize-none bg-transparent px-3 py-3 text-sm leading-6 text-white outline-none placeholder:text-slate-600"
+              className="block min-h-12 max-h-[180px] w-full resize-none bg-transparent px-3 py-3 text-sm leading-6 text-white outline-none placeholder:text-slate-400"
             />
             <div className="flex flex-wrap items-center justify-between gap-2 border-t border-white/6 px-1 pt-2">
               <div className="flex min-w-0 flex-wrap items-center gap-1.5">
@@ -383,7 +383,7 @@ export function ChatPage() {
                   >
                     {modeOptions.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}
                   </select>
-                  <ChevronDown className="pointer-events-none absolute right-2 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-slate-600" />
+                  <ChevronDown className="pointer-events-none absolute right-2 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-slate-400" />
                 </label>
                 <ModelPicker models={models} value={model} onChange={setModel} loading={modelsLoading} />
                 {attachedFile && workflowPresets.length > 0 && (
@@ -396,7 +396,7 @@ export function ChatPage() {
                       <option value="">No workflow preset</option>
                       {workflowPresets.map((item) => <option key={String(item.name)} value={String(item.name)}>{item.label || item.name}</option>)}
                     </select>
-                    <ChevronDown className="pointer-events-none absolute right-2 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-slate-600" />
+                    <ChevronDown className="pointer-events-none absolute right-2 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-slate-400" />
                   </label>
                 )}
               </div>
@@ -416,7 +416,7 @@ export function ChatPage() {
               )}
             </div>
           </div>
-          <p className="mt-2 text-center text-[10px] text-slate-700">
+          <p className="mt-2 text-center text-[10px] text-slate-400">
             Enter sends · Shift + Enter adds a line
             {conversationUsage.tokens > 0 && <> · {conversationUsage.tokens.toLocaleString()} tokens · {formatCost(conversationUsage.cost)}</>}
           </p>
