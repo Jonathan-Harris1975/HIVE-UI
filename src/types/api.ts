@@ -104,6 +104,8 @@ export interface ChatRequestPayload {
   model?: string | null
   temperature?: number
   max_tokens?: number
+  skill_id?: string | null
+  skill_title?: string | null
   conversation_id?: string | null
   use_persisted_history?: boolean
   db_history_limit?: number
@@ -195,6 +197,7 @@ export interface FileChatResponse {
   source_citation?: SourceCitation
   source_chunks?: Array<Record<string, unknown>>
   retrieval_summary?: Record<string, unknown> | string | null
+  selected_skill?: Record<string, unknown> | null
   db_recorded?: boolean
   db_error?: string | null
   message?: string
@@ -233,17 +236,6 @@ export interface WorkflowPreset {
   [key: string]: unknown
 }
 
-export interface ExecutionAdapterPolicy {
-  enabled?: boolean
-  mode?: string
-  requires_approval?: boolean
-  allowlist_count?: number
-  can_execute_after_approval?: boolean
-  note?: string
-  allowlist?: Array<Record<string, unknown>>
-  [key: string]: unknown
-}
-
 export interface HealthResponse {
   ok: boolean
   build?: string
@@ -256,8 +248,6 @@ export interface HealthResponse {
   vectorize_configured?: boolean
   embeddings_configured?: boolean
   d1_configured?: boolean
-  execution_adapters_enabled?: boolean
-  execution_adapter_policy?: ExecutionAdapterPolicy
   storage_flags?: Record<string, unknown>
   [key: string]: unknown
 }
@@ -441,10 +431,6 @@ export interface ExecutionReviewItem {
   updated_at?: string
   can_execute_now?: boolean
   requires_approval?: boolean
-  adapter_execution_enabled?: boolean
-  execution_state?: string
-  execution_mode?: string
-  execution_adapter_policy?: ExecutionAdapterPolicy
   [key: string]: unknown
 }
 
