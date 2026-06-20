@@ -166,4 +166,4 @@ GET  /v1/execution-reviews/{id}/evidence
 POST /v1/execution-reviews/{id}/decision
 ```
 
-The UI creates plans, previews and review decisions only. It does not enable live execution adapters or mutate repositories.
+The UI creates plans, previews and review decisions. When the backend reports `execution_adapters_enabled:true`, an approved review can move to an allow-listed production handoff; approval still does not auto-run repository mutations or background jobs.

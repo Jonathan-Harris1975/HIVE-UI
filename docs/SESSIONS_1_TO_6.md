@@ -37,7 +37,7 @@
 - HIVE health and configuration flags.
 - Repository hygiene reports.
 - Workflow graph building.
-- Controlled execution previews and step blockers.
+- Controlled execution previews, step blockers and approved adapter handoff readiness.
 - Review queue, evidence packs and review decisions.
 - Plan and review metadata only, with no implicit live execution.
 

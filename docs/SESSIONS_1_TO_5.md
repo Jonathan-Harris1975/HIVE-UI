@@ -49,4 +49,4 @@ The browser never receives the HIVE backend admin token. Cloudflare Pages Functi
 
 ## Execution boundary
 
-The Ops interface is plan-only. Approval decisions update review metadata but do not enable adapters or live execution.
+The Ops interface is review-gated. Approval decisions update review metadata and can surface an approved, allow-listed production handoff when the backend adapter policy is enabled.
