@@ -140,6 +140,20 @@ function reviewTitle(review: ExecutionReviewItem): string {
   return String(review.task || review.title || reviewId(review) || 'Execution review')
 }
 
+function recordValue(value: unknown): Record<string, unknown> {
+  return value && typeof value === 'object' && !Array.isArray(value) ? value as Record<string, unknown> : {}
+}
+
+function stringFrom(value: unknown): string | null {
+  return typeof value === 'string' && value.trim() ? value : null
+}
+
+function reviewExecutionStatus(review: ExecutionReviewItem): string {
+  if (review.can_execute_now) return 'ready_for_execution'
+  if (review.adapter_execution_enabled && review.status === 'approved') return 'approved_handoff_pending'
+  return review.status || 'pending_review'
+}
+
 export function OpsPage() {
   const { refreshHealth } = useAuth()
   const { setPayload, setOpen } = useInspector()
@@ -197,6 +211,21 @@ export function OpsPage() {
     void loadOps(false)
   }, [loadOps])
 
+  const templateEntries = useMemo(() => Object.entries(templates), [templates])
+  const adapterPolicy = useMemo(() => recordValue(health?.execution_adapter_policy), [health])
+  const executionAdaptersEnabled = Boolean(health?.execution_adapters_enabled ?? adapterPolicy.enabled)
+  const executionAdaptersRequireApproval = Boolean(adapterPolicy.requires_approval ?? true)
+  const executionAdapterDetail = stringFrom(adapterPolicy.note) ?? (executionAdaptersEnabled
+    ? 'Execution adapters are available for approved, allow-listed production handoffs'
+    : 'Execution adapters are disabled by backend configuration')
+  const executionAdapterSummary = health
+    ? executionAdaptersEnabled
+      ? executionAdaptersRequireApproval
+        ? 'execution adapters ready after approval'
+        : 'execution adapters ready'
+      : 'execution adapters disabled by config'
+    : 'execution adapter status loading'
+
   const flags: FlagProps[] = [
     { label: 'OpenRouter', active: Boolean(health?.openrouter_configured), detail: 'Model gateway and routing policy', icon: Network },
     { label: 'SQL persistence', active: Boolean(health?.database_configured), detail: health?.database_dialect ? `${health.database_dialect} conversation store` : 'Conversation database is not configured', icon: Database },
@@ -204,9 +233,8 @@ export function OpsPage() {
     { label: 'Vector retrieval', active: Boolean(health?.vectorize_configured), detail: 'Semantic file and chunk retrieval', icon: GitBranch },
     { label: 'Embeddings', active: Boolean(health?.embeddings_configured), detail: 'Vector generation provider', icon: Activity },
     { label: 'D1 metadata', active: Boolean(health?.d1_configured), detail: 'Skills, previews and execution-review indexes', icon: ShieldCheck },
+    { label: 'Execution adapters', active: executionAdaptersEnabled, detail: executionAdapterDetail, icon: PlayCircle },
   ]
-
-  const templateEntries = useMemo(() => Object.entries(templates), [templates])
 
   function inspect(title: string, value: unknown, description = 'Read-only operational data from the HIVE backend.') {
     setPayload({ eyebrow: 'Operations', title, description, json: value })
@@ -354,7 +382,7 @@ export function OpsPage() {
           <div>
             <p className="text-xs font-semibold uppercase tracking-[0.2em] text-cyan-300/70">Control plane</p>
             <h2 className="mt-2 text-2xl font-semibold text-white">Operational health and controlled workflow planning</h2>
-            <p className="mt-2 text-sm text-slate-500">Build {health?.build ?? 'unknown'} · {health?.env ?? 'environment unknown'} · execution adapters remain disabled</p>
+            <p className="mt-2 text-sm text-slate-500">Build {health?.build ?? 'unknown'} · {health?.env ?? 'environment unknown'} · {executionAdapterSummary}</p>
           </div>
           <button type="button" onClick={() => void loadOps(true)} className="flex h-10 items-center justify-center gap-2 rounded-xl border border-white/8 bg-white/[0.04] px-4 text-xs text-slate-300 hover:bg-white/[0.07]">
             <RefreshCw className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`} /> Refresh status
@@ -502,7 +530,7 @@ export function OpsPage() {
                   {savingReview ? <LoaderCircle className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />} Save to review queue
                 </button>
               </div>
-              <p className="mt-4 text-[11px] leading-5 text-slate-600">This screen only builds plans, previews and review records. It cannot run skills, mutate repositories or start background jobs.</p>
+              <p className="mt-4 text-[11px] leading-5 text-slate-600">This screen builds plans, previews and review records. Approved plans can move to an allow-listed production handoff; operator-triggered execution stays separate from the approval click.</p>
             </form>
 
             <div className="space-y-5">
@@ -525,7 +553,11 @@ export function OpsPage() {
                       <p className="text-xs font-semibold uppercase tracking-[0.2em] text-violet-300/70">Execution preview</p>
                       <h3 className="mt-2 text-lg font-semibold text-white">Step statuses</h3>
                     </div>
-                    <div className="flex gap-2"><StatusBadge status={preview.approval_state} /><StatusBadge status="blocked" label={`${preview.blocked_count ?? 0} blocked`} /></div>
+                    <div className="flex flex-wrap gap-2">
+                      <StatusBadge status={preview.approval_state} />
+                      <StatusBadge status={preview.can_execute_now ? 'ready_for_execution' : (preview.blocked_count ?? 0) > 0 ? 'blocked' : 'pending_review'} label={preview.can_execute_now ? 'Ready for handoff' : `${preview.blocked_count ?? 0} blocked`} />
+                      <StatusBadge status={preview.adapter_execution_enabled ? 'active' : 'disabled'} label={preview.adapter_execution_enabled ? 'Adapters enabled' : 'Adapters disabled'} />
+                    </div>
                   </div>
                   <div className="mt-5 space-y-2">
                     {(preview.step_statuses ?? []).map((step) => (
@@ -548,7 +580,7 @@ export function OpsPage() {
               <div>
                 <p className="text-xs font-semibold uppercase tracking-[0.2em] text-violet-300/70">Human gate</p>
                 <h3 className="mt-2 text-lg font-semibold text-white">Execution review queue</h3>
-                <p className="mt-1 text-xs text-slate-500">Decisions update the review record only. Approval still does not enable execution adapters.</p>
+                <p className="mt-1 text-xs text-slate-500">Approval marks an allow-listed production handoff as ready when backend execution adapters are enabled. It does not auto-run repository mutations or background jobs.</p>
               </div>
               <button type="button" onClick={() => void loadOps()} className="flex h-9 items-center justify-center gap-2 rounded-xl border border-white/8 bg-white/[0.035] px-3 text-xs text-slate-300"><RefreshCw className="h-4 w-4" /> Refresh queue</button>
             </div>
@@ -563,6 +595,7 @@ export function OpsPage() {
                       <th className="px-4 py-3 font-medium">Task</th>
                       <th className="px-4 py-3 font-medium">Repo</th>
                       <th className="px-4 py-3 font-medium">Status</th>
+                      <th className="px-4 py-3 font-medium">Execution</th>
                       <th className="px-4 py-3 font-medium">Updated</th>
                       <th className="px-4 py-3 font-medium">Actions</th>
                     </tr>
@@ -581,6 +614,7 @@ export function OpsPage() {
                           </td>
                           <td className="px-4 py-4 text-xs text-slate-400">{review.repo || 'Shared'}</td>
                           <td className="px-4 py-4"><StatusBadge status={review.status} compact /></td>
+                          <td className="px-4 py-4"><StatusBadge status={reviewExecutionStatus(review)} compact /></td>
                           <td className="px-4 py-4 text-xs text-slate-500">{formatDate(review.updated_at || review.created_at)}</td>
                           <td className="px-4 py-3">
                             <div className="flex flex-wrap gap-1.5">
