@@ -74,6 +74,8 @@ export function ChatPage() {
   const [searchParams, setSearchParams] = useSearchParams()
   const attachedFile = searchParams.get('file')
   const attachedLane = searchParams.get('lane') || 'uploads'
+  const attachedSkillId = searchParams.get('skill_id')
+  const attachedSkillTitle = searchParams.get('skill_title')
   const draft = searchParams.get('draft')
   const [prompt, setPrompt] = useState('')
   const [mode, setMode] = useState<ChatMode>(attachedFile ? 'file_analysis' : 'auto')
@@ -127,6 +129,8 @@ export function ChatPage() {
     next.delete('file')
     next.delete('name')
     next.delete('lane')
+    next.delete('skill_id')
+    next.delete('skill_title')
     setSearchParams(next, { replace: true })
     setMode('auto')
     setWorkflowPreset('')
@@ -214,6 +218,8 @@ export function ChatPage() {
       use_persisted_history: true,
       db_history_limit: 40,
       max_tokens: 2048,
+      skill_id: attachedSkillId,
+      skill_title: attachedSkillTitle,
     }
 
     try {
@@ -234,6 +240,7 @@ export function ChatPage() {
                 metadata: {
                   retrieval_summary: response.retrieval_summary,
                   source_chunks: response.source_chunks,
+                  selected_skill: response.selected_skill,
                 },
               }
             : message,
@@ -356,6 +363,12 @@ export function ChatPage() {
                   <span className="max-w-[260px] truncate">{searchParams.get('name') || attachedFile}</span>
                   <span className="rounded-full bg-black/15 px-1.5 py-0.5 text-[9px] uppercase tracking-wide text-emerald-100/65">{attachedLane.replace(/_/g, ' ')}</span>
                   <button type="button" onClick={removeAttachment} className="rounded-full p-0.5 hover:bg-white/10"><X className="h-3.5 w-3.5" /></button>
+                </div>
+              )}
+              {attachedSkillId && (
+                <div className="flex max-w-full items-center gap-2 rounded-full border border-cyan-300/20 bg-cyan-300/8 px-3 py-1.5 text-xs text-cyan-100">
+                  <Sparkles className="h-3.5 w-3.5" />
+                  <span className="max-w-[260px] truncate">Skill: {attachedSkillTitle || attachedSkillId}</span>
                 </div>
               )}
               {error && <span className="text-xs text-rose-300">{error}</span>}

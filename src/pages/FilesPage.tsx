@@ -41,6 +41,8 @@ import type {
   FileReadResponse,
   R2Lane,
   R2LanesResponse,
+  SkillItem,
+  SkillListResponse,
 } from '../types/api'
 
 type UploadMode = 'file' | 'text'
@@ -134,6 +136,39 @@ function tagsFromInput(value: string): string[] {
   return value.split(',').map((tag) => tag.trim()).filter(Boolean).slice(0, 20)
 }
 
+function skillItems(response: SkillListResponse): SkillItem[] {
+  return response.items ?? response.skills ?? response.results ?? []
+}
+
+function skillMetadata(skill: SkillItem): Record<string, unknown> {
+  return typeof skill.metadata === 'object' && skill.metadata !== null ? skill.metadata as Record<string, unknown> : {}
+}
+
+function skillField(skill: SkillItem, key: string, fallback = ''): string {
+  const direct = skill[key]
+  if (direct != null && direct !== '') return Array.isArray(direct) ? direct.join(', ') : String(direct)
+  const metadata = skillMetadata(skill)
+  const nested = metadata[key]
+  if (nested != null && nested !== '') return Array.isArray(nested) ? nested.join(', ') : String(nested)
+  return fallback
+}
+
+function skillTitle(skill: SkillItem, index = 0): string {
+  const metadata = skillMetadata(skill)
+  return String(skill.title || skill.name || metadata.title || metadata.name || `Skill ${index + 1}`)
+}
+
+function skillIdentifier(skill: SkillItem, index = 0): string {
+  const metadata = skillMetadata(skill)
+  return String(skill.id || skill.source_id || metadata.skill_id || metadata.reference_prefix || skillTitle(skill, index))
+}
+
+function isHiveSkillsDescriptorFolder(lane: string, currentPrefix: string): boolean {
+  const cleanLane = lane.trim().toLowerCase().replace(/-/g, '_')
+  const cleanPrefix = currentPrefix.replace(/^\/+/, '')
+  return cleanLane === 'hive_skills' && cleanPrefix.startsWith('skills/')
+}
+
 function rootPrefixForLane(lane: R2Lane | undefined): string {
   return lane?.primary_upload_lane ? 'uploads/' : ''
 }
@@ -172,6 +207,11 @@ export function FilesPage() {
   const [skillFile, setSkillFile] = useState<FileObject | null>(null)
   const [skillForm, setSkillForm] = useState<SkillRegistrationForm | null>(null)
   const [registeringSkill, setRegisteringSkill] = useState(false)
+  const [skillPickerFile, setSkillPickerFile] = useState<FileObject | null>(null)
+  const [skillOptions, setSkillOptions] = useState<SkillItem[]>([])
+  const [skillQuery, setSkillQuery] = useState('')
+  const [selectedSkill, setSelectedSkill] = useState<SkillItem | null>(null)
+  const [loadingSkills, setLoadingSkills] = useState(false)
   const inputRef = useRef<HTMLInputElement | null>(null)
 
   const activeLane = useMemo(
@@ -180,6 +220,7 @@ export function FilesPage() {
   )
   const readableLanes = useMemo(() => lanes.filter((lane) => lane.readable), [lanes])
   const configuredLaneCount = useMemo(() => lanes.filter((lane) => lane.configured).length, [lanes])
+  const canCreateSkillFromCurrentFolder = isHiveSkillsDescriptorFolder(selectedLane, prefix)
 
   const loadLanes = useCallback(async () => {
     setLoadingLanes(true)
@@ -443,9 +484,74 @@ export function FilesPage() {
     navigate(`/chat?lane=${encodeURIComponent(selectedLane)}&file=${encodeURIComponent(key)}&name=${encodeURIComponent(fileName(file))}`)
   }
 
+  async function loadSkillOptions(query = skillQuery) {
+    setLoadingSkills(true)
+    setError(null)
+    try {
+      const trimmed = query.trim()
+      const endpoint = trimmed
+        ? `/v1/skills/search?q=${encodeURIComponent(trimmed)}&limit=50`
+        : '/v1/skills/list?limit=50'
+      const response = await apiFetch<SkillListResponse>(endpoint)
+      const options = skillItems(response)
+      setSkillOptions(options)
+      setSelectedSkill((current) => {
+        if (current && options.some((item, index) => skillIdentifier(item, index) === skillIdentifier(current))) return current
+        return options[0] ?? null
+      })
+    } catch (caught) {
+      setSkillOptions([])
+      setSelectedSkill(null)
+      setError(caught instanceof Error ? caught.message : 'Skills could not be loaded.')
+    } finally {
+      setLoadingSkills(false)
+    }
+  }
+
+  function openSkillPicker(file: FileObject) {
+    setSkillPickerFile(file)
+    setSkillQuery('')
+    setSelectedSkill(null)
+    setNotice(null)
+    setError(null)
+    void loadSkillOptions('')
+  }
+
+  function closeSkillPicker() {
+    setSkillPickerFile(null)
+    setSkillOptions([])
+    setSkillQuery('')
+    setSelectedSkill(null)
+  }
+
+  function submitSkillSearch(event: FormEvent) {
+    event.preventDefault()
+    void loadSkillOptions(skillQuery)
+  }
+
+  function useSelectedSkillWithFile() {
+    if (!skillPickerFile || !selectedSkill) return
+    const key = fileKey(skillPickerFile)
+    const title = skillTitle(selectedSkill)
+    const skillId = skillIdentifier(selectedSkill)
+    const params = new URLSearchParams({
+      lane: selectedLane,
+      file: key,
+      name: fileName(skillPickerFile),
+      skill_id: skillId,
+      skill_title: title,
+      draft: `Use ${title} with this file: `,
+    })
+    navigate(`/chat?${params.toString()}`)
+  }
+
   function openSkillRegistration(file: FileObject) {
+    if (!canCreateSkillFromCurrentFolder) {
+      setError('Create skill from file is only available when browsing the HIVE skills lane under the skills/ folder.')
+      return
+    }
     setSkillFile(file)
-    setSkillForm(defaultSkillForm(file, selectedLane || 'uploads'))
+    setSkillForm(defaultSkillForm(file, selectedLane || 'hive_skills'))
     setError(null)
     setNotice(null)
   }
@@ -489,7 +595,7 @@ export function FilesPage() {
         }),
       })
       if (!response.ok) throw new Error(response.message || response.error_code || 'Skill registration failed.')
-      setNotice(`${title} has been added to the skill catalogue from ${fileName(file)}. Open Skills from the main menu to search or use it.`)
+      setNotice(`${title} has been registered from the HIVE skills folder. Open Skills from the main menu to search or use it.`)
       setSkillFile(null)
       setSkillForm(null)
     } catch (caught) {
@@ -544,11 +650,11 @@ export function FilesPage() {
                         <div className="flex items-start justify-between gap-2">
                           <div className="min-w-0">
                             <p className="truncate text-xs font-semibold text-slate-200">{laneLabel(lane)}</p>
-                            <p className="mt-1 line-clamp-2 text-[11px] leading-4 text-slate-600">{lane.description || 'Configured ecosystem storage lane'}</p>
+                            <p className="mt-1 line-clamp-2 text-[11px] leading-4 text-slate-400">{lane.description || 'Configured ecosystem storage lane'}</p>
                           </div>
                           <StatusBadge status={status.status} label={status.label} compact />
                         </div>
-                        <p className="mt-2 truncate text-[10px] text-slate-700">{lane.bucket || 'No bucket configured'}</p>
+                        <p className="mt-2 truncate text-[10px] text-slate-500">{lane.bucket || 'No bucket configured'}</p>
                       </button>
                       {lane.public_base_url && (
                         <a href={lane.public_base_url} target="_blank" rel="noreferrer" className="mt-3 inline-flex items-center gap-1.5 text-[11px] text-cyan-300/70 hover:text-cyan-200">
@@ -581,9 +687,9 @@ export function FilesPage() {
               <label className="text-xs font-medium text-slate-400">Search within {laneLabel(activeLane ?? { lane: selectedLane || 'storage' })}
                 <div className="mt-2 flex gap-2">
                   <div className="relative min-w-0 flex-1">
-                    <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-600" />
-                    <input value={searchInput} onChange={(event) => setSearchInput(event.target.value)} placeholder="Search object names under the current prefix" className="h-11 w-full rounded-xl border border-white/8 bg-[#061126] pl-10 pr-10 text-sm text-slate-200 outline-none placeholder:text-slate-600 focus:border-cyan-300/30" />
-                    {(searchInput || activeSearch) && <button type="button" onClick={clearSearch} className="absolute right-2 top-1/2 -translate-y-1/2 rounded-lg p-1.5 text-slate-600 hover:bg-white/5 hover:text-slate-300" aria-label="Clear file search"><X className="h-4 w-4" /></button>}
+                    <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+                    <input value={searchInput} onChange={(event) => setSearchInput(event.target.value)} placeholder="Search object names under the current prefix" className="h-11 w-full rounded-xl border border-white/8 bg-[#061126] pl-10 pr-10 text-sm text-slate-200 outline-none placeholder:text-slate-400 focus:border-cyan-300/30" />
+                    {(searchInput || activeSearch) && <button type="button" onClick={clearSearch} className="absolute right-2 top-1/2 -translate-y-1/2 rounded-lg p-1.5 text-slate-400 hover:bg-white/5 hover:text-slate-300" aria-label="Clear file search"><X className="h-4 w-4" /></button>}
                   </div>
                   <button type="submit" className="h-11 rounded-xl border border-cyan-300/20 bg-cyan-300/8 px-4 text-xs font-medium text-cyan-100 hover:bg-cyan-300/12">Search</button>
                 </div>
@@ -597,7 +703,7 @@ export function FilesPage() {
             </button>
             {breadcrumbs.map((crumb) => (
               <span key={crumb.prefix} className="flex items-center gap-1.5">
-                <ChevronRight className="h-3.5 w-3.5 text-slate-700" />
+                <ChevronRight className="h-3.5 w-3.5 text-slate-500" />
                 <button type="button" onClick={() => changePrefix(crumb.prefix)} className="max-w-[220px] truncate rounded-md px-2 py-1 hover:bg-white/5 hover:text-slate-300">{crumb.label}</button>
               </span>
             ))}
@@ -621,7 +727,7 @@ export function FilesPage() {
                 >
                   {uploading ? <LoaderCircle className="mx-auto h-8 w-8 animate-spin text-cyan-300" /> : <UploadCloud className="mx-auto h-8 w-8 text-cyan-300/70" />}
                   <p className="mt-3 text-sm font-medium text-slate-200">Drop one or more files into {laneLabel(activeLane)}</p>
-                  <p className="mt-1 text-xs text-slate-600">HIVE will store them under readable date and filename based R2 keys.</p>
+                  <p className="mt-1 text-xs text-slate-400">HIVE will store them under readable date and filename based R2 keys.</p>
                   <button type="button" onClick={() => inputRef.current?.click()} disabled={uploading} className="mt-4 inline-flex h-9 items-center gap-2 rounded-xl bg-gradient-to-r from-cyan-400 to-emerald-300 px-4 text-xs font-semibold text-[#052035] disabled:opacity-50">
                     <FileUp className="h-4 w-4" /> Choose files
                   </button>
@@ -633,7 +739,7 @@ export function FilesPage() {
                     <input value={textFilename} onChange={(event) => setTextFilename(event.target.value)} className="mt-2 h-10 w-full rounded-xl border border-white/8 bg-[#061126] px-3 text-sm text-slate-200 outline-none focus:border-cyan-300/30" />
                   </label>
                   <label className="text-xs font-medium text-slate-400">Text content
-                    <textarea value={textContent} onChange={(event) => setTextContent(event.target.value)} rows={7} placeholder="Paste notes, logs, transcripts or source text…" className="mt-2 w-full resize-y rounded-xl border border-white/8 bg-[#061126] px-3 py-3 text-sm leading-6 text-slate-200 outline-none placeholder:text-slate-600 focus:border-cyan-300/30" />
+                    <textarea value={textContent} onChange={(event) => setTextContent(event.target.value)} rows={7} placeholder="Paste notes, logs, transcripts or source text…" className="mt-2 w-full resize-y rounded-xl border border-white/8 bg-[#061126] px-3 py-3 text-sm leading-6 text-slate-200 outline-none placeholder:text-slate-400 focus:border-cyan-300/30" />
                   </label>
                   <div className="flex justify-end">
                     <button type="submit" disabled={uploading || !textFilename.trim() || !textContent.trim()} className="flex h-9 items-center gap-2 rounded-xl bg-gradient-to-r from-cyan-400 to-emerald-300 px-4 text-xs font-semibold text-[#052035] disabled:opacity-50">
@@ -654,7 +760,7 @@ export function FilesPage() {
         {error && <div className="mt-4 rounded-xl border border-rose-400/20 bg-rose-400/8 px-4 py-3 text-sm text-rose-200">{error}</div>}
 
         <section className="mt-5">
-          <div className="mb-3 flex flex-wrap items-center justify-between gap-2 text-xs text-slate-600">
+          <div className="mb-3 flex flex-wrap items-center justify-between gap-2 text-xs text-slate-400">
             <div className="flex items-center gap-2"><StatusBadge status={activeLane?.writable ? 'active' : activeLane?.readable ? 'readonly' : 'warning'} label={activeLane?.access_mode || storage} compact /> {files.length} objects · {prefixes.length} prefixes</div>
             <div className="flex items-center gap-2">
               {cursorHistory.length > 0 && <button type="button" onClick={previousPage} className="inline-flex h-8 items-center gap-1.5 rounded-lg border border-white/8 bg-white/[0.025] px-2.5 text-slate-400 hover:text-white"><ArrowLeft className="h-3.5 w-3.5" /> Previous</button>}
@@ -672,7 +778,7 @@ export function FilesPage() {
               <p className="mt-3 text-sm">This lane is configured as registry-only and cannot be browsed with the current credentials.</p>
             </div>
           ) : prefixes.length === 0 && files.length === 0 ? (
-            <div className="rounded-3xl border border-dashed border-white/10 py-16 text-center text-slate-600">
+            <div className="rounded-3xl border border-dashed border-white/10 py-16 text-center text-slate-400">
               <FolderOpen className="mx-auto h-8 w-8" />
               <p className="mt-3 text-sm">No matching objects found under this prefix.</p>
             </div>
@@ -685,7 +791,7 @@ export function FilesPage() {
                   <button key={folderPrefix} type="button" onClick={() => changePrefix(folderPrefix)} className="group rounded-2xl border border-white/8 bg-[#0a192d]/70 p-4 text-left transition hover:border-cyan-300/20 hover:bg-[#0d2038]">
                     <div className="flex h-10 w-10 items-center justify-center rounded-xl border border-amber-300/15 bg-amber-300/7 text-amber-200"><Folder className="h-5 w-5" /></div>
                     <h3 className="mt-4 truncate text-sm font-semibold text-white">{name}</h3>
-                    <p className="mt-1 truncate text-xs text-slate-600">{folderPrefix}</p>
+                    <p className="mt-1 truncate text-xs text-slate-400">{folderPrefix}</p>
                     <div className="mt-4 flex items-center justify-end border-t border-white/6 pt-3 text-[11px] text-cyan-200/65">Open prefix <ChevronRight className="ml-1 h-3.5 w-3.5" /></div>
                   </button>
                 )
@@ -703,8 +809,8 @@ export function FilesPage() {
                         <StatusBadge status={activeLane?.writable ? 'active' : 'readonly'} label={activeLane?.writable ? 'Read/write' : 'Read-only'} compact />
                       </div>
                       <h3 className="mt-4 truncate text-sm font-semibold text-white">{name}</h3>
-                      <p className="mt-1 line-clamp-2 min-h-10 break-all text-xs leading-5 text-slate-600">{key}</p>
-                      <div className="mt-4 flex items-center justify-between border-t border-white/6 pt-3 text-[11px] text-slate-600">
+                      <p className="mt-1 line-clamp-2 min-h-10 break-all text-xs leading-5 text-slate-400">{key}</p>
+                      <div className="mt-4 flex items-center justify-between border-t border-white/6 pt-3 text-[11px] text-slate-400">
                         <span>{formatBytes(Number(file.size_bytes ?? file.size ?? 0))}</span>
                         <span>{formatDate(String(file.last_modified || ''))}</span>
                       </div>
@@ -724,10 +830,15 @@ export function FilesPage() {
                       <button type="button" disabled={!chatSupported} onClick={() => chatWith(file)} className="flex h-9 items-center justify-center gap-2 rounded-xl border border-emerald-300/15 bg-emerald-300/6 text-xs font-medium text-emerald-100 transition hover:bg-emerald-300/10 disabled:cursor-not-allowed disabled:opacity-35">
                         <MessageSquareText className="h-4 w-4" /> {chatSupported ? 'Chat' : 'No chat'}
                       </button>
-                      <button type="button" onClick={() => openSkillRegistration(file)} className="flex h-9 items-center justify-center gap-2 rounded-xl border border-violet-300/15 bg-violet-300/6 text-xs font-medium text-violet-100 transition hover:bg-violet-300/10">
-                        <BrainCircuit className="h-4 w-4" /> Add skill
+                      <button type="button" onClick={() => openSkillPicker(file)} className="flex h-9 items-center justify-center gap-2 rounded-xl border border-cyan-300/15 bg-cyan-300/6 text-xs font-medium text-cyan-100 transition hover:bg-cyan-300/10">
+                        <BrainCircuit className="h-4 w-4" /> Use skill
                       </button>
                     </div>
+                    {canCreateSkillFromCurrentFolder && (
+                      <button type="button" onClick={() => openSkillRegistration(file)} className="mt-2 flex h-9 w-full items-center justify-center gap-2 rounded-xl border border-violet-300/15 bg-violet-300/6 text-xs font-medium text-violet-100 transition hover:bg-violet-300/10">
+                        <BrainCircuit className="h-4 w-4" /> Create skill from file
+                      </button>
+                    )}
                   </article>
                 )
               })}
@@ -736,15 +847,82 @@ export function FilesPage() {
         </section>
       </div>
 
+      {skillPickerFile && (
+        <div className="fixed inset-0 z-50 flex items-end bg-[#020817]/80 px-3 py-4 backdrop-blur-sm sm:items-center sm:justify-center">
+          <section className="max-h-[92vh] w-full overflow-y-auto rounded-3xl border border-white/10 bg-[#08172b] p-5 shadow-2xl shadow-black/40 sm:max-w-2xl sm:p-6">
+            <div className="flex items-start justify-between gap-4">
+              <div>
+                <p className="text-xs font-semibold uppercase tracking-[0.18em] text-cyan-200/75">Apply existing skill</p>
+                <h2 className="mt-2 text-xl font-semibold text-white">Use a skill with this file</h2>
+                <p className="mt-2 text-sm leading-6 text-slate-300">
+                  Pick an existing HIVE skill. The file stays a file, and the selected skill becomes guidance for chat/workflow analysis.
+                </p>
+              </div>
+              <button type="button" onClick={closeSkillPicker} className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-white/8 bg-white/[0.035] text-slate-300 transition hover:text-white" aria-label="Close skill picker">
+                <X className="h-4 w-4" />
+              </button>
+            </div>
+
+            <div className="mt-5 rounded-2xl border border-cyan-300/12 bg-cyan-300/[0.035] px-4 py-3 text-xs leading-5 text-cyan-100/80">
+              <span className="font-semibold text-cyan-100">Selected file:</span> {fileName(skillPickerFile)}
+              <span className="mx-2 text-cyan-100/35">·</span>
+              <span className="font-semibold text-cyan-100">Lane:</span> {selectedLane || 'uploads'}
+            </div>
+
+            <form onSubmit={submitSkillSearch} className="mt-5 flex gap-2">
+              <div className="relative min-w-0 flex-1">
+                <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+                <input value={skillQuery} onChange={(event) => setSkillQuery(event.target.value)} placeholder="Search existing skills" className="h-11 w-full rounded-xl border border-white/8 bg-[#061126] pl-10 pr-3 text-sm text-slate-100 outline-none placeholder:text-slate-400 focus:border-cyan-300/40" />
+              </div>
+              <button type="submit" disabled={loadingSkills} className="flex h-11 items-center justify-center rounded-xl border border-cyan-300/20 bg-cyan-300/8 px-4 text-sm font-medium text-cyan-100 transition hover:bg-cyan-300/12 disabled:opacity-50">
+                {loadingSkills ? <LoaderCircle className="h-4 w-4 animate-spin" /> : 'Search'}
+              </button>
+            </form>
+
+            <div className="mt-4 grid max-h-80 gap-2 overflow-y-auto pr-1">
+              {loadingSkills ? (
+                <div className="flex items-center justify-center rounded-2xl border border-white/8 bg-white/[0.025] py-8 text-sm text-slate-300"><LoaderCircle className="mr-2 h-4 w-4 animate-spin" /> Loading skills</div>
+              ) : skillOptions.length === 0 ? (
+                <div className="rounded-2xl border border-dashed border-white/10 py-8 text-center text-sm text-slate-400">No existing skills found for this search.</div>
+              ) : skillOptions.map((skill, index) => {
+                const id = skillIdentifier(skill, index)
+                const selected = selectedSkill ? skillIdentifier(selectedSkill) === id : false
+                return (
+                  <button key={`${id}-${index}`} type="button" onClick={() => setSelectedSkill(skill)} className={`rounded-2xl border p-3 text-left transition ${selected ? 'border-cyan-300/35 bg-cyan-300/[0.07]' : 'border-white/8 bg-[#061126]/75 hover:border-cyan-300/20 hover:bg-[#0d2038]'}`}>
+                    <div className="flex items-start justify-between gap-3">
+                      <div className="min-w-0">
+                        <h3 className="truncate text-sm font-semibold text-white">{skillTitle(skill, index)}</h3>
+                        <p className="mt-1 line-clamp-2 text-xs leading-5 text-slate-300">{String(skill.description || skillMetadata(skill).description || 'No description supplied.')}</p>
+                      </div>
+                      <StatusBadge status={selected ? 'active' : 'readonly'} label={selected ? 'Selected' : skillField(skill, 'risk_level', 'Skill')} compact />
+                    </div>
+                    <p className="mt-2 truncate text-[11px] text-slate-400">{skillField(skill, 'repo', 'Shared')} · {skillField(skill, 'hive_lane', skillField(skill, 'lane', 'General'))}</p>
+                  </button>
+                )
+              })}
+            </div>
+
+            <div className="mt-6 flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
+              <button type="button" onClick={closeSkillPicker} className="flex h-10 items-center justify-center rounded-xl border border-white/8 bg-white/[0.035] px-4 text-sm font-medium text-slate-200 transition hover:bg-white/[0.06]">
+                Cancel
+              </button>
+              <button type="button" onClick={useSelectedSkillWithFile} disabled={!selectedSkill} className="flex h-10 items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-cyan-300 to-emerald-300 px-4 text-sm font-semibold text-[#061126] transition disabled:opacity-50">
+                <BrainCircuit className="h-4 w-4" /> Use selected skill
+              </button>
+            </div>
+          </section>
+        </div>
+      )}
+
       {skillFile && skillForm && (
         <div className="fixed inset-0 z-50 flex items-end bg-[#020817]/80 px-3 py-4 backdrop-blur-sm sm:items-center sm:justify-center">
           <section className="max-h-[92vh] w-full overflow-y-auto rounded-3xl border border-white/10 bg-[#08172b] p-5 shadow-2xl shadow-black/40 sm:max-w-2xl sm:p-6">
             <div className="flex items-start justify-between gap-4">
               <div>
-                <p className="text-xs font-semibold uppercase tracking-[0.18em] text-violet-200/70">Review before adding</p>
-                <h2 className="mt-2 text-xl font-semibold text-white">Add this file as a skill</h2>
+                <p className="text-xs font-semibold uppercase tracking-[0.18em] text-violet-200/70">Hive skills folder only</p>
+                <h2 className="mt-2 text-xl font-semibold text-white">Create skill from descriptor file</h2>
                 <p className="mt-2 text-sm leading-6 text-slate-300">
-                  HIVE will not silently catalogue the raw file. Choose the skill details, then confirm the registration.
+                  This action is only available from the hive_skills lane under the skills/ folder. Ordinary files should use an existing skill instead.
                 </p>
               </div>
               <button type="button" onClick={closeSkillRegistration} disabled={registeringSkill} className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-white/8 bg-white/[0.035] text-slate-300 transition hover:text-white disabled:opacity-40" aria-label="Close skill registration">
@@ -814,7 +992,7 @@ export function FilesPage() {
                 Cancel
               </button>
               <button type="button" onClick={() => void registerSkillFromSelectedFile()} disabled={registeringSkill || !skillForm.title.trim()} className="flex h-10 items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-violet-300 to-cyan-300 px-4 text-sm font-semibold text-[#061126] transition disabled:opacity-50">
-                {registeringSkill ? <LoaderCircle className="h-4 w-4 animate-spin" /> : <BrainCircuit className="h-4 w-4" />} Confirm add skill
+                {registeringSkill ? <LoaderCircle className="h-4 w-4 animate-spin" /> : <BrainCircuit className="h-4 w-4" />} Confirm create skill
               </button>
             </div>
           </section>
