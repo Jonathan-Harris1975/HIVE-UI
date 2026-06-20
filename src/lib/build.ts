@@ -1,2 +1,2 @@
-export const HIVE_UI_VERSION = '0.9.2'
-export const HIVE_UI_BUILD = 'production-execution-gates'
+export const HIVE_UI_VERSION = '0.10.0'
+export const HIVE_UI_BUILD = 'r2-write-skill-models'
