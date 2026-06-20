@@ -9,13 +9,13 @@ HIVE already exposes a credential-free R2 lane registry through `GET /v1/files/r
 ## Current boundary
 
 - `uploads` is the active read/write file lane.
-- Other ecosystem buckets are metadata and public-URL aware only.
+- Other ecosystem buckets are metadata/public-URL aware and can be read/write when the production R2 credentials allow it.
 - HIVE-UI does not send Cloudflare R2 credentials to the browser.
 - The interface does not offer selectors or buttons that imply unsupported access.
 
 ## Recommended staged implementation
 
-### Stage 1: scoped read-only listing
+### Stage 1: scoped listing and controlled writes
 
 Add a backend endpoint such as:
 
@@ -67,7 +67,7 @@ Write access to non-upload buckets should be a separate capability, disabled by 
 - Audit records.
 - No overwrite or delete operation without an explicit policy.
 
-## Likely first read-only lanes
+## Governed ecosystem lanes
 
 The safest first candidates are:
 
@@ -76,4 +76,4 @@ The safest first candidates are:
 - `hive_skills`
 - `meta`
 
-Podcast audio, published pages and RSS artefacts should remain read-only unless a dedicated publishing workflow is intentionally designed.
+Podcast audio, published pages and RSS artefacts should remain governed by lane-specific publishing workflows even when HIVE has read/write bucket credentials.

@@ -18,7 +18,7 @@ For each readable lane, the Files route supports:
 - authenticated download through the Cloudflare Pages proxy;
 - shared-interface file chat for supported objects.
 
-The `uploads` lane also exposes multipart upload and paste-text controls. Every other lane is rendered as read-only, and HIVE-UI provides no write or delete request for it.
+Every writable lane exposes multipart upload and paste-text controls. Non-writable lanes remain browse/view/download only until credentials allow writes.
 
 The browser never receives R2 credentials. Calls go through the signed Cloudflare session, the Pages Function, and the authenticated HIVE backend.
 

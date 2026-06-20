@@ -135,7 +135,7 @@ GET  /v1/workflow-presets
 POST /v1/chat/with-file
 ```
 
-The `/files` route links to `/chat?lane=<lane>&file=<object_key>&name=<filename>`. The chat request includes the lane. Persisted chunk/Vectorize retrieval is enabled only for the uploads lane; read-only lanes use a bounded direct read.
+The `/files` route links to `/chat?lane=<lane>&file=<object_key>&name=<filename>`. The chat request includes the lane. Persisted chunk/Vectorize retrieval is enabled only for the uploads lane; non-upload lanes use a bounded direct read unless a lane-specific chunk index is added later.
 
 ## Models
 

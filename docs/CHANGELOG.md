@@ -25,14 +25,14 @@
 - Added authenticated browsing across every readable R2 lane.
 - Added prefix navigation, bounded server-side filename search and cursor pagination.
 - Added authoritative metadata, text/document preview and authenticated download controls.
-- Added file chat from non-upload buckets while preserving read-only enforcement.
+- Added file chat from non-upload buckets; current production lanes can be writable when server-side credentials allow it.
 - Kept upload and paste-text controls limited to the primary HIVE uploads lane.
 
 ### Models
 
 - Replaced the flat model select with a searchable grouped picker.
 - Added HIVE configured, free, reasoning, coding, documents, vision, video analysis, general, audio, image generation and video generation groups.
-- Image/video generation models are visible but disabled in standard chat pending a dedicated creation workspace.
+- Image/video/audio and infrastructure model types are visible and selectable from the grouped model picker.
 
 ### Security and CI
 
