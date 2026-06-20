@@ -1,10 +1,12 @@
 import {
   ArrowLeft,
+  BrainCircuit,
   ChevronDown,
   ChevronRight,
   Database,
   Download,
   ExternalLink,
+  Eye,
   FileArchive,
   FileImage,
   FileText,
@@ -42,6 +44,17 @@ import type {
 } from '../types/api'
 
 type UploadMode = 'file' | 'text'
+
+interface UploadResponse {
+  ok?: boolean
+  file?: FileObject
+}
+
+interface SkillFromFileResponse {
+  ok?: boolean
+  message?: string
+  error_code?: string
+}
 
 const TEXT_CHAT_SUFFIXES = new Set([
   '.txt', '.md', '.log', '.json', '.jsonl', '.csv', '.tsv', '.html', '.htm', '.xml', '.rss',
@@ -259,12 +272,16 @@ export function FilesPage() {
     setError(null)
     setNotice(null)
     try {
+      const uploaded: FileObject[] = []
       for (const file of selected) {
         const formData = new FormData()
         formData.append('upload', file)
-        await apiFetch('/v1/files/upload', { method: 'POST', body: formData })
+        const params = new URLSearchParams({ lane: selectedLane || 'uploads' })
+        const response = await apiFetch<UploadResponse>(`/v1/files/upload?${params.toString()}`, { method: 'POST', body: formData })
+        if (response.file) uploaded.push(response.file)
       }
-      setNotice(`${selected.length} file${selected.length === 1 ? '' : 's'} uploaded successfully.`)
+      const readableKeys = uploaded.map((item) => fileKey(item)).filter(Boolean).slice(0, 2)
+      setNotice(`${selected.length} file${selected.length === 1 ? '' : 's'} uploaded to ${laneLabel(activeLane)} with human-readable R2 keys${readableKeys.length ? `: ${readableKeys.join(', ')}` : '.'}`)
       setPrefix(rootPrefixForLane(activeLane))
       setCurrentCursor(null)
       setCursorHistory([])
@@ -284,15 +301,17 @@ export function FilesPage() {
     setError(null)
     setNotice(null)
     try {
-      await apiFetch('/v1/files/upload-text', {
+      const response = await apiFetch<UploadResponse>('/v1/files/upload-text', {
         method: 'POST',
         body: JSON.stringify({
           filename: textFilename.trim(),
           content: textContent,
           content_type: 'text/plain; charset=utf-8',
+          lane: selectedLane || 'uploads',
         }),
       })
-      setNotice(`${textFilename.trim()} uploaded successfully.`)
+      const key = response.file ? fileKey(response.file) : ''
+      setNotice(`${textFilename.trim()} uploaded to ${laneLabel(activeLane)}${key ? ` as ${key}` : ''}.`)
       setTextContent('')
       setPrefix(rootPrefixForLane(activeLane))
       setCurrentCursor(null)
@@ -388,7 +407,35 @@ export function FilesPage() {
     navigate(`/chat?lane=${encodeURIComponent(selectedLane)}&file=${encodeURIComponent(key)}&name=${encodeURIComponent(fileName(file))}`)
   }
 
+  async function addSkillFromFile(file: FileObject) {
+    const key = fileKey(file)
+    if (!key) return
+    setError(null)
+    setNotice(null)
+    try {
+      const response = await apiFetch<SkillFromFileResponse>('/v1/skills/from-file', {
+        method: 'POST',
+        body: JSON.stringify({
+          title: fileName(file),
+          object_key: key,
+          source_lane: selectedLane || 'uploads',
+          description: `Skill registered from uploaded file ${fileName(file)}.`,
+          repo: 'HIVE',
+          hive_lane: 'uploaded-file-skills',
+          priority_tier: 'P2',
+          risk_level: 'medium',
+          tags: ['uploaded-file', selectedLane || 'uploads'],
+        }),
+      })
+      if (!response.ok) throw new Error(response.message || response.error_code || 'Skill registration failed.')
+      setNotice(`${fileName(file)} has been added to the skill catalogue. Open Skills from the main menu to search or use it.`)
+    } catch (caught) {
+      setError(caught instanceof Error ? caught.message : 'Skill registration failed.')
+    }
+  }
+
   const downloadHref = (file: FileObject) => `/api/v1/files/r2/${encodeURIComponent(selectedLane)}/download?key=${encodeURIComponent(fileKey(file))}`
+  const viewHref = (file: FileObject) => `/api/v1/files/r2/${encodeURIComponent(selectedLane)}/view?key=${encodeURIComponent(fileKey(file))}`
 
   return (
     <div className="h-full overflow-y-auto p-4 sm:p-6 lg:p-8">
@@ -399,7 +446,7 @@ export function FilesPage() {
               <p className="text-xs font-semibold uppercase tracking-[0.2em] text-cyan-300/70">Authenticated R2 explorer</p>
               <h2 className="mt-2 text-2xl font-semibold text-white">Browse evidence across the HIVE ecosystem</h2>
               <p className="mt-2 max-w-3xl text-sm leading-6 text-slate-500">
-                The HIVE uploads bucket remains read/write. Every other configured bucket is available through scoped, server-side read-only access.
+                Every configured R2 lane can be browsed, uploaded to and opened inline when the server-side credentials allow it. Upload keys now keep readable filenames.
               </p>
             </div>
             <div className="flex flex-wrap gap-2">
@@ -418,7 +465,7 @@ export function FilesPage() {
               <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
                 <div>
                   <h3 className="text-sm font-semibold text-white">Ecosystem storage map</h3>
-                  <p className="mt-1 text-xs leading-5 text-slate-500">Select any readable lane to browse it. Registry-only lanes remain visible but locked.</p>
+                  <p className="mt-1 text-xs leading-5 text-slate-500">Select any readable lane to browse it. Writable lanes can receive uploads from this console.</p>
                 </div>
                 <StatusBadge status="active" label={`${readableLanes.length} readable · ${configuredLaneCount}/${lanes.length} configured`} compact />
               </div>
@@ -508,8 +555,8 @@ export function FilesPage() {
                   className={`mt-4 rounded-2xl border border-dashed p-6 text-center transition ${dragActive ? 'border-cyan-300/45 bg-cyan-300/[0.06]' : 'border-white/10 bg-[#071426]/70'}`}
                 >
                   {uploading ? <LoaderCircle className="mx-auto h-8 w-8 animate-spin text-cyan-300" /> : <UploadCloud className="mx-auto h-8 w-8 text-cyan-300/70" />}
-                  <p className="mt-3 text-sm font-medium text-slate-200">Drop one or more files into HIVE uploads</p>
-                  <p className="mt-1 text-xs text-slate-600">Other ecosystem buckets are deliberately read-only through this console.</p>
+                  <p className="mt-3 text-sm font-medium text-slate-200">Drop one or more files into {laneLabel(activeLane)}</p>
+                  <p className="mt-1 text-xs text-slate-600">HIVE will store them under readable date and filename based R2 keys.</p>
                   <button type="button" onClick={() => inputRef.current?.click()} disabled={uploading} className="mt-4 inline-flex h-9 items-center gap-2 rounded-xl bg-gradient-to-r from-cyan-400 to-emerald-300 px-4 text-xs font-semibold text-[#052035] disabled:opacity-50">
                     <FileUp className="h-4 w-4" /> Choose files
                   </button>
@@ -533,7 +580,7 @@ export function FilesPage() {
             </div>
           ) : activeLane && (
             <div className="mt-6 rounded-xl border border-cyan-300/12 bg-cyan-300/[0.035] px-4 py-3 text-xs leading-5 text-cyan-100/70">
-              This lane is read-only. HIVE can browse, preview, download and chat with supported objects, but it cannot upload, overwrite or delete them.
+              This lane is not writable with the current credentials. HIVE can still browse, preview, view, download and chat with supported objects.
             </div>
           )}
         </section>
@@ -597,17 +644,25 @@ export function FilesPage() {
                         <span>{formatDate(String(file.last_modified || ''))}</span>
                       </div>
                     </button>
-                    <div className="mt-3 grid grid-cols-2 gap-2">
+                    <div className="mt-3 grid grid-cols-3 gap-2">
                       <button type="button" onClick={() => void preview(file)} disabled={!chatSupported} className="flex h-9 items-center justify-center gap-1.5 rounded-xl border border-white/8 bg-white/[0.025] text-xs text-slate-400 transition hover:bg-white/[0.05] hover:text-white disabled:cursor-not-allowed disabled:opacity-35">
                         <FileText className="h-3.5 w-3.5" /> Preview
                       </button>
+                      <a href={viewHref(file)} target="_blank" rel="noreferrer" className="flex h-9 items-center justify-center gap-1.5 rounded-xl border border-white/8 bg-white/[0.025] text-xs text-slate-400 transition hover:bg-white/[0.05] hover:text-white">
+                        <Eye className="h-3.5 w-3.5" /> View
+                      </a>
                       <a href={downloadHref(file)} className="flex h-9 items-center justify-center gap-1.5 rounded-xl border border-white/8 bg-white/[0.025] text-xs text-slate-400 transition hover:bg-white/[0.05] hover:text-white">
                         <Download className="h-3.5 w-3.5" /> Download
                       </a>
                     </div>
-                    <button type="button" disabled={!chatSupported} onClick={() => chatWith(file)} className="mt-2 flex h-9 w-full items-center justify-center gap-2 rounded-xl border border-emerald-300/15 bg-emerald-300/6 text-xs font-medium text-emerald-100 transition hover:bg-emerald-300/10 disabled:cursor-not-allowed disabled:opacity-35">
-                      <MessageSquareText className="h-4 w-4" /> {chatSupported ? 'Chat with file' : 'Download only'}
-                    </button>
+                    <div className="mt-2 grid grid-cols-2 gap-2">
+                      <button type="button" disabled={!chatSupported} onClick={() => chatWith(file)} className="flex h-9 items-center justify-center gap-2 rounded-xl border border-emerald-300/15 bg-emerald-300/6 text-xs font-medium text-emerald-100 transition hover:bg-emerald-300/10 disabled:cursor-not-allowed disabled:opacity-35">
+                        <MessageSquareText className="h-4 w-4" /> {chatSupported ? 'Chat' : 'No chat'}
+                      </button>
+                      <button type="button" onClick={() => void addSkillFromFile(file)} className="flex h-9 items-center justify-center gap-2 rounded-xl border border-violet-300/15 bg-violet-300/6 text-xs font-medium text-violet-100 transition hover:bg-violet-300/10">
+                        <BrainCircuit className="h-4 w-4" /> Add skill
+                      </button>
+                    </div>
                   </article>
                 )
               })}

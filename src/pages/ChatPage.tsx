@@ -1,8 +1,10 @@
 import {
   ArrowDown,
+  BrainCircuit,
   ChevronDown,
   CircleStop,
   LoaderCircle,
+  Files,
   Paperclip,
   Send,
   Sparkles,
@@ -16,7 +18,7 @@ import {
   type FormEvent,
   type KeyboardEvent,
 } from 'react'
-import { useSearchParams } from 'react-router'
+import { Link, useSearchParams } from 'react-router'
 import { useChat } from '../context/ChatContext'
 import { useInspector } from '../context/InspectorContext'
 import { apiFetch, chatWithFile, streamChat } from '../lib/api'
@@ -317,6 +319,14 @@ export function ChatPage() {
                     {starter}
                   </button>
                 ))}
+              </div>
+              <div className="mt-5 flex flex-wrap justify-center gap-2">
+                <Link to="/files" className="inline-flex h-10 items-center gap-2 rounded-xl border border-cyan-300/15 bg-cyan-300/7 px-3 text-xs font-medium text-cyan-100 transition hover:bg-cyan-300/12">
+                  <Files className="h-4 w-4" /> Files
+                </Link>
+                <Link to="/skills" className="inline-flex h-10 items-center gap-2 rounded-xl border border-violet-300/15 bg-violet-300/7 px-3 text-xs font-medium text-violet-100 transition hover:bg-violet-300/12">
+                  <BrainCircuit className="h-4 w-4" /> Skills
+                </Link>
               </div>
             </div>
           ) : (
