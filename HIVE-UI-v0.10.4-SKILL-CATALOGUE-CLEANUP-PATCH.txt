@@ -1,0 +1,14 @@
+HIVE-UI v0.10.4 - Skill Catalogue Cleanup Patch
+
+Purpose
+- Adds a Skills page maintenance card to preview and delete legacy file-created skill records from D1.
+- The UI clearly states that cleanup touches D1 catalogue rows only and does not delete anything from R2.
+
+UI changes
+- Adds Preview cleanup action.
+- Adds Delete previewed rows action, enabled only after candidates are found.
+- Shows checked count, candidate count, R2 delete count and deletion count.
+- Shows the first candidate rows with object key and detection reasons.
+
+Verification
+- npm run check: passed.
