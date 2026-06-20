@@ -56,6 +56,16 @@ interface SkillFromFileResponse {
   error_code?: string
 }
 
+interface SkillRegistrationForm {
+  title: string
+  description: string
+  repo: string
+  hiveLane: string
+  priorityTier: string
+  riskLevel: string
+  tags: string
+}
+
 const TEXT_CHAT_SUFFIXES = new Set([
   '.txt', '.md', '.log', '.json', '.jsonl', '.csv', '.tsv', '.html', '.htm', '.xml', '.rss',
   '.pdf', '.docx', '.xlsx', '.yaml', '.yml', '.py', '.js', '.ts', '.tsx', '.jsx', '.css', '.sql',
@@ -101,6 +111,29 @@ function laneStatus(lane: R2Lane): { status: string; label: string } {
   return { status: 'unknown', label: 'Unavailable' }
 }
 
+function stripExtension(name: string): string {
+  const index = name.lastIndexOf('.')
+  return index > 0 ? name.slice(0, index) : name
+}
+
+function defaultSkillForm(file: FileObject, lane: string): SkillRegistrationForm {
+  const name = fileName(file)
+  const cleanName = stripExtension(name).replace(/[-_]+/g, ' ').replace(/\s+/g, ' ').trim()
+  return {
+    title: cleanName || name,
+    description: `Use ${name} as a governed HIVE skill reference.`,
+    repo: 'HIVE',
+    hiveLane: 'uploaded-file-skills',
+    priorityTier: 'P2',
+    riskLevel: 'medium',
+    tags: ['uploaded-file', lane || 'uploads', extension(name).replace(/^\./, '')].filter(Boolean).join(', '),
+  }
+}
+
+function tagsFromInput(value: string): string[] {
+  return value.split(',').map((tag) => tag.trim()).filter(Boolean).slice(0, 20)
+}
+
 function rootPrefixForLane(lane: R2Lane | undefined): string {
   return lane?.primary_upload_lane ? 'uploads/' : ''
 }
@@ -136,6 +169,9 @@ export function FilesPage() {
   const [textContent, setTextContent] = useState('')
   const [error, setError] = useState<string | null>(null)
   const [notice, setNotice] = useState<string | null>(null)
+  const [skillFile, setSkillFile] = useState<FileObject | null>(null)
+  const [skillForm, setSkillForm] = useState<SkillRegistrationForm | null>(null)
+  const [registeringSkill, setRegisteringSkill] = useState(false)
   const inputRef = useRef<HTMLInputElement | null>(null)
 
   const activeLane = useMemo(
@@ -407,30 +443,59 @@ export function FilesPage() {
     navigate(`/chat?lane=${encodeURIComponent(selectedLane)}&file=${encodeURIComponent(key)}&name=${encodeURIComponent(fileName(file))}`)
   }
 
-  async function addSkillFromFile(file: FileObject) {
-    const key = fileKey(file)
-    if (!key) return
+  function openSkillRegistration(file: FileObject) {
+    setSkillFile(file)
+    setSkillForm(defaultSkillForm(file, selectedLane || 'uploads'))
+    setError(null)
+    setNotice(null)
+  }
+
+  function closeSkillRegistration() {
+    if (registeringSkill) return
+    setSkillFile(null)
+    setSkillForm(null)
+  }
+
+  function updateSkillForm<K extends keyof SkillRegistrationForm>(field: K, value: SkillRegistrationForm[K]) {
+    setSkillForm((current) => current ? { ...current, [field]: value } : current)
+  }
+
+  async function registerSkillFromSelectedFile() {
+    const file = skillFile
+    const form = skillForm
+    const key = file ? fileKey(file) : ''
+    const title = form?.title.trim() ?? ''
+    if (!file || !key) return
+    if (!form || !title) {
+      setError('Give the skill a clear title before adding it to the catalogue.')
+      return
+    }
+    setRegisteringSkill(true)
     setError(null)
     setNotice(null)
     try {
       const response = await apiFetch<SkillFromFileResponse>('/v1/skills/from-file', {
         method: 'POST',
         body: JSON.stringify({
-          title: fileName(file),
+          title,
           object_key: key,
           source_lane: selectedLane || 'uploads',
-          description: `Skill registered from uploaded file ${fileName(file)}.`,
-          repo: 'HIVE',
-          hive_lane: 'uploaded-file-skills',
-          priority_tier: 'P2',
-          risk_level: 'medium',
-          tags: ['uploaded-file', selectedLane || 'uploads'],
+          description: form.description.trim() || `Skill registered from uploaded file ${fileName(file)}.`,
+          repo: form.repo.trim() || 'HIVE',
+          hive_lane: form.hiveLane.trim() || 'uploaded-file-skills',
+          priority_tier: form.priorityTier.trim() || 'P2',
+          risk_level: form.riskLevel,
+          tags: tagsFromInput(form.tags),
         }),
       })
       if (!response.ok) throw new Error(response.message || response.error_code || 'Skill registration failed.')
-      setNotice(`${fileName(file)} has been added to the skill catalogue. Open Skills from the main menu to search or use it.`)
+      setNotice(`${title} has been added to the skill catalogue from ${fileName(file)}. Open Skills from the main menu to search or use it.`)
+      setSkillFile(null)
+      setSkillForm(null)
     } catch (caught) {
       setError(caught instanceof Error ? caught.message : 'Skill registration failed.')
+    } finally {
+      setRegisteringSkill(false)
     }
   }
 
@@ -445,7 +510,7 @@ export function FilesPage() {
             <div>
               <p className="text-xs font-semibold uppercase tracking-[0.2em] text-cyan-300/70">Authenticated R2 explorer</p>
               <h2 className="mt-2 text-2xl font-semibold text-white">Browse evidence across the HIVE ecosystem</h2>
-              <p className="mt-2 max-w-3xl text-sm leading-6 text-slate-400">
+              <p className="mt-2 max-w-3xl text-sm leading-6 text-slate-500">
                 Every configured R2 lane can be browsed, uploaded to and opened inline when the server-side credentials allow it. Upload keys now keep readable filenames.
               </p>
             </div>
@@ -465,7 +530,7 @@ export function FilesPage() {
               <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
                 <div>
                   <h3 className="text-sm font-semibold text-white">Ecosystem storage map</h3>
-                  <p className="mt-1 text-xs leading-5 text-slate-400">Select any readable lane to browse it. Writable lanes can receive uploads from this console.</p>
+                  <p className="mt-1 text-xs leading-5 text-slate-500">Select any readable lane to browse it. Writable lanes can receive uploads from this console.</p>
                 </div>
                 <StatusBadge status="active" label={`${readableLanes.length} readable · ${configuredLaneCount}/${lanes.length} configured`} compact />
               </div>
@@ -479,11 +544,11 @@ export function FilesPage() {
                         <div className="flex items-start justify-between gap-2">
                           <div className="min-w-0">
                             <p className="truncate text-xs font-semibold text-slate-200">{laneLabel(lane)}</p>
-                            <p className="mt-1 line-clamp-2 text-[11px] leading-4 text-slate-400">{lane.description || 'Configured ecosystem storage lane'}</p>
+                            <p className="mt-1 line-clamp-2 text-[11px] leading-4 text-slate-600">{lane.description || 'Configured ecosystem storage lane'}</p>
                           </div>
                           <StatusBadge status={status.status} label={status.label} compact />
                         </div>
-                        <p className="mt-2 truncate text-[10px] text-slate-400">{lane.bucket || 'No bucket configured'}</p>
+                        <p className="mt-2 truncate text-[10px] text-slate-700">{lane.bucket || 'No bucket configured'}</p>
                       </button>
                       {lane.public_base_url && (
                         <a href={lane.public_base_url} target="_blank" rel="noreferrer" className="mt-3 inline-flex items-center gap-1.5 text-[11px] text-cyan-300/70 hover:text-cyan-200">
@@ -516,9 +581,9 @@ export function FilesPage() {
               <label className="text-xs font-medium text-slate-400">Search within {laneLabel(activeLane ?? { lane: selectedLane || 'storage' })}
                 <div className="mt-2 flex gap-2">
                   <div className="relative min-w-0 flex-1">
-                    <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
-                    <input value={searchInput} onChange={(event) => setSearchInput(event.target.value)} placeholder="Search object names under the current prefix" className="h-11 w-full rounded-xl border border-white/8 bg-[#061126] pl-10 pr-10 text-sm text-slate-200 outline-none placeholder:text-slate-400 focus:border-cyan-300/30" />
-                    {(searchInput || activeSearch) && <button type="button" onClick={clearSearch} className="absolute right-2 top-1/2 -translate-y-1/2 rounded-lg p-1.5 text-slate-400 hover:bg-white/5 hover:text-slate-300" aria-label="Clear file search"><X className="h-4 w-4" /></button>}
+                    <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-600" />
+                    <input value={searchInput} onChange={(event) => setSearchInput(event.target.value)} placeholder="Search object names under the current prefix" className="h-11 w-full rounded-xl border border-white/8 bg-[#061126] pl-10 pr-10 text-sm text-slate-200 outline-none placeholder:text-slate-600 focus:border-cyan-300/30" />
+                    {(searchInput || activeSearch) && <button type="button" onClick={clearSearch} className="absolute right-2 top-1/2 -translate-y-1/2 rounded-lg p-1.5 text-slate-600 hover:bg-white/5 hover:text-slate-300" aria-label="Clear file search"><X className="h-4 w-4" /></button>}
                   </div>
                   <button type="submit" className="h-11 rounded-xl border border-cyan-300/20 bg-cyan-300/8 px-4 text-xs font-medium text-cyan-100 hover:bg-cyan-300/12">Search</button>
                 </div>
@@ -526,13 +591,13 @@ export function FilesPage() {
             </form>
           </div>
 
-          <div className="mt-5 flex flex-wrap items-center gap-1.5 rounded-xl border border-white/8 bg-[#061126]/70 px-3 py-2.5 text-xs text-slate-400">
+          <div className="mt-5 flex flex-wrap items-center gap-1.5 rounded-xl border border-white/8 bg-[#061126]/70 px-3 py-2.5 text-xs text-slate-500">
             <button type="button" onClick={() => changePrefix(rootPrefixForLane(activeLane))} className="rounded-md px-2 py-1 text-cyan-200/80 hover:bg-white/5 hover:text-cyan-100">
               {laneLabel(activeLane ?? { lane: selectedLane || 'root' })}
             </button>
             {breadcrumbs.map((crumb) => (
               <span key={crumb.prefix} className="flex items-center gap-1.5">
-                <ChevronRight className="h-3.5 w-3.5 text-slate-400" />
+                <ChevronRight className="h-3.5 w-3.5 text-slate-700" />
                 <button type="button" onClick={() => changePrefix(crumb.prefix)} className="max-w-[220px] truncate rounded-md px-2 py-1 hover:bg-white/5 hover:text-slate-300">{crumb.label}</button>
               </span>
             ))}
@@ -542,8 +607,8 @@ export function FilesPage() {
           {activeLane?.writable ? (
             <div className="mt-6 border-t border-white/8 pt-5">
               <div className="flex w-fit gap-1 rounded-xl border border-white/8 bg-[#071426] p-1">
-                <button type="button" onClick={() => setUploadMode('file')} className={`rounded-lg px-3 py-1.5 text-xs transition ${uploadMode === 'file' ? 'bg-cyan-300/10 text-cyan-100' : 'text-slate-400 hover:text-slate-300'}`}>File upload</button>
-                <button type="button" onClick={() => setUploadMode('text')} className={`rounded-lg px-3 py-1.5 text-xs transition ${uploadMode === 'text' ? 'bg-cyan-300/10 text-cyan-100' : 'text-slate-400 hover:text-slate-300'}`}>Paste text</button>
+                <button type="button" onClick={() => setUploadMode('file')} className={`rounded-lg px-3 py-1.5 text-xs transition ${uploadMode === 'file' ? 'bg-cyan-300/10 text-cyan-100' : 'text-slate-500 hover:text-slate-300'}`}>File upload</button>
+                <button type="button" onClick={() => setUploadMode('text')} className={`rounded-lg px-3 py-1.5 text-xs transition ${uploadMode === 'text' ? 'bg-cyan-300/10 text-cyan-100' : 'text-slate-500 hover:text-slate-300'}`}>Paste text</button>
               </div>
 
               {uploadMode === 'file' ? (
@@ -556,7 +621,7 @@ export function FilesPage() {
                 >
                   {uploading ? <LoaderCircle className="mx-auto h-8 w-8 animate-spin text-cyan-300" /> : <UploadCloud className="mx-auto h-8 w-8 text-cyan-300/70" />}
                   <p className="mt-3 text-sm font-medium text-slate-200">Drop one or more files into {laneLabel(activeLane)}</p>
-                  <p className="mt-1 text-xs text-slate-400">HIVE will store them under readable date and filename based R2 keys.</p>
+                  <p className="mt-1 text-xs text-slate-600">HIVE will store them under readable date and filename based R2 keys.</p>
                   <button type="button" onClick={() => inputRef.current?.click()} disabled={uploading} className="mt-4 inline-flex h-9 items-center gap-2 rounded-xl bg-gradient-to-r from-cyan-400 to-emerald-300 px-4 text-xs font-semibold text-[#052035] disabled:opacity-50">
                     <FileUp className="h-4 w-4" /> Choose files
                   </button>
@@ -568,7 +633,7 @@ export function FilesPage() {
                     <input value={textFilename} onChange={(event) => setTextFilename(event.target.value)} className="mt-2 h-10 w-full rounded-xl border border-white/8 bg-[#061126] px-3 text-sm text-slate-200 outline-none focus:border-cyan-300/30" />
                   </label>
                   <label className="text-xs font-medium text-slate-400">Text content
-                    <textarea value={textContent} onChange={(event) => setTextContent(event.target.value)} rows={7} placeholder="Paste notes, logs, transcripts or source text…" className="mt-2 w-full resize-y rounded-xl border border-white/8 bg-[#061126] px-3 py-3 text-sm leading-6 text-slate-200 outline-none placeholder:text-slate-400 focus:border-cyan-300/30" />
+                    <textarea value={textContent} onChange={(event) => setTextContent(event.target.value)} rows={7} placeholder="Paste notes, logs, transcripts or source text…" className="mt-2 w-full resize-y rounded-xl border border-white/8 bg-[#061126] px-3 py-3 text-sm leading-6 text-slate-200 outline-none placeholder:text-slate-600 focus:border-cyan-300/30" />
                   </label>
                   <div className="flex justify-end">
                     <button type="submit" disabled={uploading || !textFilename.trim() || !textContent.trim()} className="flex h-9 items-center gap-2 rounded-xl bg-gradient-to-r from-cyan-400 to-emerald-300 px-4 text-xs font-semibold text-[#052035] disabled:opacity-50">
@@ -589,7 +654,7 @@ export function FilesPage() {
         {error && <div className="mt-4 rounded-xl border border-rose-400/20 bg-rose-400/8 px-4 py-3 text-sm text-rose-200">{error}</div>}
 
         <section className="mt-5">
-          <div className="mb-3 flex flex-wrap items-center justify-between gap-2 text-xs text-slate-400">
+          <div className="mb-3 flex flex-wrap items-center justify-between gap-2 text-xs text-slate-600">
             <div className="flex items-center gap-2"><StatusBadge status={activeLane?.writable ? 'active' : activeLane?.readable ? 'readonly' : 'warning'} label={activeLane?.access_mode || storage} compact /> {files.length} objects · {prefixes.length} prefixes</div>
             <div className="flex items-center gap-2">
               {cursorHistory.length > 0 && <button type="button" onClick={previousPage} className="inline-flex h-8 items-center gap-1.5 rounded-lg border border-white/8 bg-white/[0.025] px-2.5 text-slate-400 hover:text-white"><ArrowLeft className="h-3.5 w-3.5" /> Previous</button>}
@@ -607,7 +672,7 @@ export function FilesPage() {
               <p className="mt-3 text-sm">This lane is configured as registry-only and cannot be browsed with the current credentials.</p>
             </div>
           ) : prefixes.length === 0 && files.length === 0 ? (
-            <div className="rounded-3xl border border-dashed border-white/10 py-16 text-center text-slate-400">
+            <div className="rounded-3xl border border-dashed border-white/10 py-16 text-center text-slate-600">
               <FolderOpen className="mx-auto h-8 w-8" />
               <p className="mt-3 text-sm">No matching objects found under this prefix.</p>
             </div>
@@ -620,7 +685,7 @@ export function FilesPage() {
                   <button key={folderPrefix} type="button" onClick={() => changePrefix(folderPrefix)} className="group rounded-2xl border border-white/8 bg-[#0a192d]/70 p-4 text-left transition hover:border-cyan-300/20 hover:bg-[#0d2038]">
                     <div className="flex h-10 w-10 items-center justify-center rounded-xl border border-amber-300/15 bg-amber-300/7 text-amber-200"><Folder className="h-5 w-5" /></div>
                     <h3 className="mt-4 truncate text-sm font-semibold text-white">{name}</h3>
-                    <p className="mt-1 truncate text-xs text-slate-400">{folderPrefix}</p>
+                    <p className="mt-1 truncate text-xs text-slate-600">{folderPrefix}</p>
                     <div className="mt-4 flex items-center justify-end border-t border-white/6 pt-3 text-[11px] text-cyan-200/65">Open prefix <ChevronRight className="ml-1 h-3.5 w-3.5" /></div>
                   </button>
                 )
@@ -638,8 +703,8 @@ export function FilesPage() {
                         <StatusBadge status={activeLane?.writable ? 'active' : 'readonly'} label={activeLane?.writable ? 'Read/write' : 'Read-only'} compact />
                       </div>
                       <h3 className="mt-4 truncate text-sm font-semibold text-white">{name}</h3>
-                      <p className="mt-1 line-clamp-2 min-h-10 break-all text-xs leading-5 text-slate-400">{key}</p>
-                      <div className="mt-4 flex items-center justify-between border-t border-white/6 pt-3 text-[11px] text-slate-400">
+                      <p className="mt-1 line-clamp-2 min-h-10 break-all text-xs leading-5 text-slate-600">{key}</p>
+                      <div className="mt-4 flex items-center justify-between border-t border-white/6 pt-3 text-[11px] text-slate-600">
                         <span>{formatBytes(Number(file.size_bytes ?? file.size ?? 0))}</span>
                         <span>{formatDate(String(file.last_modified || ''))}</span>
                       </div>
@@ -659,7 +724,7 @@ export function FilesPage() {
                       <button type="button" disabled={!chatSupported} onClick={() => chatWith(file)} className="flex h-9 items-center justify-center gap-2 rounded-xl border border-emerald-300/15 bg-emerald-300/6 text-xs font-medium text-emerald-100 transition hover:bg-emerald-300/10 disabled:cursor-not-allowed disabled:opacity-35">
                         <MessageSquareText className="h-4 w-4" /> {chatSupported ? 'Chat' : 'No chat'}
                       </button>
-                      <button type="button" onClick={() => void addSkillFromFile(file)} className="flex h-9 items-center justify-center gap-2 rounded-xl border border-violet-300/15 bg-violet-300/6 text-xs font-medium text-violet-100 transition hover:bg-violet-300/10">
+                      <button type="button" onClick={() => openSkillRegistration(file)} className="flex h-9 items-center justify-center gap-2 rounded-xl border border-violet-300/15 bg-violet-300/6 text-xs font-medium text-violet-100 transition hover:bg-violet-300/10">
                         <BrainCircuit className="h-4 w-4" /> Add skill
                       </button>
                     </div>
@@ -670,6 +735,91 @@ export function FilesPage() {
           )}
         </section>
       </div>
+
+      {skillFile && skillForm && (
+        <div className="fixed inset-0 z-50 flex items-end bg-[#020817]/80 px-3 py-4 backdrop-blur-sm sm:items-center sm:justify-center">
+          <section className="max-h-[92vh] w-full overflow-y-auto rounded-3xl border border-white/10 bg-[#08172b] p-5 shadow-2xl shadow-black/40 sm:max-w-2xl sm:p-6">
+            <div className="flex items-start justify-between gap-4">
+              <div>
+                <p className="text-xs font-semibold uppercase tracking-[0.18em] text-violet-200/70">Review before adding</p>
+                <h2 className="mt-2 text-xl font-semibold text-white">Add this file as a skill</h2>
+                <p className="mt-2 text-sm leading-6 text-slate-300">
+                  HIVE will not silently catalogue the raw file. Choose the skill details, then confirm the registration.
+                </p>
+              </div>
+              <button type="button" onClick={closeSkillRegistration} disabled={registeringSkill} className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-white/8 bg-white/[0.035] text-slate-300 transition hover:text-white disabled:opacity-40" aria-label="Close skill registration">
+                <X className="h-4 w-4" />
+              </button>
+            </div>
+
+            <div className="mt-5 rounded-2xl border border-cyan-300/12 bg-cyan-300/[0.035] px-4 py-3 text-xs leading-5 text-cyan-100/80">
+              <span className="font-semibold text-cyan-100">Selected file:</span> {fileName(skillFile)}
+              <span className="mx-2 text-cyan-100/35">·</span>
+              <span className="font-semibold text-cyan-100">Lane:</span> {selectedLane || 'uploads'}
+            </div>
+
+            <div className="mt-5 grid gap-4">
+              <label className="text-xs font-medium text-slate-300">Skill title
+                <input value={skillForm.title} onChange={(event) => updateSkillForm('title', event.target.value)} className="mt-2 h-11 w-full rounded-xl border border-white/8 bg-[#061126] px-3 text-sm text-slate-100 outline-none focus:border-violet-300/40" />
+              </label>
+
+              <label className="text-xs font-medium text-slate-300">Description
+                <textarea value={skillForm.description} onChange={(event) => updateSkillForm('description', event.target.value)} rows={4} placeholder="Explain what this skill should be used for…" className="mt-2 w-full resize-y rounded-xl border border-white/8 bg-[#061126] px-3 py-3 text-sm leading-6 text-slate-100 outline-none placeholder:text-slate-400 focus:border-violet-300/40" />
+              </label>
+
+              <div className="grid gap-3 sm:grid-cols-2">
+                <label className="text-xs font-medium text-slate-300">Repo
+                  <select value={skillForm.repo} onChange={(event) => updateSkillForm('repo', event.target.value)} className="mt-2 h-11 w-full rounded-xl border border-white/8 bg-[#061126] px-3 text-sm text-slate-100 outline-none focus:border-violet-300/40">
+                    <option value="HIVE">HIVE</option>
+                    <option value="HIVE-UI">HIVE-UI</option>
+                    <option value="AIMS">AIMS</option>
+                    <option value="RAMS">RAMS</option>
+                    <option value="Website">Website</option>
+                    <option value="Shared">Shared</option>
+                  </select>
+                </label>
+
+                <label className="text-xs font-medium text-slate-300">Skill lane
+                  <input value={skillForm.hiveLane} onChange={(event) => updateSkillForm('hiveLane', event.target.value)} className="mt-2 h-11 w-full rounded-xl border border-white/8 bg-[#061126] px-3 text-sm text-slate-100 outline-none focus:border-violet-300/40" />
+                </label>
+              </div>
+
+              <div className="grid gap-3 sm:grid-cols-2">
+                <label className="text-xs font-medium text-slate-300">Priority
+                  <select value={skillForm.priorityTier} onChange={(event) => updateSkillForm('priorityTier', event.target.value)} className="mt-2 h-11 w-full rounded-xl border border-white/8 bg-[#061126] px-3 text-sm text-slate-100 outline-none focus:border-violet-300/40">
+                    <option value="P0">P0</option>
+                    <option value="P1">P1</option>
+                    <option value="P2">P2</option>
+                    <option value="P3">P3</option>
+                  </select>
+                </label>
+
+                <label className="text-xs font-medium text-slate-300">Risk level
+                  <select value={skillForm.riskLevel} onChange={(event) => updateSkillForm('riskLevel', event.target.value)} className="mt-2 h-11 w-full rounded-xl border border-white/8 bg-[#061126] px-3 text-sm text-slate-100 outline-none focus:border-violet-300/40">
+                    <option value="low">Low</option>
+                    <option value="medium">Medium</option>
+                    <option value="high">High</option>
+                  </select>
+                </label>
+              </div>
+
+              <label className="text-xs font-medium text-slate-300">Tags
+                <input value={skillForm.tags} onChange={(event) => updateSkillForm('tags', event.target.value)} placeholder="uploaded-file, audits, brand-assets" className="mt-2 h-11 w-full rounded-xl border border-white/8 bg-[#061126] px-3 text-sm text-slate-100 outline-none placeholder:text-slate-400 focus:border-violet-300/40" />
+                <span className="mt-2 block text-[11px] leading-5 text-slate-400">Comma-separated. These are used for search and routing, so plain names beat cryptic goblin-code.</span>
+              </label>
+            </div>
+
+            <div className="mt-6 flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
+              <button type="button" onClick={closeSkillRegistration} disabled={registeringSkill} className="flex h-10 items-center justify-center rounded-xl border border-white/8 bg-white/[0.035] px-4 text-sm font-medium text-slate-200 transition hover:bg-white/[0.06] disabled:opacity-40">
+                Cancel
+              </button>
+              <button type="button" onClick={() => void registerSkillFromSelectedFile()} disabled={registeringSkill || !skillForm.title.trim()} className="flex h-10 items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-violet-300 to-cyan-300 px-4 text-sm font-semibold text-[#061126] transition disabled:opacity-50">
+                {registeringSkill ? <LoaderCircle className="h-4 w-4 animate-spin" /> : <BrainCircuit className="h-4 w-4" />} Confirm add skill
+              </button>
+            </div>
+          </section>
+        </div>
+      )}
     </div>
   )
 }
