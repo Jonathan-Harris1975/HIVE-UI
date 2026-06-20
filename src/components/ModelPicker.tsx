@@ -3,7 +3,6 @@ import {
   Check,
   ChevronDown,
   Image,
-  LockKeyhole,
   Search,
   Sparkles,
   Video,
@@ -79,25 +78,40 @@ function groupIcon(group: string) {
   return <Sparkles className="h-3.5 w-3.5" />
 }
 
+function categoryLabel(group: string): string {
+  return GROUP_LABELS[group] || group.replace(/_/g, ' ')
+}
+
 export function ModelPicker({ models, value, onChange, loading = false }: ModelPickerProps) {
   const [open, setOpen] = useState(false)
   const [query, setQuery] = useState('')
+  const [category, setCategory] = useState('all')
   const wrapperRef = useRef<HTMLDivElement | null>(null)
   const searchRef = useRef<HTMLInputElement | null>(null)
   const listId = useId()
 
-  const visibleModels = useMemo(
-    () => models.filter((model) => model.visible_in_chat_picker !== false),
-    [models],
-  )
+  const visibleModels = useMemo(() => models, [models])
   const selected = useMemo(
     () => visibleModels.find((model) => model.id === value) ?? null,
     [value, visibleModels],
   )
 
+  const categoryChoices = useMemo(() => {
+    const counts = new Map<string, number>()
+    for (const model of visibleModels) {
+      const group = stringValue(model.primary_group) ?? 'other'
+      counts.set(group, (counts.get(group) ?? 0) + 1)
+    }
+    return GROUP_ORDER
+      .filter((group) => counts.has(group))
+      .map((group) => ({ group, count: counts.get(group) ?? 0 }))
+  }, [visibleModels])
+
   const grouped = useMemo(() => {
     const needle = query.trim().toLowerCase()
     const matches = visibleModels.filter((model) => {
+      const group = stringValue(model.primary_group) ?? 'other'
+      if (category !== 'all' && group !== category) return false
       if (!needle) return true
       return [
         model.id,
@@ -123,7 +137,7 @@ export function ModelPicker({ models, value, onChange, loading = false }: ModelP
     return GROUP_ORDER
       .filter((group) => groups.has(group))
       .map((group) => ({ group, models: groups.get(group) ?? [] }))
-  }, [query, visibleModels])
+  }, [category, query, visibleModels])
 
   useEffect(() => {
     if (!open) return
@@ -143,7 +157,6 @@ export function ModelPicker({ models, value, onChange, loading = false }: ModelP
   }, [open])
 
   function selectModel(model: ModelSummary | null) {
-    if (model && model.chat_selectable === false) return
     onChange(model?.id ?? '')
     setOpen(false)
     setQuery('')
@@ -165,8 +178,20 @@ export function ModelPicker({ models, value, onChange, loading = false }: ModelP
       </button>
 
       {open && (
-        <div className="absolute bottom-[calc(100%+8px)] left-0 z-50 w-[min(92vw,420px)] overflow-hidden rounded-2xl border border-white/10 bg-[#09182b]/98 shadow-2xl shadow-black/50 backdrop-blur-xl">
-          <div className="border-b border-white/8 p-3">
+        <div className="absolute bottom-[calc(100%+8px)] left-0 z-50 w-[min(94vw,460px)] overflow-hidden rounded-2xl border border-white/10 bg-[#09182b]/98 shadow-2xl shadow-black/50 backdrop-blur-xl">
+          <div className="space-y-2 border-b border-white/8 p-3">
+            <label className="text-[10px] font-semibold uppercase tracking-[0.16em] text-slate-500">Model type</label>
+            <select
+              value={category}
+              onChange={(event) => setCategory(event.target.value)}
+              className="h-10 w-full rounded-xl border border-white/8 bg-[#061126] px-3 text-xs text-slate-200 outline-none focus:border-cyan-300/30"
+              aria-label="Filter models by category"
+            >
+              <option value="all">All model types · {visibleModels.length}</option>
+              {categoryChoices.map(({ group, count }) => (
+                <option key={group} value={group}>{categoryLabel(group)} · {count}</option>
+              ))}
+            </select>
             <div className="relative">
               <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-600" />
               <input
@@ -185,7 +210,7 @@ export function ModelPicker({ models, value, onChange, loading = false }: ModelP
             </div>
           </div>
 
-          <div id={listId} role="listbox" aria-label="HIVE models" className="max-h-[min(62vh,520px)] overflow-y-auto p-2">
+          <div id={listId} role="listbox" aria-label="HIVE models" className="max-h-[min(56vh,460px)] overflow-y-auto p-2">
             <button
               type="button"
               role="option"
@@ -201,32 +226,28 @@ export function ModelPicker({ models, value, onChange, loading = false }: ModelP
             </button>
 
             {grouped.map(({ group, models: groupModels }) => (
-              <section key={group} className="mt-2" aria-label={GROUP_LABELS[group] || group}>
+              <section key={group} className="mt-2" aria-label={categoryLabel(group)}>
                 <div className="sticky top-0 z-10 flex items-center justify-between bg-[#09182b]/95 px-3 py-2 text-[10px] font-semibold uppercase tracking-[0.15em] text-slate-500 backdrop-blur">
-                  <span className="flex items-center gap-1.5">{groupIcon(group)} {GROUP_LABELS[group] || group}</span>
+                  <span className="flex items-center gap-1.5">{groupIcon(group)} {categoryLabel(group)}</span>
                   <span>{groupModels.length}</span>
                 </div>
                 <div className="space-y-0.5">
                   {groupModels.map((item) => {
-                    const disabled = item.chat_selectable === false
                     const active = item.id === value
                     const context = compactContext(item.context_length)
+                    const advisory = item.chat_selectable === false ? stringValue(item.disabled_reason) : null
                     return (
                       <button
                         key={item.id}
                         type="button"
                         role="option"
                         aria-selected={active}
-                        aria-disabled={disabled}
-                        disabled={disabled}
-                        title={disabled
-                          ? stringValue(item.disabled_reason) ?? 'Unavailable in standard chat'
-                          : stringValue(item.description) ?? item.id}
+                        title={stringValue(item.description) ?? item.id}
                         onClick={() => selectModel(item)}
-                        className="group/model flex w-full items-start gap-3 rounded-xl px-3 py-2.5 text-left transition hover:bg-white/[0.045] disabled:cursor-not-allowed disabled:opacity-55"
+                        className="group/model flex w-full items-start gap-3 rounded-xl px-3 py-2.5 text-left transition hover:bg-white/[0.045]"
                       >
-                        <div className={`mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-lg border ${disabled ? 'border-amber-300/15 bg-amber-300/5 text-amber-200/70' : 'border-white/8 bg-white/[0.035] text-slate-400'}`}>
-                          {disabled ? <LockKeyhole className="h-3.5 w-3.5" /> : <BrainCircuit className="h-3.5 w-3.5" />}
+                        <div className="mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-lg border border-white/8 bg-white/[0.035] text-slate-400">
+                          <BrainCircuit className="h-3.5 w-3.5" />
                         </div>
                         <div className="min-w-0 flex-1">
                           <div className="flex min-w-0 items-center gap-2">
@@ -238,12 +259,10 @@ export function ModelPicker({ models, value, onChange, loading = false }: ModelP
                             {item.is_free === true && <span className="rounded bg-emerald-300/8 px-1.5 py-0.5 text-[9px] font-semibold uppercase text-emerald-200">Free</span>}
                             {stringArray(item.configured_roles).slice(0, 3).map((role) => <span key={role} className="rounded bg-cyan-300/7 px-1.5 py-0.5 text-[9px] text-cyan-200/80">{role}</span>)}
                             {context && <span className="rounded bg-white/[0.035] px-1.5 py-0.5 text-[9px] text-slate-500">{context}</span>}
-                            {disabled && <span className="rounded bg-amber-300/7 px-1.5 py-0.5 text-[9px] text-amber-200/80">Discovery only</span>}
+                            {stringArray(item.output_modalities).slice(0, 3).map((mode) => <span key={mode} className="rounded bg-violet-300/7 px-1.5 py-0.5 text-[9px] text-violet-100/75">{mode}</span>)}
                           </div>
-                          {disabled && stringValue(item.disabled_reason) && (
-                            <p className="mt-1.5 text-[10px] leading-4 text-amber-100/55">
-                              {stringValue(item.disabled_reason)}
-                            </p>
+                          {advisory && (
+                            <p className="mt-1.5 text-[10px] leading-4 text-amber-100/55">{advisory}</p>
                           )}
                         </div>
                       </button>
