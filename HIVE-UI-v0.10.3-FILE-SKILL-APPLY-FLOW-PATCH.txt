@@ -1,0 +1,7 @@
+HIVE-UI v0.10.3 file-skill apply flow
+
+- File cards now use existing skills with selected files through a skill picker.
+- The previous ambiguous Add skill action has been replaced by Use skill.
+- Create skill from file is only shown when browsing the hive_skills lane under the skills/ folder.
+- Chat receives selected skill_id/skill_title with the attached file so backend file chat can apply the skill as guidance.
+- Mobile text contrast in the touched file/chat surfaces is kept above the earlier low-contrast slate-600 styling.
