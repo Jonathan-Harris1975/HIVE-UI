@@ -219,6 +219,8 @@ export function chatWithFile(
       conversation_id: payload.conversation_id,
       history: payload.history ?? [],
       workflow_preset: payload.workflow_preset ?? null,
+      skill_id: payload.skill_id ?? null,
+      skill_title: payload.skill_title ?? null,
       use_chunks: uploadsLane,
       use_vectorize: uploadsLane,
       vectorize_fallback_sql: true,
