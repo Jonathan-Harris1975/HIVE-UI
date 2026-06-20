@@ -17,7 +17,7 @@ function CodeBlock({ className, children }: { className?: string; children?: Rea
 
   return (
     <div className="my-4 overflow-hidden rounded-xl border border-white/10 bg-[#040b18]">
-      <div className="flex items-center justify-between border-b border-white/10 px-3 py-2 text-[11px] uppercase tracking-[0.15em] text-slate-500">
+      <div className="flex items-center justify-between border-b border-white/10 px-3 py-2 text-[11px] uppercase tracking-[0.15em] text-slate-400">
         <span>{language}</span>
         <button type="button" onClick={copyCode} className="flex items-center gap-1.5 text-slate-400 hover:text-cyan-200">
           {copied ? <Check className="h-3.5 w-3.5" /> : <Copy className="h-3.5 w-3.5" />}

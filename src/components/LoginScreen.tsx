@@ -58,7 +58,7 @@ export function LoginScreen() {
                 setLocalError(null)
               }}
               placeholder="Enter access key"
-              className="h-12 w-full rounded-xl border border-white/10 bg-[#071426] px-4 text-sm text-white outline-none transition placeholder:text-slate-600 focus:border-cyan-300/60 focus:ring-4 focus:ring-cyan-300/10"
+              className="h-12 w-full rounded-xl border border-white/10 bg-[#071426] px-4 text-sm text-white outline-none transition placeholder:text-slate-400 focus:border-cyan-300/60 focus:ring-4 focus:ring-cyan-300/10"
             />
           </label>
 
@@ -79,7 +79,7 @@ export function LoginScreen() {
           </button>
         </form>
 
-        <p className="mt-6 text-center text-xs leading-5 text-slate-500">
+        <p className="mt-6 text-center text-xs leading-5 text-slate-400">
           Your access key is exchanged once for a signed, HttpOnly session cookie. Neither the UI key nor the HIVE backend bearer token is stored in the browser bundle.
         </p>
       </section>

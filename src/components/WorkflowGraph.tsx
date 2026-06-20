@@ -18,7 +18,7 @@ function NodeIcon({ status }: { status?: string }) {
 
 export function WorkflowGraph({ nodes, edges = [], onInspect }: WorkflowGraphProps) {
   if (!nodes.length) {
-    return <div className="rounded-2xl border border-dashed border-white/10 px-4 py-12 text-center text-sm text-slate-600">Build a workflow to render its graph.</div>
+    return <div className="rounded-2xl border border-dashed border-white/10 px-4 py-12 text-center text-sm text-slate-400">Build a workflow to render its graph.</div>
   }
 
   const edgeLookup = new Map(edges.map((edge) => [`${edge.from}:${edge.to}`, edge]))
@@ -40,17 +40,17 @@ export function WorkflowGraph({ nodes, edges = [], onInspect }: WorkflowGraphPro
               </span>
               <span className="min-w-0">
                 <span className="block text-sm font-semibold text-white">{node.label || node.id}</span>
-                <span className="mt-1 block text-xs leading-5 text-slate-500">{node.summary || node.type || 'Workflow step'}</span>
+                <span className="mt-1 block text-xs leading-5 text-slate-400">{node.summary || node.type || 'Workflow step'}</span>
                 {node.skill_ids && node.skill_ids.length > 0 && (
                   <span className="mt-2 flex flex-wrap gap-1.5">
-                    {node.skill_ids.map((skillId) => <span key={skillId} className="rounded-full bg-white/[0.04] px-2 py-0.5 text-[10px] text-slate-500">{skillId}</span>)}
+                    {node.skill_ids.map((skillId) => <span key={skillId} className="rounded-full bg-white/[0.04] px-2 py-0.5 text-[10px] text-slate-400">{skillId}</span>)}
                   </span>
                 )}
               </span>
               <StatusBadge status={node.status} compact />
             </button>
             {next && linked && (
-              <div className="flex h-9 items-center pl-[31px] text-slate-700">
+              <div className="flex h-9 items-center pl-[31px] text-slate-400">
                 <ArrowDown className="h-4 w-4" />
               </div>
             )}

@@ -91,12 +91,12 @@ function ConversationSection({ closeMobile }: { closeMobile?: () => void }) {
         <Plus className="h-4 w-4" /> New conversation
       </button>
       <label className="relative mt-3 block">
-        <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-600" />
+        <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
         <input
           value={query}
           onChange={(event) => setQuery(event.target.value)}
           placeholder="Search conversations"
-          className="h-9 w-full rounded-lg border border-white/8 bg-[#071426] pl-9 pr-3 text-xs text-slate-200 outline-none placeholder:text-slate-600 focus:border-cyan-300/30"
+          className="h-9 w-full rounded-lg border border-white/8 bg-[#071426] pl-9 pr-3 text-xs text-slate-200 outline-none placeholder:text-slate-400 focus:border-cyan-300/30"
         />
       </label>
 
@@ -107,7 +107,7 @@ function ConversationSection({ closeMobile }: { closeMobile?: () => void }) {
           </div>
         )}
         {!conversationsLoading && !filtered.length && (
-          <p className="px-2 py-5 text-center text-xs leading-5 text-slate-600">No persisted conversations yet.</p>
+          <p className="px-2 py-5 text-center text-xs leading-5 text-slate-400">No persisted conversations yet.</p>
         )}
         {filtered.map((conversation) => {
           const title = conversation.title || 'Untitled conversation'
@@ -123,7 +123,7 @@ function ConversationSection({ closeMobile }: { closeMobile?: () => void }) {
                 className="w-full px-3 py-2.5 pr-16 text-left"
               >
                 <div className={`truncate text-xs font-medium ${active ? 'text-cyan-100' : 'text-slate-300'}`}>{title}</div>
-                <div className="mt-1 flex gap-2 text-[10px] text-slate-600">
+                <div className="mt-1 flex gap-2 text-[10px] text-slate-400">
                   <span>{conversation.message_count ?? 0} messages</span>
                   <span>·</span>
                   <span>{formatDate(conversation.updated_at)}</span>
@@ -134,7 +134,7 @@ function ConversationSection({ closeMobile }: { closeMobile?: () => void }) {
                   type="button"
                   aria-label="Rename conversation"
                   onClick={() => void rename(conversation.id, title)}
-                  className="rounded-md p-1.5 text-slate-500 hover:bg-white/8 hover:text-cyan-200"
+                  className="rounded-md p-1.5 text-slate-400 hover:bg-white/8 hover:text-cyan-200"
                 >
                   <Pencil className="h-3.5 w-3.5" />
                 </button>
@@ -142,7 +142,7 @@ function ConversationSection({ closeMobile }: { closeMobile?: () => void }) {
                   type="button"
                   aria-label="Delete conversation"
                   onClick={() => void remove(conversation.id, title)}
-                  className="rounded-md p-1.5 text-slate-500 hover:bg-rose-400/10 hover:text-rose-300"
+                  className="rounded-md p-1.5 text-slate-400 hover:bg-rose-400/10 hover:text-rose-300"
                 >
                   <Trash2 className="h-3.5 w-3.5" />
                 </button>
@@ -187,11 +187,11 @@ function SidebarContent({ closeMobile }: { closeMobile?: () => void }) {
       {pathname === '/chat' ? <ConversationSection closeMobile={closeMobile} /> : <div className="flex-1" />}
 
       <div className="mt-4 border-t border-white/8 pt-4">
-        <p className="mb-2 px-3 text-[10px] uppercase tracking-[0.14em] text-slate-700" title={HIVE_UI_BUILD}>UI {HIVE_UI_VERSION}</p>
+        <p className="mb-2 px-3 text-[10px] uppercase tracking-[0.14em] text-slate-400" title={HIVE_UI_BUILD}>UI {HIVE_UI_VERSION}</p>
         <button
           type="button"
           onClick={logout}
-          className="flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-sm text-slate-500 transition hover:bg-white/[0.04] hover:text-slate-200"
+          className="flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-sm text-slate-400 transition hover:bg-white/[0.04] hover:text-slate-200"
         >
           <LogOut className="h-4 w-4" /> Sign out
         </button>
@@ -211,7 +211,7 @@ function InspectorPanel() {
             <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-cyan-300/80">{payload.eyebrow ?? 'Inspector'}</p>
             <h2 className="mt-1 text-sm font-semibold text-white">{payload.title}</h2>
           </div>
-          <button type="button" onClick={() => setOpen(false)} className="rounded-lg p-2 text-slate-500 hover:bg-white/5 hover:text-white">
+          <button type="button" onClick={() => setOpen(false)} className="rounded-lg p-2 text-slate-400 hover:bg-white/5 hover:text-white">
             <PanelRightClose className="h-5 w-5" />
           </button>
         </div>
@@ -221,7 +221,7 @@ function InspectorPanel() {
             <dl className="mt-5 space-y-3">
               {payload.rows.map((row) => (
                 <div key={`${row.label}-${row.value}`} className="rounded-xl border border-white/8 bg-[#071426] p-3">
-                  <dt className="text-[10px] uppercase tracking-[0.16em] text-slate-600">{row.label}</dt>
+                  <dt className="text-[10px] uppercase tracking-[0.16em] text-slate-400">{row.label}</dt>
                   <dd className="mt-1 break-words text-xs leading-5 text-slate-300">{row.value}</dd>
                 </div>
               ))}
@@ -279,7 +279,7 @@ export function AppShell() {
             </button>
             <div className="min-w-0">
               <h1 className="truncate text-base font-semibold text-white">{meta.title}</h1>
-              <p className="hidden truncate text-xs text-slate-500 sm:block">{meta.subtitle}</p>
+              <p className="hidden truncate text-xs text-slate-400 sm:block">{meta.subtitle}</p>
             </div>
           </div>
           <div className="flex items-center gap-2">

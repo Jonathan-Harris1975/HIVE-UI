@@ -43,7 +43,7 @@ export class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundarySt
           >
             <RefreshCw className="h-4 w-4" /> Reload console
           </button>
-          <p className="mt-5 text-[10px] uppercase tracking-[0.16em] text-slate-600">HIVE-UI {HIVE_UI_VERSION} · {HIVE_UI_BUILD}</p>
+          <p className="mt-5 text-[10px] uppercase tracking-[0.16em] text-slate-400">HIVE-UI {HIVE_UI_VERSION} · {HIVE_UI_BUILD}</p>
         </section>
       </main>
     )
