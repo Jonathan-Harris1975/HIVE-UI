@@ -18,6 +18,7 @@ export interface InspectorPayload {
   description?: string
   rows?: InspectorRow[]
   json?: unknown
+  loading?: boolean
 }
 
 interface InspectorContextValue {

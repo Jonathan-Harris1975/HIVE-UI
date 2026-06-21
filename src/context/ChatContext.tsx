@@ -28,6 +28,7 @@ interface ChatContextValue {
   newConversation: () => void
   renameConversation: (id: string, title: string) => Promise<void>
   deleteConversation: (id: string) => Promise<void>
+  autoTitleConversation: (id: string) => Promise<void>
 }
 
 const ChatContext = createContext<ChatContextValue | null>(null)
@@ -83,6 +84,12 @@ export function ChatProvider({ children }: { children: ReactNode }) {
     await refreshConversations()
   }, [currentConversationId, newConversation, refreshConversations])
 
+  const autoTitleConversation = useCallback(async (id: string) => {
+    const response = await apiFetch<{ ok: boolean; error?: string }>(`/v1/chat/conversations/${encodeURIComponent(id)}/auto-title`, { method: 'POST' })
+    if (!response.ok) throw new Error(response.error || 'Conversation title could not be generated.')
+    await refreshConversations()
+  }, [refreshConversations])
+
   useEffect(() => {
     void refreshConversations().catch(() => undefined)
   }, [refreshConversations])
@@ -100,6 +107,7 @@ export function ChatProvider({ children }: { children: ReactNode }) {
     newConversation,
     renameConversation,
     deleteConversation,
+    autoTitleConversation,
   }), [
     conversations,
     conversationsLoading,
@@ -111,6 +119,7 @@ export function ChatProvider({ children }: { children: ReactNode }) {
     newConversation,
     renameConversation,
     deleteConversation,
+    autoTitleConversation,
   ])
 
   return <ChatContext.Provider value={value}>{children}</ChatContext.Provider>
