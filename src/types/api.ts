@@ -14,6 +14,7 @@ export interface ConversationSummary {
   mode?: string | null
   model?: string | null
   title?: string | null
+  auto_titled?: boolean | null
   created_at?: string | null
   updated_at?: string | null
   message_count?: number
@@ -23,10 +24,15 @@ export interface ConversationSummary {
   total_cost_usd?: number | string | null
 }
 
+export interface AutoTitleRequest {
+  force?: boolean
+}
+
 export interface AutoTitleResponse {
   ok: boolean
   conversation_id?: string
   title?: string | null
+  auto_titled?: boolean
   skipped?: boolean
   error?: string
 }
