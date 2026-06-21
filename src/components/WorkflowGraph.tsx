@@ -43,7 +43,7 @@ export function WorkflowGraph({ nodes, edges = [], onInspect }: WorkflowGraphPro
                 <span className="mt-1 block text-xs leading-5 text-slate-400">{node.summary || node.type || 'Workflow step'}</span>
                 {node.skill_ids && node.skill_ids.length > 0 && (
                   <span className="mt-2 flex flex-wrap gap-1.5">
-                    {node.skill_ids.map((skillId) => <span key={skillId} className="rounded-full bg-white/[0.04] px-2 py-0.5 text-[10px] text-slate-400">{skillId}</span>)}
+                    {node.skill_ids.map((skillId) => <span key={skillId} className="rounded-full bg-white/[0.04] px-2 py-0.5 text-[11px] text-slate-400">{skillId}</span>)}
                   </span>
                 )}
               </span>

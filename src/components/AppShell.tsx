@@ -1,6 +1,8 @@
 import {
   Activity,
   BrainCircuit,
+  Check,
+  Copy,
   Files,
   LogOut,
   Menu,
@@ -17,12 +19,15 @@ import { useEffect, useMemo, useState } from 'react'
 import { NavLink, Outlet, useLocation, useNavigate } from 'react-router'
 import { useAuth } from '../context/AuthContext'
 import { useChat } from '../context/ChatContext'
-import { useInspector } from '../context/InspectorContext'
+import { useInspector, type InspectorRow } from '../context/InspectorContext'
 import { HIVE_UI_BUILD, HIVE_UI_VERSION } from '../lib/build'
-import { formatDate } from '../lib/format'
+import { formatCost, formatDate } from '../lib/format'
 import { useOnlineStatus } from '../hooks/useOnlineStatus'
+import { ConfirmDialog } from './ConfirmDialog'
+import { EmptyState } from './EmptyState'
 import { HiveLogo } from './HiveLogo'
 
+// Header overflow strategy: keep only two mobile-visible actions in HeaderActions. A future third action should move into a HeaderActionsSheet bottom sheet triggered by MoreHorizontal.
 const navigation = [
   { to: '/chat', label: 'Chat', icon: MessageSquareText },
   { to: '/files', label: 'Files', icon: Files },
@@ -37,6 +42,12 @@ const pageMeta: Record<string, { title: string; subtitle: string }> = {
   '/ops': { title: 'Operations', subtitle: 'Health, workflow previews and review gates' },
 }
 
+interface PendingConversationDialog {
+  type: 'rename' | 'delete'
+  id: string
+  title: string
+}
+
 function ConversationSection({ closeMobile }: { closeMobile?: () => void }) {
   const navigate = useNavigate()
   const {
@@ -49,6 +60,9 @@ function ConversationSection({ closeMobile }: { closeMobile?: () => void }) {
     deleteConversation,
   } = useChat()
   const [query, setQuery] = useState('')
+  const [pendingDialog, setPendingDialog] = useState<PendingConversationDialog | null>(null)
+  const [renameValue, setRenameValue] = useState('')
+  const [dialogBusy, setDialogBusy] = useState(false)
 
   const filtered = useMemo(() => {
     const needle = query.trim().toLowerCase()
@@ -70,16 +84,35 @@ function ConversationSection({ closeMobile }: { closeMobile?: () => void }) {
     closeMobile?.()
   }
 
-  async function rename(id: string, existingTitle: string) {
-    const title = window.prompt('Rename conversation', existingTitle)
-    if (title?.trim()) await renameConversation(id, title.trim())
+  function openRename(id: string, existingTitle: string) {
+    setRenameValue(existingTitle)
+    setPendingDialog({ type: 'rename', id, title: existingTitle })
   }
 
-  async function remove(id: string, title: string) {
-    if (window.confirm(`Delete “${title}”? This removes its persisted messages and cost records.`)) {
-      await deleteConversation(id)
+  function openDelete(id: string, title: string) {
+    setPendingDialog({ type: 'delete', id, title })
+  }
+
+  async function confirmDialog() {
+    if (!pendingDialog) return
+    setDialogBusy(true)
+    try {
+      if (pendingDialog.type === 'rename') {
+        const cleanTitle = renameValue.trim()
+        if (cleanTitle) await renameConversation(pendingDialog.id, cleanTitle)
+      } else {
+        await deleteConversation(pendingDialog.id)
+      }
+      setPendingDialog(null)
+    } finally {
+      setDialogBusy(false)
     }
   }
+
+  const noResultsTitle = query.trim() ? 'No conversations match that search.' : 'No persisted conversations yet.'
+  const noResultsAction = query.trim()
+    ? { label: 'Clear search', onClick: () => setQuery('') }
+    : { label: 'New conversation', onClick: createConversation }
 
   return (
     <div className="mt-5 flex min-h-0 flex-1 flex-col border-t border-white/8 pt-5">
@@ -107,7 +140,7 @@ function ConversationSection({ closeMobile }: { closeMobile?: () => void }) {
           </div>
         )}
         {!conversationsLoading && !filtered.length && (
-          <p className="px-2 py-5 text-center text-xs leading-5 text-slate-400">No persisted conversations yet.</p>
+          <EmptyState title={noResultsTitle} body={query.trim() ? 'The sidebar filter is hiding every stored conversation.' : 'Start a clean HIVE thread and it will appear here once persisted.'} action={noResultsAction} />
         )}
         {filtered.map((conversation) => {
           const title = conversation.title || 'Untitled conversation'
@@ -123,17 +156,20 @@ function ConversationSection({ closeMobile }: { closeMobile?: () => void }) {
                 className="w-full px-3 py-2.5 pr-16 text-left"
               >
                 <div className={`truncate text-xs font-medium ${active ? 'text-cyan-100' : 'text-slate-300'}`}>{title}</div>
-                <div className="mt-1 flex gap-2 text-[10px] text-slate-400">
+                <div className="mt-1 flex gap-2 text-[11px] text-slate-400">
                   <span>{conversation.message_count ?? 0} messages</span>
                   <span>·</span>
                   <span>{formatDate(conversation.updated_at)}</span>
+                </div>
+                <div className="mt-1 text-[11px] text-slate-500">
+                  {(conversation.total_tokens ?? conversation.token_total) != null ? Number(conversation.total_tokens ?? conversation.token_total).toLocaleString() : '—'} tokens · {conversation.total_cost_usd != null || conversation.cost_usd != null ? formatCost(conversation.total_cost_usd ?? conversation.cost_usd) : '—'}
                 </div>
               </button>
               <div className="absolute right-2 top-2 flex opacity-0 transition group-hover:opacity-100 group-focus-within:opacity-100">
                 <button
                   type="button"
                   aria-label="Rename conversation"
-                  onClick={() => void rename(conversation.id, title)}
+                  onClick={() => openRename(conversation.id, title)}
                   className="rounded-md p-1.5 text-slate-400 hover:bg-white/8 hover:text-cyan-200"
                 >
                   <Pencil className="h-3.5 w-3.5" />
@@ -141,7 +177,7 @@ function ConversationSection({ closeMobile }: { closeMobile?: () => void }) {
                 <button
                   type="button"
                   aria-label="Delete conversation"
-                  onClick={() => void remove(conversation.id, title)}
+                  onClick={() => openDelete(conversation.id, title)}
                   className="rounded-md p-1.5 text-slate-400 hover:bg-rose-400/10 hover:text-rose-300"
                 >
                   <Trash2 className="h-3.5 w-3.5" />
@@ -151,6 +187,23 @@ function ConversationSection({ closeMobile }: { closeMobile?: () => void }) {
           )
         })}
       </div>
+
+      <ConfirmDialog
+        open={Boolean(pendingDialog)}
+        title={pendingDialog?.type === 'rename' ? 'Rename conversation' : 'Delete conversation'}
+        summary={pendingDialog?.type === 'rename'
+          ? 'This updates the stored conversation title used in the sidebar and conversation record.'
+          : 'This permanently removes the persisted conversation and its related message and cost records.'}
+        objectName={pendingDialog?.title}
+        systems={pendingDialog?.type === 'rename' ? ['PostgreSQL conversation row'] : ['PostgreSQL conversation row', 'PostgreSQL message rows', 'PostgreSQL cost records']}
+        confirmLabel={pendingDialog?.type === 'rename' ? 'Rename' : 'Delete conversation'}
+        tone={pendingDialog?.type === 'delete' ? 'destructive' : 'default'}
+        busy={dialogBusy}
+        confirmDisabled={pendingDialog?.type === 'rename' ? !renameValue.trim() : false}
+        textInput={pendingDialog?.type === 'rename' ? { label: 'Conversation title', value: renameValue, onChange: setRenameValue, required: true } : undefined}
+        onConfirm={() => void confirmDialog()}
+        onCancel={() => setPendingDialog(null)}
+      />
     </div>
   )
 }
@@ -202,6 +255,36 @@ function SidebarContent({ closeMobile }: { closeMobile?: () => void }) {
   )
 }
 
+function InspectorRowView({ row }: { row: InspectorRow }) {
+  const [copied, setCopied] = useState(false)
+  const [expanded, setExpanded] = useState(false)
+  const long = row.value.length > 120
+  const value = long && !expanded ? `${row.value.slice(0, 120)}…` : row.value
+
+  async function copyRow() {
+    await navigator.clipboard.writeText(row.value)
+    setCopied(true)
+    window.setTimeout(() => setCopied(false), 1400)
+  }
+
+  return (
+    <div className="rounded-xl border border-white/8 bg-[#071426] p-3">
+      <div className="flex items-center justify-between gap-3">
+        <dt className="text-[11px] uppercase tracking-[0.16em] text-slate-400">{row.label}</dt>
+        <button type="button" onClick={() => void copyRow()} className="inline-flex items-center gap-1 rounded-lg px-2 py-1 text-[11px] text-slate-400 hover:bg-white/5 hover:text-cyan-200" aria-label={`Copy ${row.label}`}>
+          {copied ? <Check className="h-3 w-3" /> : <Copy className="h-3 w-3" />} {copied ? 'Copied' : 'Copy'}
+        </button>
+      </div>
+      <dd className="mt-1 break-words text-xs leading-5 text-slate-300">{value}</dd>
+      {long && (
+        <button type="button" onClick={() => setExpanded((current) => !current)} className="mt-2 text-[11px] font-medium text-cyan-200 hover:text-cyan-100">
+          {expanded ? 'Show less' : 'Show more'}
+        </button>
+      )}
+    </div>
+  )
+}
+
 function InspectorPanel() {
   const { open, payload, setOpen } = useInspector()
 
@@ -209,9 +292,9 @@ function InspectorPanel() {
     <aside className={`fixed inset-y-0 right-0 z-40 w-[min(360px,92vw)] border-l border-white/8 bg-[#0a192d]/98 shadow-2xl shadow-black/40 backdrop-blur-xl transition-transform lg:static lg:z-auto lg:shadow-none ${open ? 'translate-x-0' : 'translate-x-full lg:hidden'}`}>
       <div className="flex h-full flex-col">
         <div className="flex h-[73px] items-center justify-between border-b border-white/8 px-5">
-          <div>
-            <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-cyan-300/80">{payload.eyebrow ?? 'Inspector'}</p>
-            <h2 className="mt-1 text-sm font-semibold text-white">{payload.title}</h2>
+          <div className="min-w-0">
+            <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-cyan-300/80">{payload.eyebrow ?? 'Inspector'}</p>
+            <h2 className="mt-1 truncate text-sm font-semibold text-white">{payload.title}</h2>
           </div>
           <button type="button" onClick={() => setOpen(false)} aria-label="Close inspector" className="rounded-lg p-2 text-slate-400 hover:bg-white/5 hover:text-white">
             <PanelRightClose className="h-5 w-5" />
@@ -219,17 +302,16 @@ function InspectorPanel() {
         </div>
         <div className="min-h-0 flex-1 overflow-y-auto p-5">
           {payload.description && <p className="text-sm leading-6 text-slate-400">{payload.description}</p>}
-          {payload.rows && payload.rows.length > 0 && (
+          {payload.loading ? (
+            <div className="mt-5 space-y-3" aria-live="polite" aria-label="Inspector loading">
+              {[0, 1, 2].map((item) => <div key={item} className="h-16 animate-pulse rounded-xl border border-white/8 bg-white/[0.035]" />)}
+            </div>
+          ) : payload.rows && payload.rows.length > 0 ? (
             <dl className="mt-5 space-y-3">
-              {payload.rows.map((row) => (
-                <div key={`${row.label}-${row.value}`} className="rounded-xl border border-white/8 bg-[#071426] p-3">
-                  <dt className="text-[10px] uppercase tracking-[0.16em] text-slate-400">{row.label}</dt>
-                  <dd className="mt-1 break-words text-xs leading-5 text-slate-300">{row.value}</dd>
-                </div>
-              ))}
+              {payload.rows.map((row) => <InspectorRowView key={`${row.label}-${row.value}`} row={row} />)}
             </dl>
-          )}
-          {payload.json !== undefined && (
+          ) : null}
+          {payload.json !== undefined && !payload.loading && (
             <pre className="mt-5 overflow-x-auto whitespace-pre-wrap rounded-xl border border-white/8 bg-[#040b18] p-4 text-[11px] leading-5 text-slate-400">
               {JSON.stringify(payload.json, null, 2)}
             </pre>
@@ -237,6 +319,27 @@ function InspectorPanel() {
         </div>
       </div>
     </aside>
+  )
+}
+
+function HeaderActions({ health, open, toggle }: { health: ReturnType<typeof useAuth>['health']; open: boolean; toggle: () => void }) {
+  return (
+    <div className="flex shrink-0 items-center gap-2">
+      <div className="hidden items-center gap-2 rounded-full border border-white/8 bg-white/[0.035] px-3 py-1.5 text-[11px] text-slate-400 sm:flex">
+        <span className={`h-2 w-2 rounded-full ${health?.ok ? 'bg-emerald-300 shadow-[0_0_12px_rgba(110,231,183,.7)]' : 'bg-amber-300'}`} />
+        {health?.build ?? 'HIVE'}
+      </div>
+      <button
+        type="button"
+        onClick={toggle}
+        aria-pressed={open}
+        aria-label={open ? 'Close inspector' : 'Open inspector'}
+        className={`rounded-xl border p-2.5 transition ${open ? 'border-cyan-300/30 bg-cyan-300/10 text-cyan-200' : 'border-white/8 bg-white/[0.035] text-slate-400 hover:text-white'}`}
+        title="Toggle inspector"
+      >
+        {open ? <PanelRightClose className="h-4.5 w-4.5" /> : <PanelRightOpen className="h-4.5 w-4.5" />}
+      </button>
+    </div>
   )
 }
 
@@ -274,7 +377,7 @@ export function AppShell() {
             Browser offline. Stored pages remain visible, but HIVE requests will wait for the connection to return.
           </div>
         )}
-        <header className="flex h-[73px] shrink-0 items-center justify-between border-b border-white/8 bg-[#071426]/85 px-4 backdrop-blur-xl sm:px-6">
+        <header className="flex h-[73px] shrink-0 items-center justify-between gap-3 border-b border-white/8 bg-[#071426]/85 px-4 backdrop-blur-xl sm:px-6">
           <div className="flex min-w-0 items-center gap-3">
             <button type="button" onClick={() => setMobileMenuOpen(true)} aria-label="Open navigation" className="rounded-lg p-2 text-slate-400 hover:bg-white/5 hover:text-white lg:hidden">
               <Menu className="h-5 w-5" />
@@ -284,22 +387,7 @@ export function AppShell() {
               <p className="hidden truncate text-xs text-slate-400 sm:block">{meta.subtitle}</p>
             </div>
           </div>
-          <div className="flex items-center gap-2">
-            <div className="hidden items-center gap-2 rounded-full border border-white/8 bg-white/[0.035] px-3 py-1.5 text-[11px] text-slate-400 sm:flex">
-              <span className={`h-2 w-2 rounded-full ${health?.ok ? 'bg-emerald-300 shadow-[0_0_12px_rgba(110,231,183,.7)]' : 'bg-amber-300'}`} />
-              {health?.build ?? 'HIVE'}
-            </div>
-            <button
-              type="button"
-              onClick={toggle}
-              aria-pressed={open}
-              aria-label={open ? 'Close inspector' : 'Open inspector'}
-              className={`rounded-xl border p-2.5 transition ${open ? 'border-cyan-300/30 bg-cyan-300/10 text-cyan-200' : 'border-white/8 bg-white/[0.035] text-slate-400 hover:text-white'}`}
-              title="Toggle inspector"
-            >
-              {open ? <PanelRightClose className="h-4.5 w-4.5" /> : <PanelRightOpen className="h-4.5 w-4.5" />}
-            </button>
-          </div>
+          <HeaderActions health={health} open={open} toggle={toggle} />
         </header>
 
         <main id="hive-main-content" className="min-h-0 flex-1 overflow-hidden" tabIndex={-1}>

@@ -37,6 +37,7 @@ export function LoginScreen() {
           <p className="mx-auto mt-3 max-w-sm text-sm leading-6 text-slate-400">
             Your operational command room for chat, files, skills and controlled workflows.
           </p>
+          <p className="mt-2 text-xs text-slate-500">HIVE is a private AI operations console. Access is restricted to its operator.</p>
         </div>
 
         <form onSubmit={handleSubmit} className="mt-8 space-y-4">

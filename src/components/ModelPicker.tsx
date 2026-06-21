@@ -8,7 +8,7 @@ import {
   Video,
   X,
 } from 'lucide-react'
-import { useEffect, useId, useMemo, useRef, useState } from 'react'
+import { useEffect, useId, useMemo, useRef, useState, type KeyboardEvent } from 'react'
 import type { ModelSummary } from '../types/api'
 
 interface ModelPickerProps {
@@ -87,8 +87,12 @@ export function ModelPicker({ models, value, onChange, loading = false }: ModelP
   const [query, setQuery] = useState('')
   const [category, setCategory] = useState('all')
   const wrapperRef = useRef<HTMLDivElement | null>(null)
+  const triggerRef = useRef<HTMLButtonElement | null>(null)
   const searchRef = useRef<HTMLInputElement | null>(null)
+  const listRef = useRef<HTMLDivElement | null>(null)
   const listId = useId()
+  const autoOptionId = `${listId}-auto`
+  const [activeIndex, setActiveIndex] = useState(0)
 
   const visibleModels = useMemo(() => models, [models])
   const selected = useMemo(
@@ -139,38 +143,81 @@ export function ModelPicker({ models, value, onChange, loading = false }: ModelP
       .map((group) => ({ group, models: groups.get(group) ?? [] }))
   }, [category, query, visibleModels])
 
+  const selectableOptions = useMemo(() => [null, ...grouped.flatMap(({ models: groupModels }) => groupModels.filter((item) => item.chat_selectable !== false))], [grouped])
+
+  useEffect(() => {
+    setActiveIndex(0)
+  }, [category, query, open])
+
   useEffect(() => {
     if (!open) return
     const closeOnOutsideClick = (event: MouseEvent) => {
-      if (!wrapperRef.current?.contains(event.target as Node)) setOpen(false)
-    }
-    const closeOnEscape = (event: KeyboardEvent) => {
-      if (event.key === 'Escape') setOpen(false)
+      if (!wrapperRef.current?.contains(event.target as Node)) {
+        setOpen(false)
+        triggerRef.current?.focus()
+      }
     }
     document.addEventListener('mousedown', closeOnOutsideClick)
-    document.addEventListener('keydown', closeOnEscape)
     window.setTimeout(() => searchRef.current?.focus(), 0)
     return () => {
       document.removeEventListener('mousedown', closeOnOutsideClick)
-      document.removeEventListener('keydown', closeOnEscape)
     }
   }, [open])
+
+  useEffect(() => {
+    if (!open) return
+    const activeId = selectableOptions[activeIndex]?.id ? `${listId}-${selectableOptions[activeIndex]?.id.replace(/[^a-zA-Z0-9_-]/g, '-')}` : autoOptionId
+    listRef.current?.querySelector<HTMLElement>(`#${CSS.escape(activeId)}`)?.scrollIntoView({ block: 'nearest' })
+  }, [activeIndex, autoOptionId, listId, open, selectableOptions])
+
+  function closePicker() {
+    setOpen(false)
+    triggerRef.current?.focus()
+  }
 
   function selectModel(model: ModelSummary | null) {
     onChange(model?.id ?? '')
     setOpen(false)
     setQuery('')
+    triggerRef.current?.focus()
+  }
+
+  function handleListKeyDown(event: KeyboardEvent<HTMLDivElement>) {
+    if (event.key === 'Escape') {
+      event.preventDefault()
+      closePicker()
+      return
+    }
+    if (event.key === 'ArrowDown' || event.key === 'ArrowUp') {
+      event.preventDefault()
+      const direction = event.key === 'ArrowDown' ? 1 : -1
+      setActiveIndex((current) => {
+        const count = selectableOptions.length
+        if (!count) return 0
+        return (current + direction + count) % count
+      })
+      return
+    }
+    if (event.key === 'Enter') {
+      event.preventDefault()
+      selectModel(selectableOptions[activeIndex] ?? null)
+    }
+  }
+
+  function optionId(model: ModelSummary | null): string {
+    return model?.id ? `${listId}-${model.id.replace(/[^a-zA-Z0-9_-]/g, '-')}` : autoOptionId
   }
 
   return (
     <div ref={wrapperRef} className="relative min-w-0">
       <button
+        ref={triggerRef}
         type="button"
         onClick={() => setOpen((current) => !current)}
         aria-expanded={open}
         aria-controls={listId}
         aria-label="Choose HIVE model"
-        className="flex h-8 max-w-[260px] items-center gap-2 rounded-lg border border-white/8 bg-white/[0.035] px-2.5 text-left text-xs text-slate-300 outline-none transition hover:bg-white/[0.055]"
+        className="flex h-8 max-w-[260px] items-center gap-2 rounded-lg border border-white/8 bg-white/[0.035] px-2.5 text-left text-xs text-slate-300 outline-none transition hover:bg-white/[0.055] focus:ring-1 focus:ring-cyan-300/50"
       >
         <BrainCircuit className="h-3.5 w-3.5 shrink-0 text-cyan-300/70" />
         <span className="min-w-0 flex-1 truncate">{selected ? modelLabel(selected) : loading ? 'Loading models…' : 'Auto route'}</span>
@@ -181,7 +228,7 @@ export function ModelPicker({ models, value, onChange, loading = false }: ModelP
       {open && (
         <div className="absolute bottom-[calc(100%+8px)] left-0 z-50 w-[min(94vw,460px)] overflow-hidden rounded-2xl border border-white/10 bg-[#09182b]/98 shadow-2xl shadow-black/50 backdrop-blur-xl">
           <div className="space-y-2 border-b border-white/8 p-3">
-            <label className="text-[10px] font-semibold uppercase tracking-[0.16em] text-slate-400">Model type</label>
+            <label className="text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-400">Model type</label>
             <select
               value={category}
               onChange={(event) => setCategory(event.target.value)}
@@ -211,13 +258,15 @@ export function ModelPicker({ models, value, onChange, loading = false }: ModelP
             </div>
           </div>
 
-          <div id={listId} role="listbox" aria-label="HIVE models" className="max-h-[min(56vh,460px)] overflow-y-auto p-2">
+          <div ref={listRef} id={listId} role="listbox" tabIndex={0} aria-label="HIVE models" aria-activedescendant={optionId(selectableOptions[activeIndex] ?? null)} onKeyDown={handleListKeyDown} className="max-h-[min(56vh,460px)] overflow-y-auto p-2 outline-none">
             <button
+              id={autoOptionId}
               type="button"
               role="option"
               aria-selected={!value}
+              onFocus={() => setActiveIndex(0)}
               onClick={() => selectModel(null)}
-              className="flex w-full items-start gap-3 rounded-xl px-3 py-2.5 text-left transition hover:bg-cyan-300/[0.06]"
+              className={`flex w-full items-start gap-3 rounded-xl px-3 py-2.5 text-left transition hover:bg-cyan-300/[0.06] ${activeIndex === 0 ? 'ring-1 ring-cyan-300/50 bg-cyan-300/[0.045]' : ''}`}
             >
               <div className="mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-lg border border-cyan-300/15 bg-cyan-300/7 text-cyan-200"><BrainCircuit className="h-4 w-4" /></div>
               <div className="min-w-0 flex-1">
@@ -228,7 +277,7 @@ export function ModelPicker({ models, value, onChange, loading = false }: ModelP
 
             {grouped.map(({ group, models: groupModels }) => (
               <section key={group} className="mt-2" aria-label={categoryLabel(group)}>
-                <div className="sticky top-0 z-10 flex items-center justify-between bg-[#09182b]/95 px-3 py-2 text-[10px] font-semibold uppercase tracking-[0.15em] text-slate-400 backdrop-blur">
+                <div className="sticky top-0 z-10 flex items-center justify-between bg-[#09182b]/95 px-3 py-2 text-[11px] font-semibold uppercase tracking-[0.15em] text-slate-400 backdrop-blur">
                   <span className="flex items-center gap-1.5">{groupIcon(group)} {categoryLabel(group)}</span>
                   <span>{groupModels.length}</span>
                 </div>
@@ -237,18 +286,21 @@ export function ModelPicker({ models, value, onChange, loading = false }: ModelP
                     const active = item.id === value
                     const context = compactContext(item.context_length)
                     const chatSelectable = item.chat_selectable !== false
+                    const selectableIndex = chatSelectable ? selectableOptions.findIndex((model) => model?.id === item.id) : -1
                     const advisory = chatSelectable ? null : stringValue(item.disabled_reason)
                     return (
                       <button
                         key={item.id}
+                        id={optionId(item)}
                         type="button"
                         role="option"
                         aria-selected={active}
                         aria-disabled={!chatSelectable}
                         disabled={!chatSelectable}
                         title={advisory || stringValue(item.description) || item.id}
+                        onFocus={() => { if (selectableIndex >= 0) setActiveIndex(selectableIndex) }}
                         onClick={() => { if (chatSelectable) selectModel(item) }}
-                        className={`group/model flex w-full items-start gap-3 rounded-xl px-3 py-2.5 text-left transition ${chatSelectable ? 'hover:bg-white/[0.045]' : 'cursor-not-allowed opacity-70'}`}
+                        className={`group/model flex w-full items-start gap-3 rounded-xl px-3 py-2.5 text-left transition ${chatSelectable ? 'hover:bg-white/[0.045]' : 'cursor-not-allowed opacity-70'} ${selectableIndex === activeIndex ? 'ring-1 ring-cyan-300/50 bg-cyan-300/[0.045]' : ''}`}
                       >
                         <div className="mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-lg border border-white/8 bg-white/[0.035] text-slate-400">
                           <BrainCircuit className="h-3.5 w-3.5" />
@@ -258,7 +310,7 @@ export function ModelPicker({ models, value, onChange, loading = false }: ModelP
                             <span className="truncate text-xs font-medium text-slate-200 group-hover/model:text-white">{modelLabel(item)}</span>
                             {active && <Check className="h-3.5 w-3.5 shrink-0 text-emerald-300" />}
                           </div>
-                          <p className="mt-0.5 truncate text-[10px] text-slate-400">{item.id}</p>
+                          <p className="mt-0.5 truncate text-[11px] text-slate-400">{item.id}</p>
                           <div className="mt-1.5 flex flex-wrap gap-1">
                             {!chatSelectable && <span className="rounded bg-amber-300/10 px-1.5 py-0.5 text-[9px] font-semibold uppercase text-amber-100">Discovery only</span>}
                             {item.is_free === true && <span className="rounded bg-emerald-300/8 px-1.5 py-0.5 text-[9px] font-semibold uppercase text-emerald-200">Free</span>}
@@ -267,7 +319,7 @@ export function ModelPicker({ models, value, onChange, loading = false }: ModelP
                             {stringArray(item.output_modalities).slice(0, 3).map((mode) => <span key={mode} className="rounded bg-violet-300/7 px-1.5 py-0.5 text-[9px] text-violet-100/75">{mode}</span>)}
                           </div>
                           {advisory && (
-                            <p className="mt-1.5 text-[10px] leading-4 text-amber-100/75">{advisory}</p>
+                            <p className="mt-1.5 text-[11px] leading-4 text-amber-100/75">{advisory}</p>
                           )}
                         </div>
                       </button>
