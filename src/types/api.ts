@@ -176,6 +176,7 @@ export interface FileListResponse {
   access_mode?: string
   prefix?: string
   search?: string | null
+  recursive?: boolean
   prefix_count?: number
   prefixes?: string[]
   files?: FileObject[]
