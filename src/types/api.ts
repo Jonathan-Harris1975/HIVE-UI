@@ -18,6 +18,17 @@ export interface ConversationSummary {
   updated_at?: string | null
   message_count?: number
   cost_usd?: number | string | null
+  total_tokens?: number | null
+  token_total?: number | null
+  total_cost_usd?: number | string | null
+}
+
+export interface AutoTitleResponse {
+  ok: boolean
+  conversation_id?: string
+  title?: string | null
+  skipped?: boolean
+  error?: string
 }
 
 export interface PersistedMessage {
@@ -28,6 +39,8 @@ export interface PersistedMessage {
   provider?: string | null
   token_total?: number | null
   cost_usd?: number | null
+  streaming_model?: string | null
+  streaming_count?: number
   metadata?: Record<string, unknown> | null
   created_at?: string | null
 }
@@ -324,7 +337,9 @@ export interface RepoHealthItem {
   detail?: string
   liveness?: RepoHealthProbe | null
   operational?: RepoHealthProbe | null
+  readiness?: RepoHealthProbe | null
 }
+
 
 export interface OpsEventItem {
   event_id: string
@@ -367,6 +382,7 @@ export interface RepoHealthResponse {
   }
   repos?: RepoHealthItem[]
   note?: string
+  error?: string
 }
 
 export interface WorkflowTemplate {
