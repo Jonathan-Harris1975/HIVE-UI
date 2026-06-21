@@ -94,6 +94,7 @@ function fileSourceLabel(source: FileSourceSelection): string {
 
 export function ChatPage() {
   const {
+    conversations,
     currentConversationId,
     messages,
     conversationLoading,
@@ -129,6 +130,10 @@ export function ChatPage() {
   const endRef = useRef<HTMLDivElement | null>(null)
   const scrollRef = useRef<HTMLDivElement | null>(null)
   const textareaRef = useRef<HTMLTextAreaElement | null>(null)
+  const currentConversationSummary = useMemo(
+    () => conversations.find((conversation) => conversation.id === currentConversationId) ?? null,
+    [conversations, currentConversationId],
+  )
 
   useEffect(() => {
     void apiFetch<ModelsResponse>('/v1/models')
@@ -213,10 +218,10 @@ export function ChatPage() {
       if (event.type === 'conversation') return
     }
     if (event.event === 'token' && typeof event.content === 'string') {
-      const tokenishCount = event.content.trim() ? event.content.trim().split(/\s+/).length : 0
+      const characterCount = event.content.length
       setMessages((current) => current.map((message) =>
         message.id === assistantId
-          ? { ...message, content: `${message.content}${event.content}`, streaming_count: (message.streaming_count ?? 0) + tokenishCount }
+          ? { ...message, content: `${message.content}${event.content}`, streaming_count: (message.streaming_count ?? 0) + characterCount }
           : message,
       ))
       return
@@ -304,8 +309,11 @@ export function ChatPage() {
           handleStreamEvent(assistantMessage.id, event)
         } }, controller.signal)
       }
-      if (wasNewConversation && completedConversationId) {
-        await autoTitleConversation(completedConversationId).catch(() => undefined)
+      if (completedConversationId) {
+        const canAutoTitle = wasNewConversation || !currentConversationSummary?.title || currentConversationSummary.auto_titled === false
+        if (canAutoTitle) {
+          await autoTitleConversation(completedConversationId).catch(() => undefined)
+        }
       }
       await refreshConversations().catch(() => undefined)
     } catch (caught) {

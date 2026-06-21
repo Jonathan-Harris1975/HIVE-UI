@@ -1296,6 +1296,7 @@ export function FilesPage() {
           </div>
 
           {(selectedSources.length > 0 || activeLane?.writable) && (
+            // Mobile action strip intentionally uses flex-wrap below 480px, so actions wrap into compact rows rather than clipping the viewport.
             <div
               className="mt-5 flex flex-wrap gap-2 rounded-2xl border border-white/8 bg-[#071426]/70 p-2"
               aria-label="Available file actions"

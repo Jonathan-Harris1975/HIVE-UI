@@ -36,6 +36,14 @@ function skillTitle(skill: SkillItem, index = 0): string {
   return String(skill.title || skill.name || metadata.title || `Skill ${index + 1}`)
 }
 
+const KNOWN_REPOS = ['AIMS', 'HIVE', 'HIVE-UI', 'RAMS', 'Website', 'Shared']
+const KNOWN_RISKS = ['low', 'medium', 'high']
+
+function validParam(value: string | null, allowed: readonly string[]): string {
+  if (!value) return ''
+  return allowed.includes(value) ? value : ''
+}
+
 export function SkillsPage() {
   const navigate = useNavigate()
   const [searchParams, setSearchParams] = useSearchParams()
@@ -44,8 +52,8 @@ export function SkillsPage() {
   const [loading, setLoading] = useState(true)
   const [query, setQuery] = useState(searchParams.get('q') ?? '')
   const [submittedQuery, setSubmittedQuery] = useState(searchParams.get('q') ?? '')
-  const [repo, setRepo] = useState(searchParams.get('repo') ?? '')
-  const [risk, setRisk] = useState(searchParams.get('risk') ?? '')
+  const [repo, setRepo] = useState(validParam(searchParams.get('repo'), KNOWN_REPOS))
+  const [risk, setRisk] = useState(validParam(searchParams.get('risk'), KNOWN_RISKS))
   const [lane, setLane] = useState(searchParams.get('lane') ?? '')
   const [task, setTask] = useState('')
   const [recommending, setRecommending] = useState(false)
@@ -91,8 +99,8 @@ export function SkillsPage() {
   }, [lane, repo, risk, setSearchParams, submittedQuery])
 
   const filters = useMemo(() => {
-    const repos = new Set<string>(['HIVE', 'AIMS', 'RAMS', 'Website'])
-    const risks = new Set<string>(['low', 'medium', 'high'])
+    const repos = new Set<string>(KNOWN_REPOS)
+    const risks = new Set<string>(KNOWN_RISKS)
     const lanes = new Set<string>()
     for (const skill of skills) {
       const skillRepo = field(skill, 'repo')
@@ -104,6 +112,29 @@ export function SkillsPage() {
     }
     return { repos: [...repos].sort(), risks: [...risks].sort(), lanes: [...lanes].sort() }
   }, [skills])
+
+  useEffect(() => {
+    let changed = false
+    if (repo && !filters.repos.includes(repo)) {
+      setRepo('')
+      changed = true
+    }
+    if (risk && !filters.risks.includes(risk)) {
+      setRisk('')
+      changed = true
+    }
+    if (!loading && lane && filters.lanes.length > 0 && !filters.lanes.includes(lane)) {
+      setLane('')
+      changed = true
+    }
+    if (changed) {
+      const next = new URLSearchParams(searchParams)
+      next.delete('repo')
+      next.delete('risk')
+      next.delete('lane')
+      setSearchParams(next, { replace: true })
+    }
+  }, [filters, lane, loading, repo, risk, searchParams, setSearchParams])
 
   function searchSkills(event: FormEvent) {
     event.preventDefault()
