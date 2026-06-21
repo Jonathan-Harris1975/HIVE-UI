@@ -12,7 +12,7 @@ interface ChatMessageProps {
 export function ChatMessage({ message, onInspect }: ChatMessageProps) {
   const [copied, setCopied] = useState(false)
   const assistant = message.role === 'assistant'
-  const streamingCount = message.streaming_count ?? (message.content ? message.content.trim().split(/\s+/).filter(Boolean).length : 0)
+  const streamingCount = message.streaming_count ?? message.content.length
 
   async function copyMessage() {
     if (!message.content) return
@@ -41,7 +41,7 @@ export function ChatMessage({ message, onInspect }: ChatMessageProps) {
                 <div className={`${message.content ? 'mt-4 border-t border-white/6 pt-3' : ''} flex items-center gap-2 text-slate-400`} role="status" aria-live="polite">
                   <LoaderCircle className="h-4 w-4 animate-spin" />
                   <span>HIVE is thinking</span>
-                  <span className="text-[11px] text-slate-500">{[message.streaming_model, `${streamingCount.toLocaleString()} tokens`].filter(Boolean).join(' · ')}</span>
+                  <span className="text-[11px] text-slate-500">{[message.streaming_model, `~${streamingCount.toLocaleString()} chars`].filter(Boolean).join(' · ')}</span>
                 </div>
               )}
               {message.error && <p className="mt-3 rounded-lg border border-rose-400/20 bg-rose-400/8 px-3 py-2 text-xs text-rose-200" role="alert">{message.error}</p>}

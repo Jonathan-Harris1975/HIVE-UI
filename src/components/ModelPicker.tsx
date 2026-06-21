@@ -182,7 +182,7 @@ export function ModelPicker({ models, value, onChange, loading = false }: ModelP
     triggerRef.current?.focus()
   }
 
-  function handleListKeyDown(event: KeyboardEvent<HTMLDivElement>) {
+  function handleListKeyDown(event: KeyboardEvent<HTMLElement>) {
     if (event.key === 'Escape') {
       event.preventDefault()
       closePicker()
@@ -246,6 +246,7 @@ export function ModelPicker({ models, value, onChange, loading = false }: ModelP
                 ref={searchRef}
                 value={query}
                 onChange={(event) => setQuery(event.target.value)}
+                onKeyDown={handleListKeyDown}
                 placeholder="Search models, providers or capabilities"
                 aria-label="Search models"
                 className="h-10 w-full rounded-xl border border-white/8 bg-[#061126] pl-9 pr-9 text-xs text-slate-200 outline-none placeholder:text-slate-400 focus:border-cyan-300/30"
