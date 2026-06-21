@@ -127,9 +127,9 @@ export interface StreamEvent {
 }
 
 
-export interface FileAttachment {
-  object_key: string
+export interface FileSourceSelection {
   lane: string
+  object_key: string
   name?: string | null
 }
 
@@ -194,6 +194,20 @@ export interface FileReadResponse {
   error?: string
 }
 
+export interface FileDeleteResponse {
+  ok: boolean
+  dry_run?: boolean
+  lane?: string
+  bucket?: string
+  requested_count?: number
+  deleted_count?: number
+  deleted_keys?: string[]
+  object_keys?: string[]
+  errors?: Array<{ key?: string; code?: string; message?: string }>
+  error?: string | { message?: string; hint?: string }
+  message?: string
+}
+
 export interface FileChatResponse {
   ok: boolean
   reply?: string
@@ -201,10 +215,10 @@ export interface FileChatResponse {
   model_used?: string
   provider?: string
   usage?: UsageSummary
+  source?: FileObject
+  sources?: FileObject[]
   source_citation?: SourceCitation
   source_citations?: SourceCitation[]
-  sources?: Array<Record<string, unknown>>
-  file_count?: number
   source_chunks?: Array<Record<string, unknown>>
   retrieval_summary?: Record<string, unknown> | string | null
   selected_skill?: Record<string, unknown> | null
@@ -502,6 +516,7 @@ export interface R2LanesResponse {
   configured_count?: number
   primary_upload_lane?: string
   multi_bucket_read_enabled?: boolean
+  multi_bucket_write_enabled?: boolean
   read_credentials_configured?: boolean
   lanes?: R2Lane[]
   note?: string
