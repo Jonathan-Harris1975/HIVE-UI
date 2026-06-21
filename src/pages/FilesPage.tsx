@@ -109,6 +109,8 @@ const TEXT_CHAT_SUFFIXES = new Set([
   ".cfg",
 ]);
 
+const MAX_SELECTED_OBJECTS = 8;
+
 function fileKey(file: FileObject): string {
   return String(file.object_key || file.key || "");
 }
@@ -266,6 +268,11 @@ function selectedSourceForFile(
   return { lane, object_key: fileKey(file), name: fileName(file) };
 }
 
+function folderNameFromPrefix(folderPrefix: string): string {
+  const clean = folderPrefix.replace(/\/$/, "");
+  return clean.split("/").pop() || folderPrefix;
+}
+
 function deleteErrorMessage(response: FileDeleteResponse): string {
   if (typeof response.error === "string") return response.error;
   if (response.error?.message) return response.error.message;
@@ -324,6 +331,7 @@ export function FilesPage() {
     null,
   );
   const [deletingObjects, setDeletingObjects] = useState(false);
+  const [selectingPrefix, setSelectingPrefix] = useState<string | null>(null);
   const inputRef = useRef<HTMLInputElement | null>(null);
 
   const activeLane = useMemo(
@@ -727,6 +735,11 @@ export function FilesPage() {
   function toggleObjectSelection(file: FileObject) {
     const source = selectedSourceForFile(selectedLane, file);
     const id = selectionId(source.lane, source.object_key);
+    const alreadySelected = Boolean(selectedObjects[id]);
+    if (!alreadySelected && selectedSources.length >= MAX_SELECTED_OBJECTS) {
+      setNotice(`Selection is capped at ${MAX_SELECTED_OBJECTS} files to keep file chat inside the file chat limit.`);
+      return;
+    }
     setSelectedObjects((current) => {
       const next = { ...current };
       if (next[id]) delete next[id];
@@ -734,6 +747,53 @@ export function FilesPage() {
       return next;
     });
     setSelectedAction(null);
+  }
+
+  async function selectPrefixObjects(folderPrefix: string) {
+    if (!selectedLane || !activeLane?.readable) return;
+    const remaining = MAX_SELECTED_OBJECTS - selectedSources.length;
+    if (remaining <= 0) {
+      setNotice(`Selection is capped at ${MAX_SELECTED_OBJECTS} files. Clear a few before adding a folder.`);
+      return;
+    }
+    setSelectingPrefix(folderPrefix);
+    setError(null);
+    setNotice(null);
+    try {
+      const params = new URLSearchParams({
+        prefix: folderPrefix,
+        limit: String(remaining),
+        recursive: "true",
+      });
+      const response = await apiFetch<FileListResponse>(
+        `/v1/files/r2/${encodeURIComponent(selectedLane)}/objects?${params.toString()}`,
+      );
+      if (!response.ok) throw new Error(responseMessage(response));
+      const nextSources = (response.files ?? [])
+        .map((file) => selectedSourceForFile(selectedLane, file))
+        .filter((source) => source.object_key && !selectedObjects[selectionId(source.lane, source.object_key)])
+        .slice(0, remaining);
+      if (!nextSources.length) {
+        setNotice(`No selectable files were found under ${folderNameFromPrefix(folderPrefix)}.`);
+        return;
+      }
+      setSelectedObjects((current) => {
+        const next = { ...current };
+        for (const source of nextSources) {
+          if (Object.keys(next).length >= MAX_SELECTED_OBJECTS) break;
+          next[selectionId(source.lane, source.object_key)] = source;
+        }
+        return next;
+      });
+      setSelectedAction(null);
+      setNotice(
+        `${nextSources.length} file${nextSources.length === 1 ? "" : "s"} selected from ${folderNameFromPrefix(folderPrefix)}${response.truncated ? `; showing the first ${nextSources.length} within the ${MAX_SELECTED_OBJECTS}-file chat limit.` : "."}`,
+      );
+    } catch (caught) {
+      setError(caught instanceof Error ? caught.message : "Folder selection failed.");
+    } finally {
+      setSelectingPrefix(null);
+    }
   }
 
   function clearSelectedObjects() {
@@ -1497,7 +1557,7 @@ export function FilesPage() {
               </span>
               <span className="ml-2 text-cyan-100/65">
                 across {selectedLaneCount} lane
-                {selectedLaneCount === 1 ? "" : "s"}
+                {selectedLaneCount === 1 ? "" : "s"} · max {MAX_SELECTED_OBJECTS}
               </span>
             </div>
             <div className="flex flex-wrap gap-2">
@@ -1606,14 +1666,15 @@ export function FilesPage() {
           ) : (
             <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
               {prefixes.map((folderPrefix) => {
-                const clean = folderPrefix.replace(/\/$/, "");
-                const name = clean.split("/").pop() || folderPrefix;
+                const name = folderNameFromPrefix(folderPrefix);
+                const selectedInside = selectedSources.some(
+                  (source) => source.lane === selectedLane && source.object_key.startsWith(folderPrefix),
+                );
+                const prefixBusy = selectingPrefix === folderPrefix;
                 return (
-                  <button
+                  <article
                     key={folderPrefix}
-                    type="button"
-                    onClick={() => changePrefix(folderPrefix)}
-                    className="group rounded-2xl border border-white/8 bg-[#0a192d]/70 p-4 text-left transition hover:border-cyan-300/20 hover:bg-[#0d2038]"
+                    className={`group rounded-2xl border p-4 transition hover:border-cyan-300/20 hover:bg-[#0d2038] ${selectedInside ? "border-cyan-300/25 bg-cyan-300/[0.04]" : "border-white/8 bg-[#0a192d]/70"}`}
                   >
                     <div className="flex h-10 w-10 items-center justify-center rounded-xl border border-amber-300/15 bg-amber-300/7 text-amber-200">
                       <Folder className="h-5 w-5" />
@@ -1624,10 +1685,28 @@ export function FilesPage() {
                     <p className="mt-1 truncate text-xs text-slate-400">
                       {folderPrefix}
                     </p>
-                    <div className="mt-4 flex items-center justify-end border-t border-white/6 pt-3 text-[11px] text-cyan-200/65">
-                      Open prefix <ChevronRight className="ml-1 h-3.5 w-3.5" />
+                    <p className="mt-2 text-[11px] leading-5 text-slate-500">
+                      Select files from this folder without drilling into every nested prefix.
+                    </p>
+                    <div className="mt-4 grid grid-cols-2 gap-2 border-t border-white/6 pt-3">
+                      <button
+                        type="button"
+                        onClick={() => changePrefix(folderPrefix)}
+                        className="flex h-9 items-center justify-center gap-1.5 rounded-xl border border-white/8 bg-white/[0.025] text-[11px] font-medium text-cyan-200/75 transition hover:bg-white/[0.05] hover:text-cyan-100"
+                      >
+                        Open <ChevronRight className="h-3.5 w-3.5" />
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => void selectPrefixObjects(folderPrefix)}
+                        disabled={prefixBusy || selectedSources.length >= MAX_SELECTED_OBJECTS}
+                        className="flex h-9 items-center justify-center gap-1.5 rounded-xl border border-cyan-300/15 bg-cyan-300/6 text-[11px] font-medium text-cyan-100 transition hover:bg-cyan-300/10 disabled:cursor-not-allowed disabled:opacity-40"
+                      >
+                        {prefixBusy ? <LoaderCircle className="h-3.5 w-3.5 animate-spin" /> : <CheckSquare className="h-3.5 w-3.5" />}
+                        Select files
+                      </button>
                     </div>
-                  </button>
+                  </article>
                 );
               })}
 
