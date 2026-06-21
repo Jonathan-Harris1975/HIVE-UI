@@ -43,7 +43,7 @@ export function ChatProvider({ children }: { children: ReactNode }) {
   const refreshConversations = useCallback(async () => {
     setConversationsLoading(true)
     try {
-      const response = await apiFetch<ConversationListResponse>('/v1/db/conversations?limit=100')
+      const response = await apiFetch<ConversationListResponse>('/v1/chat/conversations?limit=100')
       if (!response.ok) throw new Error(response.error || 'Conversation storage is unavailable.')
       setConversations(response.conversations ?? [])
     } finally {
