@@ -21,11 +21,12 @@ import {
 import { Link, useSearchParams } from 'react-router'
 import { useChat } from '../context/ChatContext'
 import { useInspector } from '../context/InspectorContext'
-import { apiFetch, chatWithFile, streamChat } from '../lib/api'
+import { apiFetch, chatWithFiles, streamChat } from '../lib/api'
 import { formatCost } from '../lib/format'
 import type {
   ChatMode,
   ChatRequestPayload,
+  FileAttachment,
   ModelSummary,
   ModelsResponse,
   StreamEvent,
@@ -72,13 +73,23 @@ export function ChatPage() {
   } = useChat()
   const { setPayload, setOpen } = useInspector()
   const [searchParams, setSearchParams] = useSearchParams()
-  const attachedFile = searchParams.get('file')
-  const attachedLane = searchParams.get('lane') || 'uploads'
+  const attachedFiles = useMemo<FileAttachment[]>(() => {
+    const files = searchParams.getAll('file')
+    const lanes = searchParams.getAll('lane')
+    const names = searchParams.getAll('name')
+    const defaultLane = lanes[0] || 'uploads'
+    return files.map((objectKey, index) => ({
+      object_key: objectKey,
+      lane: lanes[index] || defaultLane,
+      name: names[index] || objectKey.split('/').pop() || objectKey,
+    })).filter((file) => file.object_key)
+  }, [searchParams])
+  const hasAttachedFiles = attachedFiles.length > 0
   const attachedSkillId = searchParams.get('skill_id')
   const attachedSkillTitle = searchParams.get('skill_title')
   const draft = searchParams.get('draft')
   const [prompt, setPrompt] = useState('')
-  const [mode, setMode] = useState<ChatMode>(attachedFile ? 'file_analysis' : 'auto')
+  const [mode, setMode] = useState<ChatMode>(hasAttachedFiles ? 'file_analysis' : 'auto')
   const [model, setModel] = useState('')
   const [models, setModels] = useState<ModelSummary[]>([])
   const [modelsLoading, setModelsLoading] = useState(true)
@@ -116,15 +127,15 @@ export function ChatPage() {
   }, [draft, searchParams, setSearchParams])
 
   useEffect(() => {
-    if (attachedFile) setMode('file_analysis')
-  }, [attachedFile])
+    if (hasAttachedFiles) setMode('file_analysis')
+  }, [hasAttachedFiles])
 
   const conversationUsage = useMemo(() => messages.reduce((total, message) => ({
     tokens: total.tokens + Number(message.usage?.total_tokens ?? message.token_total ?? 0),
     cost: total.cost + Number(message.usage?.cost ?? message.cost_usd ?? 0),
   }), { tokens: 0, cost: 0 }), [messages])
 
-  function removeAttachment() {
+  function removeAllAttachments() {
     const next = new URLSearchParams(searchParams)
     next.delete('file')
     next.delete('name')
@@ -134,6 +145,29 @@ export function ChatPage() {
     setSearchParams(next, { replace: true })
     setMode('auto')
     setWorkflowPreset('')
+  }
+
+  function removeAttachment(indexToRemove: number) {
+    const next = new URLSearchParams(searchParams)
+    const files = searchParams.getAll('file')
+    const lanes = searchParams.getAll('lane')
+    const names = searchParams.getAll('name')
+    next.delete('file')
+    next.delete('lane')
+    next.delete('name')
+    files.forEach((file, index) => {
+      if (index === indexToRemove) return
+      next.append('file', file)
+      next.append('lane', lanes[index] || lanes[0] || 'uploads')
+      next.append('name', names[index] || file.split('/').pop() || file)
+    })
+    if (files.length <= 1) {
+      next.delete('skill_id')
+      next.delete('skill_title')
+      setMode('auto')
+      setWorkflowPreset('')
+    }
+    setSearchParams(next, { replace: true })
   }
 
   function resizeTextarea() {
@@ -223,8 +257,8 @@ export function ChatPage() {
     }
 
     try {
-      if (attachedFile) {
-        const response = await chatWithFile(attachedLane, attachedFile, { ...payload, workflow_preset: workflowPreset || null }, controller.signal)
+      if (hasAttachedFiles) {
+        const response = await chatWithFiles(attachedFiles, { ...payload, workflow_preset: workflowPreset || null }, controller.signal)
         if (!response.ok) throw new Error(response.message || response.error_code || 'File chat failed.')
         if (response.conversation_id) setCurrentConversationId(response.conversation_id)
         setMessages((current) => current.map((message) =>
@@ -240,6 +274,9 @@ export function ChatPage() {
                 metadata: {
                   retrieval_summary: response.retrieval_summary,
                   source_chunks: response.source_chunks,
+                  source_citations: response.source_citations,
+                  sources: response.sources,
+                  file_count: response.file_count,
                   selected_skill: response.selected_skill,
                 },
               }
@@ -355,15 +392,22 @@ export function ChatPage() {
 
       <div className="shrink-0 border-t border-white/8 bg-[#071426]/95 px-3 pb-[max(12px,env(safe-area-inset-bottom))] pt-3 backdrop-blur-xl sm:px-6">
         <form onSubmit={handleSubmit} className="mx-auto max-w-4xl">
-          {(attachedFile || error) && (
+          {(hasAttachedFiles || error) && (
             <div className="mb-2 flex flex-wrap items-center gap-2">
-              {attachedFile && (
-                <div className="flex max-w-full items-center gap-2 rounded-full border border-emerald-300/20 bg-emerald-300/8 px-3 py-1.5 text-xs text-emerald-100">
-                  <Paperclip className="h-3.5 w-3.5" />
-                  <span className="max-w-[260px] truncate">{searchParams.get('name') || attachedFile}</span>
-                  <span className="rounded-full bg-black/15 px-1.5 py-0.5 text-[9px] uppercase tracking-wide text-emerald-100/65">{attachedLane.replace(/_/g, ' ')}</span>
-                  <button type="button" onClick={removeAttachment} className="rounded-full p-0.5 hover:bg-white/10"><X className="h-3.5 w-3.5" /></button>
-                </div>
+              {hasAttachedFiles && (
+                <>
+                  {attachedFiles.map((file, index) => (
+                    <div key={`${file.lane}:${file.object_key}`} className="flex max-w-full items-center gap-2 rounded-full border border-emerald-300/20 bg-emerald-300/8 px-3 py-1.5 text-xs text-emerald-100">
+                      <Paperclip className="h-3.5 w-3.5" />
+                      <span className="max-w-[220px] truncate">{file.name || file.object_key}</span>
+                      <span className="rounded-full bg-black/15 px-1.5 py-0.5 text-[9px] uppercase tracking-wide text-emerald-100/65">{file.lane.replace(/_/g, ' ')}</span>
+                      <button type="button" onClick={() => removeAttachment(index)} className="rounded-full p-0.5 hover:bg-white/10" aria-label={`Remove ${file.name || file.object_key}`}><X className="h-3.5 w-3.5" /></button>
+                    </div>
+                  ))}
+                  {attachedFiles.length > 1 && (
+                    <button type="button" onClick={removeAllAttachments} className="rounded-full border border-white/8 bg-white/[0.035] px-3 py-1.5 text-xs text-slate-300 hover:text-white">Clear all</button>
+                  )}
+                </>
               )}
               {attachedSkillId && (
                 <div className="flex max-w-full items-center gap-2 rounded-full border border-cyan-300/20 bg-cyan-300/8 px-3 py-1.5 text-xs text-cyan-100">
@@ -382,8 +426,8 @@ export function ChatPage() {
               value={prompt}
               onChange={(event) => { setPrompt(event.target.value); resizeTextarea() }}
               onKeyDown={handleKeyDown}
-              placeholder={attachedFile ? 'Ask about the attached file…' : 'Message HIVE…'}
-              aria-label={attachedFile ? 'Ask about the attached file' : 'Message HIVE'}
+              placeholder={hasAttachedFiles ? `Ask about the attached file${attachedFiles.length === 1 ? '' : 's'}…` : 'Message HIVE…'}
+              aria-label={hasAttachedFiles ? `Ask about the attached file${attachedFiles.length === 1 ? '' : 's'}` : 'Message HIVE'}
               className="block min-h-12 max-h-[180px] w-full resize-none bg-transparent px-3 py-3 text-sm leading-6 text-white outline-none placeholder:text-slate-400"
             />
             <div className="flex flex-wrap items-center justify-between gap-2 border-t border-white/6 px-1 pt-2">
@@ -399,7 +443,7 @@ export function ChatPage() {
                   <ChevronDown className="pointer-events-none absolute right-2 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-slate-400" />
                 </label>
                 <ModelPicker models={models} value={model} onChange={setModel} loading={modelsLoading} />
-                {attachedFile && workflowPresets.length > 0 && (
+                {hasAttachedFiles && workflowPresets.length > 0 && (
                   <label className="relative max-w-[210px]">
                     <select
                       value={workflowPreset}

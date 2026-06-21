@@ -71,7 +71,7 @@ interface SkillRegistrationForm {
 const TEXT_CHAT_SUFFIXES = new Set([
   '.txt', '.md', '.log', '.json', '.jsonl', '.csv', '.tsv', '.html', '.htm', '.xml', '.rss',
   '.pdf', '.docx', '.xlsx', '.yaml', '.yml', '.py', '.js', '.ts', '.tsx', '.jsx', '.css', '.sql',
-  '.sh', '.toml', '.ini', '.cfg',
+  '.sh', '.toml', '.ini', '.cfg', '.zip',
 ])
 
 function fileKey(file: FileObject): string {
@@ -212,6 +212,7 @@ export function FilesPage() {
   const [skillQuery, setSkillQuery] = useState('')
   const [selectedSkill, setSelectedSkill] = useState<SkillItem | null>(null)
   const [loadingSkills, setLoadingSkills] = useState(false)
+  const [selectedChatFiles, setSelectedChatFiles] = useState<FileObject[]>([])
   const inputRef = useRef<HTMLInputElement | null>(null)
 
   const activeLane = useMemo(
@@ -304,6 +305,7 @@ export function FilesPage() {
     setCursorHistory([])
     setNotice(null)
     setError(null)
+    setSelectedChatFiles([])
   }
 
   function changePrefix(nextPrefix: string) {
@@ -312,6 +314,7 @@ export function FilesPage() {
     setCursorHistory([])
     setActiveSearch('')
     setSearchInput('')
+    setSelectedChatFiles([])
   }
 
   function submitSearch(event: FormEvent) {
@@ -326,6 +329,7 @@ export function FilesPage() {
     setActiveSearch('')
     setCurrentCursor(null)
     setCursorHistory([])
+    setSelectedChatFiles([])
   }
 
   function nextPage() {
@@ -362,6 +366,7 @@ export function FilesPage() {
       setPrefix(rootPrefixForLane(activeLane))
       setCurrentCursor(null)
       setCursorHistory([])
+      setSelectedChatFiles([])
       await loadObjects()
     } catch (caught) {
       setError(caught instanceof Error ? caught.message : 'Upload failed.')
@@ -393,6 +398,7 @@ export function FilesPage() {
       setPrefix(rootPrefixForLane(activeLane))
       setCurrentCursor(null)
       setCursorHistory([])
+      setSelectedChatFiles([])
       await loadObjects()
     } catch (caught) {
       setError(caught instanceof Error ? caught.message : 'Text upload failed.')
@@ -482,6 +488,38 @@ export function FilesPage() {
   function chatWith(file: FileObject) {
     const key = fileKey(file)
     navigate(`/chat?lane=${encodeURIComponent(selectedLane)}&file=${encodeURIComponent(key)}&name=${encodeURIComponent(fileName(file))}`)
+  }
+
+  function isSelectedForChat(file: FileObject): boolean {
+    const key = fileKey(file)
+    return selectedChatFiles.some((item) => fileKey(item) === key)
+  }
+
+  function toggleChatSelection(file: FileObject) {
+    if (!activeLane?.chat_supported || !canChatWithObject(file)) return
+    const key = fileKey(file)
+    setSelectedChatFiles((current) => {
+      if (current.some((item) => fileKey(item) === key)) return current.filter((item) => fileKey(item) !== key)
+      if (current.length >= 8) {
+        setNotice('HIVE can compare up to 8 files in one chat. Clear one before adding another.')
+        return current
+      }
+      setNotice(null)
+      return [...current, file]
+    })
+  }
+
+  function chatWithSelectedFiles() {
+    const chatFiles = selectedChatFiles.filter((file) => canChatWithObject(file) && fileKey(file))
+    if (!chatFiles.length) return
+    const params = new URLSearchParams()
+    chatFiles.forEach((file) => {
+      params.append('lane', selectedLane || 'uploads')
+      params.append('file', fileKey(file))
+      params.append('name', fileName(file))
+    })
+    params.set('draft', chatFiles.length === 1 ? 'Use this file: ' : `Compare these ${chatFiles.length} files: `)
+    navigate(`/chat?${params.toString()}`)
   }
 
   async function loadSkillOptions(query = skillQuery) {
@@ -768,6 +806,21 @@ export function FilesPage() {
             </div>
           </div>
 
+          {selectedChatFiles.length > 0 && (
+            <div className="mb-4 flex flex-col gap-3 rounded-2xl border border-emerald-300/15 bg-emerald-300/[0.045] p-3 sm:flex-row sm:items-center sm:justify-between">
+              <div>
+                <p className="text-sm font-semibold text-emerald-100">{selectedChatFiles.length} file{selectedChatFiles.length === 1 ? '' : 's'} selected for chat</p>
+                <p className="mt-1 line-clamp-1 text-xs text-emerald-100/65">{selectedChatFiles.map((file) => fileName(file)).join(' · ')}</p>
+              </div>
+              <div className="flex gap-2">
+                <button type="button" onClick={() => setSelectedChatFiles([])} className="h-9 rounded-xl border border-white/8 bg-white/[0.035] px-3 text-xs font-medium text-slate-200 transition hover:bg-white/[0.06]">Clear</button>
+                <button type="button" onClick={chatWithSelectedFiles} className="flex h-9 items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-cyan-300 to-emerald-300 px-3 text-xs font-semibold text-[#061126] transition hover:brightness-110">
+                  <MessageSquareText className="h-4 w-4" /> Chat with selected
+                </button>
+              </div>
+            </div>
+          )}
+
           {loading ? (
             <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
               {[0, 1, 2, 3, 4, 5].map((item) => <div key={item} className="h-44 animate-pulse rounded-2xl border border-white/5 bg-white/[0.025]" />)}
@@ -801,8 +854,9 @@ export function FilesPage() {
                 const key = fileKey(file)
                 const name = fileName(file)
                 const chatSupported = Boolean(activeLane?.chat_supported && canChatWithObject(file))
+                const selectedForChat = isSelectedForChat(file)
                 return (
-                  <article key={key} className="group rounded-2xl border border-white/8 bg-[#0a192d]/70 p-4 transition hover:border-cyan-300/20 hover:bg-[#0d2038]">
+                  <article key={key} className={`group rounded-2xl border p-4 transition ${selectedForChat ? 'border-emerald-300/35 bg-emerald-300/[0.055]' : 'border-white/8 bg-[#0a192d]/70 hover:border-cyan-300/20 hover:bg-[#0d2038]'}`}>
                     <button type="button" onClick={() => void inspect(file)} className="block w-full text-left">
                       <div className="flex items-start justify-between gap-3">
                         <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-cyan-300/15 bg-cyan-300/7 text-cyan-200"><FileIcon name={name} /></div>
@@ -814,6 +868,9 @@ export function FilesPage() {
                         <span>{formatBytes(Number(file.size_bytes ?? file.size ?? 0))}</span>
                         <span>{formatDate(String(file.last_modified || ''))}</span>
                       </div>
+                    </button>
+                    <button type="button" disabled={!chatSupported} onClick={() => toggleChatSelection(file)} className={`mt-3 flex h-9 w-full items-center justify-center gap-2 rounded-xl border text-xs font-medium transition disabled:cursor-not-allowed disabled:opacity-35 ${selectedForChat ? 'border-emerald-300/30 bg-emerald-300/12 text-emerald-100' : 'border-cyan-300/15 bg-cyan-300/6 text-cyan-100 hover:bg-cyan-300/10'}`}>
+                      <MessageSquareText className="h-4 w-4" /> {selectedForChat ? 'Selected for chat' : 'Add to chat'}
                     </button>
                     <div className="mt-3 grid grid-cols-3 gap-2">
                       <button type="button" onClick={() => void preview(file)} disabled={!chatSupported} className="flex h-9 items-center justify-center gap-1.5 rounded-xl border border-white/8 bg-white/[0.025] text-xs text-slate-400 transition hover:bg-white/[0.05] hover:text-white disabled:cursor-not-allowed disabled:opacity-35">
