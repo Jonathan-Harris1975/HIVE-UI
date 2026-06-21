@@ -39,6 +39,26 @@ Impact:
 - makes model limitations easier to notice;
 - keeps the discovery-only state visible without shouting at the operator.
 
+
+
+### 4. Multi-file chat selection
+
+The Files page now supports selecting up to eight chat-capable files and sending them into one shared chat session. The Chat page renders each attached file as its own removable chip, keeps the file-analysis mode active while files are attached, and sends all selected file references to the backend in a single request.
+
+Impact:
+- supports comparison, cross-checking and combined repository/file review workflows;
+- avoids the previous one-file bottleneck when reviewing ZIPs, logs and related source artefacts;
+- keeps single-file chat backwards compatible.
+
+### 5. ZIP/NUL-byte failure handling
+
+The chat/file path now treats ZIP archives as analysable text sources where bounded extraction is supported, and removes literal NUL codepoints before any SQL-backed persistence. This directly addresses the mobile error state where PostgreSQL rejected uploaded archive content containing `0x00` bytes.
+
+Impact:
+- prevents the PostgreSQL `NUL (0x00)` failure from surfacing as a dead-end chat error;
+- allows HIVE-main.zip-style repository archives to be analysed through file chat;
+- preserves visible replacement markers so operators can still see where binary/null content was encountered.
+
 ## UX findings and improvement opportunities
 
 ### Priority 1 - Operator trust and irreversible-action clarity
