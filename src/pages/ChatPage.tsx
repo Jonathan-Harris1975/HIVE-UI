@@ -26,7 +26,7 @@ import { formatCost } from '../lib/format'
 import type {
   ChatMode,
   ChatRequestPayload,
-  FileAttachment,
+  FileSourceSelection,
   ModelSummary,
   ModelsResponse,
   StreamEvent,
@@ -62,6 +62,36 @@ function makeMessage(role: 'user' | 'assistant', content: string, pending = fals
   }
 }
 
+function parseFileSources(value: string | null, fallbackFile: string | null, fallbackLane: string): FileSourceSelection[] {
+  if (value) {
+    try {
+      const parsed = JSON.parse(value) as unknown
+      if (Array.isArray(parsed)) {
+        const sources: FileSourceSelection[] = []
+        for (const item of parsed) {
+          if (!item || typeof item !== 'object') continue
+          const record = item as Record<string, unknown>
+          const objectKey = String(record.object_key || '')
+          if (!objectKey) continue
+          sources.push({
+            lane: String(record.lane || fallbackLane || 'uploads'),
+            object_key: objectKey,
+            name: record.name ? String(record.name) : undefined,
+          })
+        }
+        return sources
+      }
+    } catch {
+      return fallbackFile ? [{ lane: fallbackLane || 'uploads', object_key: fallbackFile }] : []
+    }
+  }
+  return fallbackFile ? [{ lane: fallbackLane || 'uploads', object_key: fallbackFile }] : []
+}
+
+function fileSourceLabel(source: FileSourceSelection): string {
+  return source.name || source.object_key.split('/').pop() || source.object_key
+}
+
 export function ChatPage() {
   const {
     currentConversationId,
@@ -73,18 +103,13 @@ export function ChatPage() {
   } = useChat()
   const { setPayload, setOpen } = useInspector()
   const [searchParams, setSearchParams] = useSearchParams()
-  const attachedFiles = useMemo<FileAttachment[]>(() => {
-    const files = searchParams.getAll('file')
-    const lanes = searchParams.getAll('lane')
-    const names = searchParams.getAll('name')
-    const defaultLane = lanes[0] || 'uploads'
-    return files.map((objectKey, index) => ({
-      object_key: objectKey,
-      lane: lanes[index] || defaultLane,
-      name: names[index] || objectKey.split('/').pop() || objectKey,
-    })).filter((file) => file.object_key)
-  }, [searchParams])
-  const hasAttachedFiles = attachedFiles.length > 0
+  const attachedFile = searchParams.get('file')
+  const attachedLane = searchParams.get('lane') || 'uploads'
+  const attachedSources = useMemo(
+    () => parseFileSources(searchParams.get('sources'), attachedFile, attachedLane),
+    [attachedFile, attachedLane, searchParams],
+  )
+  const hasAttachedFiles = attachedSources.length > 0
   const attachedSkillId = searchParams.get('skill_id')
   const attachedSkillTitle = searchParams.get('skill_title')
   const draft = searchParams.get('draft')
@@ -135,39 +160,17 @@ export function ChatPage() {
     cost: total.cost + Number(message.usage?.cost ?? message.cost_usd ?? 0),
   }), { tokens: 0, cost: 0 }), [messages])
 
-  function removeAllAttachments() {
+  function removeAttachment() {
     const next = new URLSearchParams(searchParams)
     next.delete('file')
     next.delete('name')
     next.delete('lane')
+    next.delete('sources')
     next.delete('skill_id')
     next.delete('skill_title')
     setSearchParams(next, { replace: true })
     setMode('auto')
     setWorkflowPreset('')
-  }
-
-  function removeAttachment(indexToRemove: number) {
-    const next = new URLSearchParams(searchParams)
-    const files = searchParams.getAll('file')
-    const lanes = searchParams.getAll('lane')
-    const names = searchParams.getAll('name')
-    next.delete('file')
-    next.delete('lane')
-    next.delete('name')
-    files.forEach((file, index) => {
-      if (index === indexToRemove) return
-      next.append('file', file)
-      next.append('lane', lanes[index] || lanes[0] || 'uploads')
-      next.append('name', names[index] || file.split('/').pop() || file)
-    })
-    if (files.length <= 1) {
-      next.delete('skill_id')
-      next.delete('skill_title')
-      setMode('auto')
-      setWorkflowPreset('')
-    }
-    setSearchParams(next, { replace: true })
   }
 
   function resizeTextarea() {
@@ -258,7 +261,7 @@ export function ChatPage() {
 
     try {
       if (hasAttachedFiles) {
-        const response = await chatWithFiles(attachedFiles, { ...payload, workflow_preset: workflowPreset || null }, controller.signal)
+        const response = await chatWithFiles(attachedSources, { ...payload, workflow_preset: workflowPreset || null }, controller.signal)
         if (!response.ok) throw new Error(response.message || response.error_code || 'File chat failed.')
         if (response.conversation_id) setCurrentConversationId(response.conversation_id)
         setMessages((current) => current.map((message) =>
@@ -274,9 +277,6 @@ export function ChatPage() {
                 metadata: {
                   retrieval_summary: response.retrieval_summary,
                   source_chunks: response.source_chunks,
-                  source_citations: response.source_citations,
-                  sources: response.sources,
-                  file_count: response.file_count,
                   selected_skill: response.selected_skill,
                 },
               }
@@ -395,19 +395,20 @@ export function ChatPage() {
           {(hasAttachedFiles || error) && (
             <div className="mb-2 flex flex-wrap items-center gap-2">
               {hasAttachedFiles && (
-                <>
-                  {attachedFiles.map((file, index) => (
-                    <div key={`${file.lane}:${file.object_key}`} className="flex max-w-full items-center gap-2 rounded-full border border-emerald-300/20 bg-emerald-300/8 px-3 py-1.5 text-xs text-emerald-100">
-                      <Paperclip className="h-3.5 w-3.5" />
-                      <span className="max-w-[220px] truncate">{file.name || file.object_key}</span>
-                      <span className="rounded-full bg-black/15 px-1.5 py-0.5 text-[9px] uppercase tracking-wide text-emerald-100/65">{file.lane.replace(/_/g, ' ')}</span>
-                      <button type="button" onClick={() => removeAttachment(index)} className="rounded-full p-0.5 hover:bg-white/10" aria-label={`Remove ${file.name || file.object_key}`}><X className="h-3.5 w-3.5" /></button>
-                    </div>
-                  ))}
-                  {attachedFiles.length > 1 && (
-                    <button type="button" onClick={removeAllAttachments} className="rounded-full border border-white/8 bg-white/[0.035] px-3 py-1.5 text-xs text-slate-300 hover:text-white">Clear all</button>
-                  )}
-                </>
+                <div className="flex max-w-full items-center gap-2 rounded-full border border-emerald-300/20 bg-emerald-300/8 px-3 py-1.5 text-xs text-emerald-100">
+                  <Paperclip className="h-3.5 w-3.5" />
+                  <span className="max-w-[260px] truncate">
+                    {attachedSources.length === 1
+                      ? fileSourceLabel(attachedSources[0])
+                      : `${attachedSources.length} files selected`}
+                  </span>
+                  <span className="rounded-full bg-black/15 px-1.5 py-0.5 text-[9px] uppercase tracking-wide text-emerald-100/65">
+                    {attachedSources.length === 1
+                      ? attachedSources[0].lane.replace(/_/g, ' ')
+                      : `${new Set(attachedSources.map((source) => source.lane)).size} lanes`}
+                  </span>
+                  <button type="button" onClick={removeAttachment} className="rounded-full p-0.5 hover:bg-white/10"><X className="h-3.5 w-3.5" /></button>
+                </div>
               )}
               {attachedSkillId && (
                 <div className="flex max-w-full items-center gap-2 rounded-full border border-cyan-300/20 bg-cyan-300/8 px-3 py-1.5 text-xs text-cyan-100">
@@ -426,8 +427,8 @@ export function ChatPage() {
               value={prompt}
               onChange={(event) => { setPrompt(event.target.value); resizeTextarea() }}
               onKeyDown={handleKeyDown}
-              placeholder={hasAttachedFiles ? `Ask about the attached file${attachedFiles.length === 1 ? '' : 's'}…` : 'Message HIVE…'}
-              aria-label={hasAttachedFiles ? `Ask about the attached file${attachedFiles.length === 1 ? '' : 's'}` : 'Message HIVE'}
+              placeholder={hasAttachedFiles ? 'Ask about the attached files…' : 'Message HIVE…'}
+              aria-label={hasAttachedFiles ? 'Ask about the attached files' : 'Message HIVE'}
               className="block min-h-12 max-h-[180px] w-full resize-none bg-transparent px-3 py-3 text-sm leading-6 text-white outline-none placeholder:text-slate-400"
             />
             <div className="flex flex-wrap items-center justify-between gap-2 border-t border-white/6 px-1 pt-2">

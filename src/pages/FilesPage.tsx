@@ -2,6 +2,7 @@ import {
   ArrowLeft,
   BrainCircuit,
   ChevronDown,
+  CheckSquare,
   ChevronRight,
   Database,
   Download,
@@ -17,6 +18,8 @@ import {
   MessageSquareText,
   RefreshCw,
   Search,
+  Square,
+  Trash2,
   UploadCloud,
   X,
 } from 'lucide-react'
@@ -35,10 +38,12 @@ import { useInspector } from '../context/InspectorContext'
 import { apiFetch } from '../lib/api'
 import { formatBytes, formatDate } from '../lib/format'
 import type {
+  FileDeleteResponse,
   FileListResponse,
   FileMetadataResponse,
   FileObject,
   FileReadResponse,
+  FileSourceSelection,
   R2Lane,
   R2LanesResponse,
   SkillItem,
@@ -71,7 +76,7 @@ interface SkillRegistrationForm {
 const TEXT_CHAT_SUFFIXES = new Set([
   '.txt', '.md', '.log', '.json', '.jsonl', '.csv', '.tsv', '.html', '.htm', '.xml', '.rss',
   '.pdf', '.docx', '.xlsx', '.yaml', '.yml', '.py', '.js', '.ts', '.tsx', '.jsx', '.css', '.sql',
-  '.sh', '.toml', '.ini', '.cfg', '.zip',
+  '.sh', '.toml', '.ini', '.cfg',
 ])
 
 function fileKey(file: FileObject): string {
@@ -173,6 +178,20 @@ function rootPrefixForLane(lane: R2Lane | undefined): string {
   return lane?.primary_upload_lane ? 'uploads/' : ''
 }
 
+function selectionId(lane: string, key: string): string {
+  return `${lane}::${key}`
+}
+
+function selectedSourceForFile(lane: string, file: FileObject): FileSourceSelection {
+  return { lane, object_key: fileKey(file), name: fileName(file) }
+}
+
+function deleteErrorMessage(response: FileDeleteResponse): string {
+  if (typeof response.error === 'string') return response.error
+  if (response.error?.message) return response.error.message
+  return response.message || 'R2 delete failed.'
+}
+
 function FileIcon({ name }: { name: string }) {
   const suffix = extension(name)
   if (suffix === '.zip') return <FileArchive className="h-5 w-5" />
@@ -212,7 +231,8 @@ export function FilesPage() {
   const [skillQuery, setSkillQuery] = useState('')
   const [selectedSkill, setSelectedSkill] = useState<SkillItem | null>(null)
   const [loadingSkills, setLoadingSkills] = useState(false)
-  const [selectedChatFiles, setSelectedChatFiles] = useState<FileObject[]>([])
+  const [selectedObjects, setSelectedObjects] = useState<Record<string, FileSourceSelection>>({})
+  const [deletingObjects, setDeletingObjects] = useState(false)
   const inputRef = useRef<HTMLInputElement | null>(null)
 
   const activeLane = useMemo(
@@ -222,6 +242,12 @@ export function FilesPage() {
   const readableLanes = useMemo(() => lanes.filter((lane) => lane.readable), [lanes])
   const configuredLaneCount = useMemo(() => lanes.filter((lane) => lane.configured).length, [lanes])
   const canCreateSkillFromCurrentFolder = isHiveSkillsDescriptorFolder(selectedLane, prefix)
+  const selectedSources = useMemo(() => Object.values(selectedObjects), [selectedObjects])
+  const selectedLaneCount = useMemo(() => new Set(selectedSources.map((source) => source.lane)).size, [selectedSources])
+  const selectedWritable = useMemo(() => {
+    if (!selectedSources.length) return false
+    return selectedSources.every((source) => lanes.find((lane) => lane.lane === source.lane)?.writable)
+  }, [lanes, selectedSources])
 
   const loadLanes = useCallback(async () => {
     setLoadingLanes(true)
@@ -305,7 +331,6 @@ export function FilesPage() {
     setCursorHistory([])
     setNotice(null)
     setError(null)
-    setSelectedChatFiles([])
   }
 
   function changePrefix(nextPrefix: string) {
@@ -314,7 +339,6 @@ export function FilesPage() {
     setCursorHistory([])
     setActiveSearch('')
     setSearchInput('')
-    setSelectedChatFiles([])
   }
 
   function submitSearch(event: FormEvent) {
@@ -329,7 +353,6 @@ export function FilesPage() {
     setActiveSearch('')
     setCurrentCursor(null)
     setCursorHistory([])
-    setSelectedChatFiles([])
   }
 
   function nextPage() {
@@ -366,7 +389,6 @@ export function FilesPage() {
       setPrefix(rootPrefixForLane(activeLane))
       setCurrentCursor(null)
       setCursorHistory([])
-      setSelectedChatFiles([])
       await loadObjects()
     } catch (caught) {
       setError(caught instanceof Error ? caught.message : 'Upload failed.')
@@ -398,7 +420,6 @@ export function FilesPage() {
       setPrefix(rootPrefixForLane(activeLane))
       setCurrentCursor(null)
       setCursorHistory([])
-      setSelectedChatFiles([])
       await loadObjects()
     } catch (caught) {
       setError(caught instanceof Error ? caught.message : 'Text upload failed.')
@@ -486,40 +507,97 @@ export function FilesPage() {
   }
 
   function chatWith(file: FileObject) {
-    const key = fileKey(file)
-    navigate(`/chat?lane=${encodeURIComponent(selectedLane)}&file=${encodeURIComponent(key)}&name=${encodeURIComponent(fileName(file))}`)
+    const source = selectedSourceForFile(selectedLane, file)
+    navigateToFileChat([source], `Use ${source.name || source.object_key} with this file: `)
   }
 
-  function isSelectedForChat(file: FileObject): boolean {
-    const key = fileKey(file)
-    return selectedChatFiles.some((item) => fileKey(item) === key)
-  }
-
-  function toggleChatSelection(file: FileObject) {
-    if (!activeLane?.chat_supported || !canChatWithObject(file)) return
-    const key = fileKey(file)
-    setSelectedChatFiles((current) => {
-      if (current.some((item) => fileKey(item) === key)) return current.filter((item) => fileKey(item) !== key)
-      if (current.length >= 8) {
-        setNotice('HIVE can compare up to 8 files in one chat. Clear one before adding another.')
-        return current
-      }
-      setNotice(null)
-      return [...current, file]
-    })
-  }
-
-  function chatWithSelectedFiles() {
-    const chatFiles = selectedChatFiles.filter((file) => canChatWithObject(file) && fileKey(file))
-    if (!chatFiles.length) return
-    const params = new URLSearchParams()
-    chatFiles.forEach((file) => {
-      params.append('lane', selectedLane || 'uploads')
-      params.append('file', fileKey(file))
-      params.append('name', fileName(file))
-    })
-    params.set('draft', chatFiles.length === 1 ? 'Use this file: ' : `Compare these ${chatFiles.length} files: `)
+  function navigateToFileChat(sources: FileSourceSelection[], draft = 'Use these files: ') {
+    const params = new URLSearchParams({ sources: JSON.stringify(sources), draft })
+    if (sources.length === 1) {
+      params.set('lane', sources[0].lane)
+      params.set('file', sources[0].object_key)
+      if (sources[0].name) params.set('name', sources[0].name)
+    }
     navigate(`/chat?${params.toString()}`)
+  }
+
+  function toggleObjectSelection(file: FileObject) {
+    const source = selectedSourceForFile(selectedLane, file)
+    const id = selectionId(source.lane, source.object_key)
+    setSelectedObjects((current) => {
+      const next = { ...current }
+      if (next[id]) delete next[id]
+      else next[id] = source
+      return next
+    })
+  }
+
+  function clearSelectedObjects() {
+    setSelectedObjects({})
+  }
+
+  function chatWithSelectedObjects() {
+    if (!selectedSources.length) return
+    navigateToFileChat(selectedSources, `Use these ${selectedSources.length} files: `)
+  }
+
+  async function deleteObjectsForLane(lane: string, objectKeys: string[]): Promise<number> {
+    const response = await apiFetch<FileDeleteResponse>(`/v1/files/r2/${encodeURIComponent(lane)}/objects`, {
+      method: 'DELETE',
+      body: JSON.stringify({ object_keys: objectKeys }),
+    })
+    if (!response.ok) throw new Error(deleteErrorMessage(response))
+    return Number(response.deleted_count ?? objectKeys.length)
+  }
+
+  async function deleteSelectedObjects() {
+    if (!selectedSources.length || !selectedWritable) return
+    const confirmed = window.confirm(`Delete ${selectedSources.length} selected object${selectedSources.length === 1 ? '' : 's'} from R2?`)
+    if (!confirmed) return
+    setDeletingObjects(true)
+    setError(null)
+    setNotice(null)
+    try {
+      const grouped = selectedSources.reduce<Record<string, string[]>>((accumulator, source) => {
+        accumulator[source.lane] = [...(accumulator[source.lane] ?? []), source.object_key]
+        return accumulator
+      }, {})
+      let deleted = 0
+      for (const [lane, objectKeys] of Object.entries(grouped)) {
+        deleted += await deleteObjectsForLane(lane, objectKeys)
+      }
+      setNotice(`${deleted} selected object${deleted === 1 ? '' : 's'} deleted from R2.`)
+      clearSelectedObjects()
+      await loadObjects()
+    } catch (caught) {
+      setError(caught instanceof Error ? caught.message : 'Selected R2 objects could not be deleted.')
+    } finally {
+      setDeletingObjects(false)
+    }
+  }
+
+  async function deleteOneObject(file: FileObject) {
+    if (!activeLane?.writable) return
+    const key = fileKey(file)
+    const confirmed = window.confirm(`Delete ${fileName(file)} from ${laneLabel(activeLane)}?`)
+    if (!confirmed) return
+    setDeletingObjects(true)
+    setError(null)
+    setNotice(null)
+    try {
+      const deleted = await deleteObjectsForLane(selectedLane, [key])
+      setSelectedObjects((current) => {
+        const next = { ...current }
+        delete next[selectionId(selectedLane, key)]
+        return next
+      })
+      setNotice(`${deleted || 1} object deleted from ${laneLabel(activeLane)}.`)
+      await loadObjects()
+    } catch (caught) {
+      setError(caught instanceof Error ? caught.message : 'R2 object could not be deleted.')
+    } finally {
+      setDeletingObjects(false)
+    }
   }
 
   async function loadSkillOptions(query = skillQuery) {
@@ -572,10 +650,12 @@ export function FilesPage() {
     const key = fileKey(skillPickerFile)
     const title = skillTitle(selectedSkill)
     const skillId = skillIdentifier(selectedSkill)
+    const source = { lane: selectedLane, object_key: key, name: fileName(skillPickerFile) } satisfies FileSourceSelection
     const params = new URLSearchParams({
       lane: selectedLane,
       file: key,
       name: fileName(skillPickerFile),
+      sources: JSON.stringify([source]),
       skill_id: skillId,
       skill_title: title,
       draft: `Use ${title} with this file: `,
@@ -797,6 +877,24 @@ export function FilesPage() {
         {notice && <div className="mt-4 rounded-xl border border-emerald-400/20 bg-emerald-400/8 px-4 py-3 text-sm text-emerald-200">{notice}</div>}
         {error && <div className="mt-4 rounded-xl border border-rose-400/20 bg-rose-400/8 px-4 py-3 text-sm text-rose-200">{error}</div>}
 
+        {selectedSources.length > 0 && (
+          <div className="mt-4 flex flex-col gap-3 rounded-2xl border border-cyan-300/15 bg-cyan-300/[0.045] px-4 py-3 text-sm text-cyan-100 sm:flex-row sm:items-center sm:justify-between">
+            <div>
+              <span className="font-semibold">{selectedSources.length} object{selectedSources.length === 1 ? '' : 's'} selected</span>
+              <span className="ml-2 text-cyan-100/65">across {selectedLaneCount} lane{selectedLaneCount === 1 ? '' : 's'}</span>
+            </div>
+            <div className="flex flex-wrap gap-2">
+              <button type="button" onClick={chatWithSelectedObjects} className="inline-flex h-9 items-center gap-2 rounded-xl border border-emerald-300/20 bg-emerald-300/10 px-3 text-xs font-medium text-emerald-100 hover:bg-emerald-300/15">
+                <MessageSquareText className="h-4 w-4" /> Chat with selected
+              </button>
+              <button type="button" onClick={() => void deleteSelectedObjects()} disabled={!selectedWritable || deletingObjects} className="inline-flex h-9 items-center gap-2 rounded-xl border border-rose-300/20 bg-rose-300/8 px-3 text-xs font-medium text-rose-100 hover:bg-rose-300/12 disabled:cursor-not-allowed disabled:opacity-40">
+                {deletingObjects ? <LoaderCircle className="h-4 w-4 animate-spin" /> : <Trash2 className="h-4 w-4" />} Delete selected
+              </button>
+              <button type="button" onClick={clearSelectedObjects} className="inline-flex h-9 items-center rounded-xl border border-white/8 bg-white/[0.035] px-3 text-xs font-medium text-slate-200 hover:bg-white/[0.06]">Clear</button>
+            </div>
+          </div>
+        )}
+
         <section className="mt-5">
           <div className="mb-3 flex flex-wrap items-center justify-between gap-2 text-xs text-slate-400">
             <div className="flex items-center gap-2"><StatusBadge status={activeLane?.writable ? 'active' : activeLane?.readable ? 'readonly' : 'warning'} label={activeLane?.access_mode || storage} compact /> {files.length} objects · {prefixes.length} prefixes</div>
@@ -805,21 +903,6 @@ export function FilesPage() {
               {nextCursor && <button type="button" onClick={nextPage} className="inline-flex h-8 items-center gap-1.5 rounded-lg border border-white/8 bg-white/[0.025] px-2.5 text-slate-400 hover:text-white">Next <ChevronRight className="h-3.5 w-3.5" /></button>}
             </div>
           </div>
-
-          {selectedChatFiles.length > 0 && (
-            <div className="mb-4 flex flex-col gap-3 rounded-2xl border border-emerald-300/15 bg-emerald-300/[0.045] p-3 sm:flex-row sm:items-center sm:justify-between">
-              <div>
-                <p className="text-sm font-semibold text-emerald-100">{selectedChatFiles.length} file{selectedChatFiles.length === 1 ? '' : 's'} selected for chat</p>
-                <p className="mt-1 line-clamp-1 text-xs text-emerald-100/65">{selectedChatFiles.map((file) => fileName(file)).join(' · ')}</p>
-              </div>
-              <div className="flex gap-2">
-                <button type="button" onClick={() => setSelectedChatFiles([])} className="h-9 rounded-xl border border-white/8 bg-white/[0.035] px-3 text-xs font-medium text-slate-200 transition hover:bg-white/[0.06]">Clear</button>
-                <button type="button" onClick={chatWithSelectedFiles} className="flex h-9 items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-cyan-300 to-emerald-300 px-3 text-xs font-semibold text-[#061126] transition hover:brightness-110">
-                  <MessageSquareText className="h-4 w-4" /> Chat with selected
-                </button>
-              </div>
-            </div>
-          )}
 
           {loading ? (
             <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
@@ -854,23 +937,23 @@ export function FilesPage() {
                 const key = fileKey(file)
                 const name = fileName(file)
                 const chatSupported = Boolean(activeLane?.chat_supported && canChatWithObject(file))
-                const selectedForChat = isSelectedForChat(file)
+                const selected = Boolean(selectedObjects[selectionId(selectedLane, key)])
                 return (
-                  <article key={key} className={`group rounded-2xl border p-4 transition ${selectedForChat ? 'border-emerald-300/35 bg-emerald-300/[0.055]' : 'border-white/8 bg-[#0a192d]/70 hover:border-cyan-300/20 hover:bg-[#0d2038]'}`}>
+                  <article key={key} className={`group rounded-2xl border p-4 transition hover:border-cyan-300/20 hover:bg-[#0d2038] ${selected ? 'border-cyan-300/35 bg-cyan-300/[0.055]' : 'border-white/8 bg-[#0a192d]/70'}`}>
+                    <div className="mb-3 flex items-center justify-between gap-2">
+                      <button type="button" onClick={() => toggleObjectSelection(file)} aria-pressed={selected} className={`inline-flex h-8 items-center gap-1.5 rounded-lg border px-2.5 text-[11px] font-medium transition ${selected ? 'border-cyan-300/30 bg-cyan-300/10 text-cyan-100' : 'border-white/8 bg-white/[0.025] text-slate-400 hover:text-slate-200'}`}>
+                        {selected ? <CheckSquare className="h-3.5 w-3.5" /> : <Square className="h-3.5 w-3.5" />} Select
+                      </button>
+                      <StatusBadge status={activeLane?.writable ? 'active' : 'readonly'} label={activeLane?.writable ? 'Read/write' : 'Read-only'} compact />
+                    </div>
                     <button type="button" onClick={() => void inspect(file)} className="block w-full text-left">
-                      <div className="flex items-start justify-between gap-3">
-                        <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-cyan-300/15 bg-cyan-300/7 text-cyan-200"><FileIcon name={name} /></div>
-                        <StatusBadge status={activeLane?.writable ? 'active' : 'readonly'} label={activeLane?.writable ? 'Read/write' : 'Read-only'} compact />
-                      </div>
+                      <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-cyan-300/15 bg-cyan-300/7 text-cyan-200"><FileIcon name={name} /></div>
                       <h3 className="mt-4 truncate text-sm font-semibold text-white">{name}</h3>
                       <p className="mt-1 line-clamp-2 min-h-10 break-all text-xs leading-5 text-slate-400">{key}</p>
                       <div className="mt-4 flex items-center justify-between border-t border-white/6 pt-3 text-[11px] text-slate-400">
                         <span>{formatBytes(Number(file.size_bytes ?? file.size ?? 0))}</span>
                         <span>{formatDate(String(file.last_modified || ''))}</span>
                       </div>
-                    </button>
-                    <button type="button" disabled={!chatSupported} onClick={() => toggleChatSelection(file)} className={`mt-3 flex h-9 w-full items-center justify-center gap-2 rounded-xl border text-xs font-medium transition disabled:cursor-not-allowed disabled:opacity-35 ${selectedForChat ? 'border-emerald-300/30 bg-emerald-300/12 text-emerald-100' : 'border-cyan-300/15 bg-cyan-300/6 text-cyan-100 hover:bg-cyan-300/10'}`}>
-                      <MessageSquareText className="h-4 w-4" /> {selectedForChat ? 'Selected for chat' : 'Add to chat'}
                     </button>
                     <div className="mt-3 grid grid-cols-3 gap-2">
                       <button type="button" onClick={() => void preview(file)} disabled={!chatSupported} className="flex h-9 items-center justify-center gap-1.5 rounded-xl border border-white/8 bg-white/[0.025] text-xs text-slate-400 transition hover:bg-white/[0.05] hover:text-white disabled:cursor-not-allowed disabled:opacity-35">
@@ -883,12 +966,15 @@ export function FilesPage() {
                         <Download className="h-3.5 w-3.5" /> Download
                       </a>
                     </div>
-                    <div className="mt-2 grid grid-cols-2 gap-2">
+                    <div className="mt-2 grid grid-cols-3 gap-2">
                       <button type="button" disabled={!chatSupported} onClick={() => chatWith(file)} className="flex h-9 items-center justify-center gap-2 rounded-xl border border-emerald-300/15 bg-emerald-300/6 text-xs font-medium text-emerald-100 transition hover:bg-emerald-300/10 disabled:cursor-not-allowed disabled:opacity-35">
                         <MessageSquareText className="h-4 w-4" /> {chatSupported ? 'Chat' : 'No chat'}
                       </button>
                       <button type="button" onClick={() => openSkillPicker(file)} className="flex h-9 items-center justify-center gap-2 rounded-xl border border-cyan-300/15 bg-cyan-300/6 text-xs font-medium text-cyan-100 transition hover:bg-cyan-300/10">
                         <BrainCircuit className="h-4 w-4" /> Use skill
+                      </button>
+                      <button type="button" onClick={() => void deleteOneObject(file)} disabled={!activeLane?.writable || deletingObjects} className="flex h-9 items-center justify-center gap-2 rounded-xl border border-rose-300/15 bg-rose-300/6 text-xs font-medium text-rose-100 transition hover:bg-rose-300/10 disabled:cursor-not-allowed disabled:opacity-35">
+                        {deletingObjects ? <LoaderCircle className="h-4 w-4 animate-spin" /> : <Trash2 className="h-4 w-4" />} Delete
                       </button>
                     </div>
                     {canCreateSkillFromCurrentFolder && (
