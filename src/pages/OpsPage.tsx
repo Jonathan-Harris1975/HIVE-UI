@@ -17,6 +17,8 @@ import {
   XCircle,
 } from 'lucide-react'
 import { useCallback, useEffect, useMemo, useState, type FormEvent } from 'react'
+import { ConfirmDialog } from '../components/ConfirmDialog'
+import { EmptyState } from '../components/EmptyState'
 import { StatusBadge } from '../components/StatusBadge'
 import { WorkflowGraph } from '../components/WorkflowGraph'
 import { useAuth } from '../context/AuthContext'
@@ -40,6 +42,12 @@ import type {
 } from '../types/api'
 
 type OpsTab = 'overview' | 'workflow' | 'reviews'
+type ReviewDecision = 'approved' | 'rejected' | 'needs_changes' | 'archived'
+
+interface PendingReviewDecision {
+  review: ExecutionReviewItem
+  decision: ReviewDecision
+}
 
 interface FlagProps {
   label: string
@@ -57,9 +65,9 @@ function Flag({ label, active, detail, icon: Icon }: FlagProps) {
         </div>
         <div className="min-w-0 flex-1">
           <h3 className="truncate text-xs font-semibold text-white">{label}</h3>
-          <p className="mt-0.5 truncate text-[10px] text-slate-400" title={detail}>{detail}</p>
+          <p className="mt-0.5 truncate text-[11px] text-slate-400" title={detail}>{detail}</p>
         </div>
-        <StatusBadge status={active ? 'healthy' : 'warning'} compact />
+        <StatusBadge status={active ? 'ready' : 'partial'} variant="readiness" compact />
       </div>
     </article>
   )
@@ -94,13 +102,17 @@ function RepoHealthCard({ item, onInspect }: { item: RepoHealthItem; onInspect: 
         <div className="min-w-0 flex-1">
           <div className="flex items-center gap-1.5">
             <h4 className="truncate text-xs font-semibold text-white">{item.label || item.repo}</h4>
-            <span className="truncate text-[9px] uppercase tracking-[0.12em] text-slate-400">{category}</span>
+            <span className="truncate text-[11px] uppercase tracking-[0.12em] text-slate-400">{category}</span>
           </div>
-          <p className="mt-0.5 truncate text-[10px] text-slate-400" title={item.detail || item.description}>{item.detail || item.description || 'No health detail returned.'}</p>
+          <p className="mt-0.5 truncate text-[11px] text-slate-400" title={item.detail || item.description}>{item.detail || item.description || 'No health detail returned.'}</p>
         </div>
-        <StatusBadge status={item.status} compact />
+        <div className="flex flex-col items-end gap-1">
+          <StatusBadge status={item.liveness?.status || item.status} variant="liveness" compact />
+          <StatusBadge status={item.readiness?.status || item.operational?.status || item.status} variant="readiness" compact />
+          <StatusBadge status={item.operational?.status || item.status} variant="operational" compact />
+        </div>
       </div>
-      <div className="mt-2 flex items-center gap-2 text-[9px] text-slate-400">
+      <div className="mt-2 flex items-center gap-2 text-[11px] text-slate-400">
         <span>{typeof latency === 'number' ? `${latency} ms` : 'No latency'}</span>
         {operationalStatus && <span>Operational: {operationalStatus.replace(/_/g, ' ')}</span>}
       </div>
@@ -121,7 +133,7 @@ function OpsEventCard({ item, onInspect }: { item: OpsEventItem; onInspect: () =
             <StatusBadge status={severity} compact />
           </div>
           <p className="mt-1 line-clamp-2 text-[11px] leading-5 text-slate-400">{item.summary || 'No event summary returned.'}</p>
-          <p className="mt-2 text-[9px] uppercase tracking-[0.12em] text-slate-400">{item.service || 'unknown service'} · {formatDate(item.occurred_at || item.received_at)}</p>
+          <p className="mt-2 text-[11px] uppercase tracking-[0.12em] text-slate-400">{item.service || 'unknown service'} · {formatDate(item.occurred_at || item.received_at)}</p>
         </div>
       </div>
     </button>
@@ -154,6 +166,33 @@ function reviewExecutionStatus(review: ExecutionReviewItem): string {
   return review.status || 'pending_review'
 }
 
+function reviewString(review: ExecutionReviewItem, ...keys: string[]): string | null {
+  for (const key of keys) {
+    const value = review[key]
+    if (typeof value === 'string' && value.trim()) return value
+    if (Array.isArray(value) && value.length) return value.join(', ')
+  }
+  return null
+}
+
+function reviewRisk(review: ExecutionReviewItem): string {
+  return reviewString(review, 'risk_level', 'highest_risk', 'risk') || 'unknown'
+}
+
+function reviewEvidenceSummary(review: ExecutionReviewItem): string {
+  const evidence = recordValue(review.evidence)
+  return reviewString(review, 'evidence_summary', 'review_evidence_summary', 'summary')
+    || stringFrom(evidence.summary)
+    || 'No review evidence summary returned.'
+}
+
+function reviewDecisionLabel(decision: ReviewDecision): string {
+  if (decision === 'approved') return 'Approve review'
+  if (decision === 'needs_changes') return 'Mark needs changes'
+  if (decision === 'rejected') return 'Reject review'
+  return 'Archive review'
+}
+
 export function OpsPage() {
   const { refreshHealth } = useAuth()
   const { setPayload, setOpen } = useInspector()
@@ -179,6 +218,8 @@ export function OpsPage() {
   const [buildingPreview, setBuildingPreview] = useState(false)
   const [savingReview, setSavingReview] = useState(false)
   const [decisionBusy, setDecisionBusy] = useState<string | null>(null)
+  const [pendingReviewDecision, setPendingReviewDecision] = useState<PendingReviewDecision | null>(null)
+  const [decisionNote, setDecisionNote] = useState('')
 
   const loadOps = useCallback(async (forceRepoHealth = false) => {
     setLoading(true)
@@ -334,24 +375,30 @@ export function OpsPage() {
     }
   }
 
-  async function decideReview(review: ExecutionReviewItem, decision: 'approved' | 'rejected' | 'needs_changes' | 'archived') {
+  function requestReviewDecision(review: ExecutionReviewItem, decision: ReviewDecision) {
+    setPendingReviewDecision({ review, decision })
+    setDecisionNote('')
+  }
+
+  async function decideReview(review: ExecutionReviewItem, decision: ReviewDecision, note: string) {
     const id = reviewId(review)
     if (!id) return
-    const note = window.prompt(`Decision note for ${decision.replace('_', ' ')}`, '')
-    if (note === null) return
     setDecisionBusy(`${id}:${decision}`)
     setError(null)
+    setReviews((current) => current.filter((item) => reviewId(item) !== id))
+    setOpenReviewCount((current) => Math.max(0, current - 1))
     try {
       const response = await apiFetch<{ ok: boolean; error_code?: string }>(`/v1/execution-reviews/${encodeURIComponent(id)}/decision`, {
         method: 'POST',
         body: JSON.stringify({ decision, reviewer: 'HIVE-UI', note: note.trim() || null }),
       })
       if (!response.ok) throw new Error(response.error_code || 'Review decision could not be recorded.')
-      await loadOps()
     } catch (caught) {
       setError(caught instanceof Error ? caught.message : 'Review decision could not be recorded.')
+      await loadOps()
     } finally {
       setDecisionBusy(null)
+      setPendingReviewDecision(null)
     }
   }
 
@@ -372,7 +419,7 @@ export function OpsPage() {
   const tabs: Array<{ id: OpsTab; label: string }> = [
     { id: 'overview', label: 'Overview' },
     { id: 'workflow', label: 'Workflow lab' },
-    { id: 'reviews', label: `Review queue${openReviewCount ? ` (${openReviewCount})` : ''}` },
+    { id: 'reviews', label: `Reviews${openReviewCount ? ` · ${openReviewCount}` : ''}` },
   ]
 
   return (
@@ -407,9 +454,9 @@ export function OpsPage() {
               <div className="flex items-center justify-between gap-3">
                 <div>
                   <h3 className="text-sm font-semibold text-white">Repository and service health</h3>
-                  <p className="mt-0.5 text-[10px] text-slate-400">Liveness plus operational readiness for background APIs where available.</p>
+                  <p className="mt-0.5 text-[11px] text-slate-400">Online is process liveness; Ready is configuration readiness; Degraded means the repo responds with partial capability.</p>
                 </div>
-                <StatusBadge status={repoHealth?.overall_status || 'not_configured'} compact />
+                <div className="flex items-center gap-1.5"><StatusBadge status={repoHealth?.overall_status || 'not_configured'} variant="operational" compact />{repoHealth?.error && <button type="button" onClick={() => void loadOps(true)} className="inline-flex h-8 items-center gap-1.5 rounded-lg border border-amber-300/15 bg-amber-300/7 px-2.5 text-[11px] text-amber-100"><RefreshCw className="h-3.5 w-3.5" /> Retry</button>}</div>
               </div>
               {repoHealth?.repos?.length ? (
                 <div className="mt-3 grid grid-cols-2 gap-2">
@@ -418,7 +465,7 @@ export function OpsPage() {
                   ))}
                 </div>
               ) : (
-                <div className="mt-3 rounded-xl border border-dashed border-white/10 px-3 py-5 text-center text-xs text-slate-400">Repository health is not configured on this HIVE backend yet.</div>
+                <div className="mt-3"><EmptyState icon={<ServerCog className="h-8 w-8" />} title="Repository health unavailable" body="Repo health could not be loaded or is not configured on this HIVE backend." action={{ label: 'Retry', onClick: () => void loadOps(true) }} /></div>
               )}
             </section>
 
@@ -437,7 +484,7 @@ export function OpsPage() {
                   ))}
                 </div>
               ) : (
-                <div className="mt-4 rounded-xl border border-dashed border-white/10 px-3 py-5 text-center text-xs text-slate-400">No operational events are currently recorded.</div>
+                <div className="mt-4"><EmptyState icon={<BellRing className="h-8 w-8" />} title="No operational events" body="No operational events are currently recorded." /></div>
               )}
             </section>
 
@@ -586,17 +633,18 @@ export function OpsPage() {
             </div>
 
             {reviews.length === 0 ? (
-              <div className="mt-5 rounded-2xl border border-dashed border-white/10 py-14 text-center text-sm text-slate-400">No execution review records are stored.</div>
+              <div className="mt-5"><EmptyState icon={<ShieldCheck className="h-8 w-8" />} title="No executions pending review." body="Review queue is clear." /></div>
             ) : (
               <div className="mt-5 overflow-x-auto rounded-2xl border border-white/8">
                 <table className="w-full min-w-[900px] border-collapse text-left">
-                  <thead className="bg-[#071426] text-[10px] uppercase tracking-[0.14em] text-slate-400">
+                  <thead className="bg-[#071426] text-[11px] uppercase tracking-[0.14em] text-slate-400">
                     <tr>
                       <th className="px-4 py-3 font-medium">Task</th>
-                      <th className="px-4 py-3 font-medium">Repo</th>
+                      <th className="px-4 py-3 font-medium">Target</th>
+                      <th className="px-4 py-3 font-medium">Risk</th>
                       <th className="px-4 py-3 font-medium">Status</th>
                       <th className="px-4 py-3 font-medium">Execution</th>
-                      <th className="px-4 py-3 font-medium">Updated</th>
+                      <th className="px-4 py-3 font-medium">Created</th>
                       <th className="px-4 py-3 font-medium">Actions</th>
                     </tr>
                   </thead>
@@ -609,21 +657,23 @@ export function OpsPage() {
                           <td className="max-w-[420px] px-4 py-4">
                             <button type="button" onClick={() => inspect('Execution review', review, id)} className="text-left">
                               <span className="block text-sm font-medium text-white">{reviewTitle(review)}</span>
-                              <span className="mt-1 block text-[11px] text-slate-400">{id}</span>
+                              <span className="mt-1 block text-[11px] text-slate-400">{reviewString(review, 'action_type', 'action') || 'review'} · {reviewString(review, 'skill_name', 'skill') || 'no skill linked'}</span>
+                              <span className="mt-1 line-clamp-2 block text-[11px] leading-5 text-slate-400">{reviewEvidenceSummary(review)}</span>
                             </button>
                           </td>
-                          <td className="px-4 py-4 text-xs text-slate-400">{review.repo || 'Shared'}</td>
+                          <td className="px-4 py-4 text-xs text-slate-400"><span className="block text-slate-200">{reviewString(review, 'target', 'repo') || review.repo || 'Shared'}</span><span className="mt-1 block text-[11px] text-slate-500">{id}</span></td>
+                          <td className="px-4 py-4"><StatusBadge status={reviewRisk(review)} compact /></td>
                           <td className="px-4 py-4"><StatusBadge status={review.status} compact /></td>
                           <td className="px-4 py-4"><StatusBadge status={reviewExecutionStatus(review)} compact /></td>
-                          <td className="px-4 py-4 text-xs text-slate-400">{formatDate(review.updated_at || review.created_at)}</td>
+                          <td className="px-4 py-4 text-xs text-slate-400">{formatDate(review.created_at || review.updated_at)}</td>
                           <td className="px-4 py-3">
                             <div className="flex flex-wrap gap-1.5">
-                              <button type="button" disabled={busy} onClick={() => void openEvidence(review)} className="rounded-lg border border-white/8 bg-white/[0.035] px-2.5 py-1.5 text-[10px] text-slate-300 disabled:opacity-40">Evidence</button>
-                              <button type="button" disabled={busy} onClick={() => void decideReview(review, 'approved')} className="rounded-lg border border-emerald-300/15 bg-emerald-300/7 px-2.5 py-1.5 text-[10px] text-emerald-200 disabled:opacity-40">Approve</button>
-                              <button type="button" disabled={busy} onClick={() => void decideReview(review, 'needs_changes')} className="rounded-lg border border-amber-300/15 bg-amber-300/7 px-2.5 py-1.5 text-[10px] text-amber-200 disabled:opacity-40">Needs changes</button>
-                              <button type="button" disabled={busy} onClick={() => void decideReview(review, 'rejected')} className="rounded-lg border border-rose-300/15 bg-rose-300/7 px-2.5 py-1.5 text-[10px] text-rose-200 disabled:opacity-40">Reject</button>
+                              <button type="button" disabled={busy} onClick={() => void openEvidence(review)} className="rounded-lg border border-white/8 bg-white/[0.035] px-2.5 py-1.5 text-[11px] text-slate-300 disabled:opacity-40">Evidence</button>
+                              <button type="button" disabled={busy} onClick={() => requestReviewDecision(review, 'approved')} className="rounded-lg border border-emerald-300/15 bg-emerald-300/7 px-2.5 py-1.5 text-[11px] text-emerald-200 disabled:opacity-40">Approve</button>
+                              <button type="button" disabled={busy} onClick={() => requestReviewDecision(review, 'needs_changes')} className="rounded-lg border border-amber-300/15 bg-amber-300/7 px-2.5 py-1.5 text-[11px] text-amber-200 disabled:opacity-40">Needs changes</button>
+                              <button type="button" disabled={busy} onClick={() => requestReviewDecision(review, 'rejected')} className="rounded-lg border border-rose-300/15 bg-rose-300/7 px-2.5 py-1.5 text-[11px] text-rose-200 disabled:opacity-40">Reject</button>
                             </div>
-                            {busy && <span className="mt-2 flex items-center gap-1.5 text-[10px] text-slate-400"><LoaderCircle className="h-3 w-3 animate-spin" /> Updating review</span>}
+                            {busy && <span className="mt-2 flex items-center gap-1.5 text-[11px] text-slate-400"><LoaderCircle className="h-3 w-3 animate-spin" /> Updating review</span>}
                           </td>
                         </tr>
                       )
@@ -635,6 +685,31 @@ export function OpsPage() {
           </section>
         )}
       </div>
+
+      <ConfirmDialog
+        open={Boolean(pendingReviewDecision)}
+        title={pendingReviewDecision ? reviewDecisionLabel(pendingReviewDecision.decision) : 'Review decision'}
+        summary={pendingReviewDecision?.decision === 'approved' ? 'This will record approval for the review item. High-risk or production-adjacent work remains gated by backend execution policy.' : 'This will record the review decision and remove the item from the active queue.'}
+        objectName={pendingReviewDecision ? reviewTitle(pendingReviewDecision.review) : undefined}
+        systems={['D1 execution review rows', 'PostgreSQL review records where mirrored', 'Backend execution-review audit trail']}
+        confirmLabel={pendingReviewDecision ? reviewDecisionLabel(pendingReviewDecision.decision) : 'Confirm'}
+        tone={pendingReviewDecision?.decision === 'rejected' ? 'destructive' : 'default'}
+        busy={Boolean(decisionBusy)}
+        textInput={{
+          label: 'Decision note',
+          value: decisionNote,
+          onChange: setDecisionNote,
+          placeholder: pendingReviewDecision?.decision === 'rejected' ? 'State why this review is rejected' : 'Add context for the audit trail',
+          multiline: true,
+          required: pendingReviewDecision?.decision === 'rejected',
+        }}
+        confirmDisabled={pendingReviewDecision?.decision === 'rejected' && !decisionNote.trim()}
+        onConfirm={() => {
+          if (!pendingReviewDecision) return
+          void decideReview(pendingReviewDecision.review, pendingReviewDecision.decision, decisionNote)
+        }}
+        onCancel={() => setPendingReviewDecision(null)}
+      />
     </div>
   )
 }

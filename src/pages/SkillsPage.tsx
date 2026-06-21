@@ -10,7 +10,9 @@ import {
   WandSparkles,
 } from 'lucide-react'
 import { useCallback, useEffect, useMemo, useState, type FormEvent } from 'react'
-import { useNavigate } from 'react-router'
+import { useNavigate, useSearchParams } from 'react-router'
+import { ConfirmDialog } from '../components/ConfirmDialog'
+import { EmptyState } from '../components/EmptyState'
 import { StatusBadge } from '../components/StatusBadge'
 import { useInspector } from '../context/InspectorContext'
 import { apiFetch } from '../lib/api'
@@ -36,14 +38,15 @@ function skillTitle(skill: SkillItem, index = 0): string {
 
 export function SkillsPage() {
   const navigate = useNavigate()
+  const [searchParams, setSearchParams] = useSearchParams()
   const { setPayload, setOpen } = useInspector()
   const [skills, setSkills] = useState<SkillItem[]>([])
   const [loading, setLoading] = useState(true)
-  const [query, setQuery] = useState('')
-  const [submittedQuery, setSubmittedQuery] = useState('')
-  const [repo, setRepo] = useState('')
-  const [risk, setRisk] = useState('')
-  const [lane, setLane] = useState('')
+  const [query, setQuery] = useState(searchParams.get('q') ?? '')
+  const [submittedQuery, setSubmittedQuery] = useState(searchParams.get('q') ?? '')
+  const [repo, setRepo] = useState(searchParams.get('repo') ?? '')
+  const [risk, setRisk] = useState(searchParams.get('risk') ?? '')
+  const [lane, setLane] = useState(searchParams.get('lane') ?? '')
   const [task, setTask] = useState('')
   const [recommending, setRecommending] = useState(false)
   const [showRecommender, setShowRecommender] = useState(false)
@@ -51,6 +54,7 @@ export function SkillsPage() {
   const [cleanupRunning, setCleanupRunning] = useState(false)
   const [cleanupNotice, setCleanupNotice] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
+  const [cleanupDialogOpen, setCleanupDialogOpen] = useState(false)
 
   const loadSkills = useCallback(async () => {
     setLoading(true)
@@ -77,6 +81,15 @@ export function SkillsPage() {
     void loadSkills()
   }, [loadSkills])
 
+  useEffect(() => {
+    const next = new URLSearchParams()
+    if (submittedQuery) next.set('q', submittedQuery)
+    if (repo) next.set('repo', repo)
+    if (risk) next.set('risk', risk)
+    if (lane) next.set('lane', lane)
+    setSearchParams(next, { replace: true })
+  }, [lane, repo, risk, setSearchParams, submittedQuery])
+
   const filters = useMemo(() => {
     const repos = new Set<string>(['HIVE', 'AIMS', 'RAMS', 'Website'])
     const risks = new Set<string>(['low', 'medium', 'high'])
@@ -95,6 +108,19 @@ export function SkillsPage() {
   function searchSkills(event: FormEvent) {
     event.preventDefault()
     setSubmittedQuery(query.trim())
+  }
+
+  function clearFilters() {
+    setQuery('')
+    setSubmittedQuery('')
+    setRepo('')
+    setRisk('')
+    setLane('')
+  }
+
+  function clearSearch() {
+    setQuery('')
+    setSubmittedQuery('')
   }
 
   async function recommend(event: FormEvent) {
@@ -146,6 +172,7 @@ export function SkillsPage() {
 
   async function runUploadedFileSkillCleanup() {
     if (!cleanupPreview || !cleanupPreview.candidate_count) return
+    setCleanupDialogOpen(false)
     setCleanupRunning(true)
     setCleanupNotice(null)
     setError(null)
@@ -232,7 +259,7 @@ export function SkillsPage() {
                 <button type="button" onClick={previewUploadedFileSkillCleanup} disabled={cleanupRunning} className="flex h-10 items-center justify-center gap-2 rounded-xl border border-amber-300/20 bg-amber-300/10 px-4 text-xs font-medium text-amber-100 disabled:opacity-50">
                   {cleanupRunning ? <LoaderCircle className="h-4 w-4 animate-spin" /> : <Search className="h-4 w-4" />} Preview cleanup
                 </button>
-                <button type="button" onClick={runUploadedFileSkillCleanup} disabled={cleanupRunning || !cleanupPreview?.candidate_count} className="flex h-10 items-center justify-center gap-2 rounded-xl border border-rose-300/20 bg-rose-300/10 px-4 text-xs font-medium text-rose-100 disabled:opacity-45">
+                <button type="button" onClick={() => setCleanupDialogOpen(true)} disabled={cleanupRunning || !cleanupPreview?.candidate_count} className="flex h-10 items-center justify-center gap-2 rounded-xl border border-rose-300/20 bg-rose-300/10 px-4 text-xs font-medium text-rose-100 disabled:opacity-45">
                   <Trash2 className="h-4 w-4" /> Delete previewed rows
                 </button>
               </div>
@@ -287,7 +314,12 @@ export function SkillsPage() {
           {loading ? (
             <div className="flex items-center justify-center py-16 text-slate-400"><LoaderCircle className="mr-2 h-5 w-5 animate-spin" /> Loading skill registry</div>
           ) : skills.length === 0 ? (
-            <div className="rounded-3xl border border-dashed border-white/10 py-16 text-center text-slate-400"><BrainCircuit className="mx-auto h-9 w-9" /><p className="mt-3 text-sm">No skills match the current query.</p></div>
+            <EmptyState
+              icon={<BrainCircuit className="h-5 w-5" />}
+              title={submittedQuery ? 'No skills found for that search.' : 'No skills found.'}
+              body={submittedQuery || repo || risk || lane ? 'The active filters are hiding every registry entry.' : 'The skill catalogue is empty or unavailable. Open the HIVE skills folder to add governed skill descriptors.'}
+              action={submittedQuery ? { label: 'Clear search', onClick: clearSearch } : (repo || risk || lane) ? { label: 'Clear filters', onClick: clearFilters } : { label: 'Open skills folder in Files', onClick: () => navigate('/files') }}
+            />
           ) : (
             <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
               {skills.map((skill, index) => {
@@ -302,14 +334,14 @@ export function SkillsPage() {
                       <div className="flex items-center justify-between gap-3">
                         <div className="flex h-9 w-9 items-center justify-center rounded-xl border border-cyan-300/15 bg-cyan-300/7 text-cyan-200"><BrainCircuit className="h-4.5 w-4.5" /></div>
                         <div className="flex flex-wrap justify-end gap-1.5">
-                          {score != null && Number.isFinite(score) && <span className="rounded-full border border-cyan-300/15 bg-cyan-300/7 px-2 py-1 text-[10px] text-cyan-200">{score.toFixed(2)}</span>}
+                          {score != null && Number.isFinite(score) && <span className="rounded-full border border-cyan-300/15 bg-cyan-300/7 px-2 py-1 text-[11px] text-cyan-200">{score.toFixed(2)}</span>}
                           <StatusBadge status={riskLevel} compact />
                           <StatusBadge status={status} compact />
                         </div>
                       </div>
                       <h3 className="mt-4 text-sm font-semibold text-white">{title}</h3>
                       <p className="mt-2 line-clamp-3 min-h-[60px] text-xs leading-5 text-slate-400">{String(skill.description || metadata.description || 'No description supplied.')}</p>
-                      <div className="mt-4 flex flex-wrap gap-1.5 border-t border-white/6 pt-3 text-[10px] text-slate-400">
+                      <div className="mt-4 flex flex-wrap gap-1.5 border-t border-white/6 pt-3 text-[11px] text-slate-400">
                         <span>{field(skill, 'repo', 'Shared')}</span><span>·</span><span>{field(skill, 'hive_lane', field(skill, 'lane', 'General'))}</span>
                       </div>
                     </button>
@@ -323,6 +355,18 @@ export function SkillsPage() {
           )}
         </section>
       </div>
+      <ConfirmDialog
+        open={cleanupDialogOpen}
+        title="Run catalogue cleanup"
+        summary="This deletes the previewed duplicate skill catalogue entries. It does not delete R2 bucket objects."
+        objectName={`${cleanupPreview?.candidate_count ?? 0} previewed skill row${(cleanupPreview?.candidate_count ?? 0) === 1 ? '' : 's'}`}
+        systems={['D1 skill catalogue rows', 'PostgreSQL skill index records where mirrored', 'R2 objects not touched']}
+        confirmLabel="Run cleanup"
+        tone="destructive"
+        busy={cleanupRunning}
+        onConfirm={() => void runUploadedFileSkillCleanup()}
+        onCancel={() => setCleanupDialogOpen(false)}
+      />
     </div>
   )
 }

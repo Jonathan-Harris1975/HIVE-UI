@@ -46,9 +46,9 @@ const modeOptions: Array<{ value: ChatMode; label: string }> = [
 ]
 
 const starters = [
-  'Review the latest HIVE operational risks and give me a safe action order.',
-  'Help me trace a deployment failure without guessing.',
-  'Recommend the best shared skills for a new AIMS quality-control task.',
+  { category: 'Operations', border: 'border-amber-300/40', prompt: 'Review the latest HIVE operational risks and give me a safe action order.' },
+  { category: 'Debugging', border: 'border-rose-300/40', prompt: 'Help me trace a deployment failure without guessing.' },
+  { category: 'Skills', border: 'border-cyan-300/40', prompt: 'Recommend the best shared skills for a new AIMS quality-control task.' },
 ]
 
 function makeMessage(role: 'user' | 'assistant', content: string, pending = false): UiMessage {
@@ -100,6 +100,8 @@ export function ChatPage() {
     setMessages,
     setCurrentConversationId,
     refreshConversations,
+    newConversation,
+    autoTitleConversation,
   } = useChat()
   const { setPayload, setOpen } = useInspector()
   const [searchParams, setSearchParams] = useSearchParams()
@@ -200,13 +202,22 @@ export function ChatPage() {
   }
 
   function handleStreamEvent(assistantId: string, event: StreamEvent) {
-    if (event.event === 'meta' && event.type === 'conversation' && event.conversation_id) {
-      setCurrentConversationId(event.conversation_id)
-      return
+    if (event.event === 'meta') {
+      const eventModel = typeof event.model_used === 'string' ? event.model_used : typeof event.model === 'string' ? event.model : null
+      if (event.conversation_id && event.type === 'conversation') setCurrentConversationId(event.conversation_id)
+      if (eventModel) {
+        setMessages((current) => current.map((message) =>
+          message.id === assistantId ? { ...message, streaming_model: eventModel } : message,
+        ))
+      }
+      if (event.type === 'conversation') return
     }
     if (event.event === 'token' && typeof event.content === 'string') {
+      const tokenishCount = event.content.trim() ? event.content.trim().split(/\s+/).length : 0
       setMessages((current) => current.map((message) =>
-        message.id === assistantId ? { ...message, content: `${message.content}${event.content}` } : message,
+        message.id === assistantId
+          ? { ...message, content: `${message.content}${event.content}`, streaming_count: (message.streaming_count ?? 0) + tokenishCount }
+          : message,
       ))
       return
     }
@@ -223,7 +234,7 @@ export function ChatPage() {
           ? {
               ...message,
               pending: false,
-              model: event.model_used || message.model,
+              model: event.model_used || message.model || message.streaming_model,
               provider: event.provider || message.provider,
               usage: event.usage || message.usage,
               error: event.ok === false ? event.message || 'The model did not complete the response.' : message.error,
@@ -237,6 +248,8 @@ export function ChatPage() {
     const messageText = (value ?? prompt).trim()
     if (!messageText || streaming) return
 
+    const wasNewConversation = !currentConversationId
+    let completedConversationId = currentConversationId
     const userMessage = makeMessage('user', messageText)
     const assistantMessage = makeMessage('assistant', '', true)
     setMessages((current) => [...current, userMessage, assistantMessage])
@@ -263,7 +276,10 @@ export function ChatPage() {
       if (hasAttachedFiles) {
         const response = await chatWithFiles(attachedSources, { ...payload, workflow_preset: workflowPreset || null }, controller.signal)
         if (!response.ok) throw new Error(response.message || response.error_code || 'File chat failed.')
-        if (response.conversation_id) setCurrentConversationId(response.conversation_id)
+        if (response.conversation_id) {
+          completedConversationId = response.conversation_id
+          setCurrentConversationId(response.conversation_id)
+        }
         setMessages((current) => current.map((message) =>
           message.id === assistantMessage.id
             ? {
@@ -283,7 +299,13 @@ export function ChatPage() {
             : message,
         ))
       } else {
-        await streamChat(payload, { onEvent: (event) => handleStreamEvent(assistantMessage.id, event) }, controller.signal)
+        await streamChat(payload, { onEvent: (event) => {
+          if (event.conversation_id) completedConversationId = event.conversation_id
+          handleStreamEvent(assistantMessage.id, event)
+        } }, controller.signal)
+      }
+      if (wasNewConversation && completedConversationId) {
+        await autoTitleConversation(completedConversationId).catch(() => undefined)
       }
       await refreshConversations().catch(() => undefined)
     } catch (caught) {
@@ -354,17 +376,20 @@ export function ChatPage() {
               <div className="mt-8 grid w-full max-w-2xl gap-3 sm:grid-cols-3">
                 {starters.map((starter) => (
                   <button
-                    key={starter}
+                    key={starter.category}
                     type="button"
-                    onClick={() => void submitMessage(starter)}
-                    className="rounded-2xl border border-white/8 bg-white/[0.025] p-4 text-left text-xs leading-5 text-slate-400 transition hover:border-cyan-300/20 hover:bg-cyan-300/[0.04] hover:text-slate-200"
+                    onClick={() => void submitMessage(starter.prompt)}
+                    className={`rounded-2xl border border-l-2 border-white/8 ${starter.border} bg-white/[0.025] p-4 text-left text-xs leading-5 text-slate-400 transition hover:border-cyan-300/20 hover:bg-cyan-300/[0.04] hover:text-slate-200`}
                   >
-                    <Sparkles className="mb-3 h-4 w-4 text-cyan-300/70" />
-                    {starter}
+                    <span className="mb-2 flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-300"><Sparkles className="h-3.5 w-3.5 text-cyan-300/70" /> {starter.category}</span>
+                    {starter.prompt}
                   </button>
                 ))}
               </div>
               <div className="mt-5 flex flex-wrap justify-center gap-2">
+                <button type="button" onClick={newConversation} className="inline-flex h-10 items-center gap-2 rounded-xl border border-white/10 bg-white/[0.035] px-3 text-xs font-medium text-slate-200 transition hover:bg-white/[0.06]">
+                  New conversation
+                </button>
                 <Link to="/files" className="inline-flex h-10 items-center gap-2 rounded-xl border border-cyan-300/15 bg-cyan-300/7 px-3 text-xs font-medium text-cyan-100 transition hover:bg-cyan-300/12">
                   <Files className="h-4 w-4" /> Files
                 </Link>
@@ -474,7 +499,7 @@ export function ChatPage() {
               )}
             </div>
           </div>
-          <p className="mt-2 text-center text-[10px] text-slate-400">
+          <p className="mt-2 text-center text-[11px] text-slate-400">
             Enter sends · Shift + Enter adds a line
             {conversationUsage.tokens > 0 && <> · {conversationUsage.tokens.toLocaleString()} tokens · {formatCost(conversationUsage.cost)}</>}
           </p>
