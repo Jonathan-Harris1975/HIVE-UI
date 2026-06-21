@@ -1,5 +1,6 @@
 import type {
   ChatRequestPayload,
+  FileAttachment,
   FileChatResponse,
   StreamEvent,
 } from '../types/api'
@@ -206,13 +207,30 @@ export function chatWithFile(
   payload: ChatRequestPayload & { workflow_preset?: string | null },
   signal?: AbortSignal,
 ): Promise<FileChatResponse> {
-  const uploadsLane = lane === 'uploads'
+  return chatWithFiles([{ lane, object_key: objectKey }], payload, signal)
+}
+
+export function chatWithFiles(
+  files: FileAttachment[],
+  payload: ChatRequestPayload & { workflow_preset?: string | null },
+  signal?: AbortSignal,
+): Promise<FileChatResponse> {
+  const cleanFiles = files
+    .map((file) => ({
+      lane: file.lane || 'uploads',
+      object_key: file.object_key,
+      name: file.name ?? null,
+    }))
+    .filter((file) => file.object_key)
+  const first = cleanFiles[0]
+  const uploadsLane = cleanFiles.length === 1 && first?.lane === 'uploads'
   return apiFetch<FileChatResponse>('/v1/chat/with-file', {
     method: 'POST',
     signal,
     body: JSON.stringify({
-      lane,
-      object_key: objectKey,
+      lane: first?.lane ?? 'uploads',
+      object_key: first?.object_key ?? '',
+      files: cleanFiles.length > 1 ? cleanFiles : [],
       message: payload.message,
       mode: payload.mode === 'auto' ? 'file_analysis' : payload.mode,
       model: payload.model,
