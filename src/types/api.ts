@@ -126,6 +126,13 @@ export interface StreamEvent {
   [key: string]: unknown
 }
 
+
+export interface FileAttachment {
+  object_key: string
+  lane: string
+  name?: string | null
+}
+
 export interface SourceCitation {
   label?: string
   object_key?: string
@@ -195,6 +202,9 @@ export interface FileChatResponse {
   provider?: string
   usage?: UsageSummary
   source_citation?: SourceCitation
+  source_citations?: SourceCitation[]
+  sources?: Array<Record<string, unknown>>
+  file_count?: number
   source_chunks?: Array<Record<string, unknown>>
   retrieval_summary?: Record<string, unknown> | string | null
   selected_skill?: Record<string, unknown> | null
