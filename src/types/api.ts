@@ -128,6 +128,11 @@ export interface ChatRequestPayload {
   conversation_id?: string | null
   use_persisted_history?: boolean
   db_history_limit?: number
+  use_skills?: boolean
+  skill_repo?: string | null
+  skill_lane?: string | null
+  skill_risk_ceiling?: 'low' | 'medium' | 'high' | null
+  skill_limit?: number | null
 }
 
 export interface StreamEvent {
