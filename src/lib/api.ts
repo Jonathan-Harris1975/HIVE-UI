@@ -1,7 +1,7 @@
 import type {
   ChatRequestPayload,
-  FileAttachment,
   FileChatResponse,
+  FileSourceSelection,
   StreamEvent,
 } from '../types/api'
 
@@ -201,36 +201,21 @@ export async function streamChat(
   }
 }
 
-export function chatWithFile(
-  lane: string,
-  objectKey: string,
-  payload: ChatRequestPayload & { workflow_preset?: string | null },
-  signal?: AbortSignal,
-): Promise<FileChatResponse> {
-  return chatWithFiles([{ lane, object_key: objectKey }], payload, signal)
-}
-
 export function chatWithFiles(
-  files: FileAttachment[],
+  files: FileSourceSelection[],
   payload: ChatRequestPayload & { workflow_preset?: string | null },
   signal?: AbortSignal,
 ): Promise<FileChatResponse> {
   const cleanFiles = files
-    .map((file) => ({
-      lane: file.lane || 'uploads',
-      object_key: file.object_key,
-      name: file.name ?? null,
-    }))
-    .filter((file) => file.object_key)
-  const first = cleanFiles[0]
-  const uploadsLane = cleanFiles.length === 1 && first?.lane === 'uploads'
+    .filter((file) => file.object_key && file.lane)
+    .map((file) => ({ lane: file.lane, object_key: file.object_key, name: file.name ?? undefined }))
+  const singleUploadsFile = cleanFiles.length === 1 && cleanFiles[0]?.lane === 'uploads'
+
   return apiFetch<FileChatResponse>('/v1/chat/with-file', {
     method: 'POST',
     signal,
     body: JSON.stringify({
-      lane: first?.lane ?? 'uploads',
-      object_key: first?.object_key ?? '',
-      files: cleanFiles.length > 1 ? cleanFiles : [],
+      files: cleanFiles,
       message: payload.message,
       mode: payload.mode === 'auto' ? 'file_analysis' : payload.mode,
       model: payload.model,
@@ -239,10 +224,19 @@ export function chatWithFiles(
       workflow_preset: payload.workflow_preset ?? null,
       skill_id: payload.skill_id ?? null,
       skill_title: payload.skill_title ?? null,
-      use_chunks: uploadsLane,
-      use_vectorize: uploadsLane,
+      use_chunks: singleUploadsFile,
+      use_vectorize: singleUploadsFile,
       vectorize_fallback_sql: true,
-      auto_chunk: uploadsLane,
+      auto_chunk: singleUploadsFile,
     }),
   })
+}
+
+export function chatWithFile(
+  lane: string,
+  objectKey: string,
+  payload: ChatRequestPayload & { workflow_preset?: string | null },
+  signal?: AbortSignal,
+): Promise<FileChatResponse> {
+  return chatWithFiles([{ lane, object_key: objectKey }], payload, signal)
 }
