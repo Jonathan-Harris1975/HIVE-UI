@@ -123,10 +123,13 @@ export function ChatPage() {
   const [modelsLoading, setModelsLoading] = useState(true)
   const [workflowPresets, setWorkflowPresets] = useState<WorkflowPreset[]>([])
   const [workflowPreset, setWorkflowPreset] = useState('')
+  const [useSkillContext, setUseSkillContext] = useState(false)
   const [streaming, setStreaming] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [showScrollButton, setShowScrollButton] = useState(false)
   const abortRef = useRef<AbortController | null>(null)
+  const tokenBufferRef = useRef('')
+  const tokenFlushTimerRef = useRef<number | null>(null)
   const endRef = useRef<HTMLDivElement | null>(null)
   const scrollRef = useRef<HTMLDivElement | null>(null)
   const textareaRef = useRef<HTMLTextAreaElement | null>(null)
@@ -187,6 +190,35 @@ export function ChatPage() {
     textarea.style.height = `${Math.min(textarea.scrollHeight, 180)}px`
   }
 
+
+  function flushTokenBuffer(assistantId: string) {
+    const buffered = tokenBufferRef.current
+    if (!buffered) return
+    tokenBufferRef.current = ''
+    setMessages((current) => current.map((message) =>
+      message.id === assistantId
+        ? { ...message, content: `${message.content}${buffered}`, streaming_count: (message.streaming_count ?? 0) + buffered.length }
+        : message,
+    ))
+  }
+
+  function queueToken(assistantId: string, content: string) {
+    tokenBufferRef.current += content
+    if (tokenFlushTimerRef.current !== null) return
+    tokenFlushTimerRef.current = window.setTimeout(() => {
+      tokenFlushTimerRef.current = null
+      flushTokenBuffer(assistantId)
+    }, 75)
+  }
+
+  function clearTokenBuffer() {
+    tokenBufferRef.current = ''
+    if (tokenFlushTimerRef.current !== null) {
+      window.clearTimeout(tokenFlushTimerRef.current)
+      tokenFlushTimerRef.current = null
+    }
+  }
+
   function inspectMessage(message: UiMessage) {
     setPayload({
       eyebrow: message.role === 'assistant' ? 'Assistant message' : 'User message',
@@ -218,21 +250,18 @@ export function ChatPage() {
       if (event.type === 'conversation') return
     }
     if (event.event === 'token' && typeof event.content === 'string') {
-      const characterCount = event.content.length
-      setMessages((current) => current.map((message) =>
-        message.id === assistantId
-          ? { ...message, content: `${message.content}${event.content}`, streaming_count: (message.streaming_count ?? 0) + characterCount }
-          : message,
-      ))
+      queueToken(assistantId, event.content)
       return
     }
     if (event.event === 'error') {
+      flushTokenBuffer(assistantId)
       setMessages((current) => current.map((message) =>
         message.id === assistantId ? { ...message, pending: false, error: event.message || 'Streaming failed.' } : message,
       ))
       return
     }
     if (event.event === 'done') {
+      flushTokenBuffer(assistantId)
       if (event.conversation_id) setCurrentConversationId(event.conversation_id)
       setMessages((current) => current.map((message) =>
         message.id === assistantId
@@ -263,6 +292,7 @@ export function ChatPage() {
     setStreaming(true)
     if (textareaRef.current) textareaRef.current.style.height = '48px'
 
+    clearTokenBuffer()
     const controller = new AbortController()
     abortRef.current = controller
     const payload: ChatRequestPayload = {
@@ -275,6 +305,7 @@ export function ChatPage() {
       max_tokens: 2048,
       skill_id: attachedSkillId,
       skill_title: attachedSkillTitle,
+      use_skills: useSkillContext && !hasAttachedFiles,
     }
 
     try {
@@ -309,10 +340,12 @@ export function ChatPage() {
           handleStreamEvent(assistantMessage.id, event)
         } }, controller.signal)
       }
+      setStreaming(false)
+      abortRef.current = null
       if (completedConversationId) {
         const canAutoTitle = wasNewConversation || !currentConversationSummary?.title || currentConversationSummary.auto_titled === false
         if (canAutoTitle) {
-          await autoTitleConversation(completedConversationId).catch(() => undefined)
+          void autoTitleConversation(completedConversationId).catch(() => undefined)
         }
       }
       await refreshConversations().catch(() => undefined)
@@ -329,6 +362,7 @@ export function ChatPage() {
         ))
       }
     } finally {
+      clearTokenBuffer()
       setStreaming(false)
       abortRef.current = null
     }
@@ -477,6 +511,17 @@ export function ChatPage() {
                   <ChevronDown className="pointer-events-none absolute right-2 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-slate-400" />
                 </label>
                 <ModelPicker models={models} value={model} onChange={setModel} loading={modelsLoading} />
+                {!hasAttachedFiles && (
+                  <button
+                    type="button"
+                    onClick={() => setUseSkillContext((value) => !value)}
+                    className={`h-8 rounded-lg border px-3 text-xs font-medium transition ${useSkillContext ? 'border-cyan-300/30 bg-cyan-300/10 text-cyan-100' : 'border-white/8 bg-white/[0.035] text-slate-400 hover:bg-white/[0.055] hover:text-slate-200'}`}
+                    aria-pressed={useSkillContext}
+                    title="Use retrieved HIVE skills for this message. Off keeps ordinary chat fast."
+                  >
+                    Skills {useSkillContext ? 'on' : 'off'}
+                  </button>
+                )}
                 {hasAttachedFiles && workflowPresets.length > 0 && (
                   <label className="relative max-w-[210px]">
                     <select
