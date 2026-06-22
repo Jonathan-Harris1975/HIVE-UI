@@ -49,28 +49,60 @@ interface PendingReviewDecision {
   decision: ReviewDecision
 }
 
+type FlagStatus = 'ready' | 'not_ready' | 'disabled' | 'partial' | 'unknown'
+
 interface FlagProps {
   label: string
-  active: boolean
+  status: FlagStatus
   detail: string
   icon: typeof Activity
 }
 
-function Flag({ label, active, detail, icon: Icon }: FlagProps) {
+function flagTone(status: FlagStatus): string {
+  if (status === 'ready') return 'border-emerald-300/15 bg-emerald-300/7 text-emerald-200'
+  if (status === 'not_ready') return 'border-rose-300/15 bg-rose-300/7 text-rose-200'
+  if (status === 'partial') return 'border-amber-300/15 bg-amber-300/7 text-amber-200'
+  return 'border-cyan-300/15 bg-cyan-300/7 text-cyan-200'
+}
+
+function Flag({ label, status, detail, icon: Icon }: FlagProps) {
   return (
     <article className="min-w-0 rounded-xl border border-white/8 bg-[#0a192d]/70 p-3">
       <div className="flex items-center gap-2.5">
-        <div className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-lg border ${active ? 'border-emerald-300/15 bg-emerald-300/7 text-emerald-200' : 'border-amber-300/15 bg-amber-300/7 text-amber-200'}`}>
+        <div className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-lg border ${flagTone(status)}`}>
           <Icon className="h-3.5 w-3.5" />
         </div>
         <div className="min-w-0 flex-1">
           <h3 className="truncate text-xs font-semibold text-white">{label}</h3>
           <p className="mt-0.5 truncate text-[11px] text-slate-400" title={detail}>{detail}</p>
         </div>
-        <StatusBadge status={active ? 'ready' : 'partial'} variant="readiness" compact />
+        <StatusBadge status={status} variant="readiness" compact />
       </div>
     </article>
   )
+}
+
+function recordFrom(value: unknown): Record<string, unknown> {
+  return value && typeof value === 'object' && !Array.isArray(value) ? value as Record<string, unknown> : {}
+}
+
+function hasOwn(value: Record<string, unknown>, key: string): boolean {
+  return Object.prototype.hasOwnProperty.call(value, key)
+}
+
+function configuredStatus(configured: unknown, enabled?: unknown): FlagStatus {
+  if (enabled === false) return 'disabled'
+  if (configured === true) return 'ready'
+  if (configured === false) return enabled === undefined ? 'not_ready' : 'not_ready'
+  return 'unknown'
+}
+
+function configuredText(status: FlagStatus, readyText: string, notReadyText: string, disabledText = 'Disabled by backend configuration'): string {
+  if (status === 'ready') return readyText
+  if (status === 'disabled') return disabledText
+  if (status === 'not_ready') return notReadyText
+  if (status === 'partial') return 'Partially configured; inspect backend health for the exact gap.'
+  return 'Backend health contract did not include this helper flag.'
 }
 
 function RepoIcon({ category }: { category?: string }) {
@@ -267,14 +299,72 @@ export function OpsPage() {
       : 'execution adapters disabled by config'
     : 'execution adapter status loading'
 
+  const storageFlags = recordFrom(health?.storage_flags)
+  const r2Flags = recordFrom(storageFlags.r2)
+  const sqlFlags = recordFrom(storageFlags.sql)
+  const vectorizeFlags = recordFrom(storageFlags.vectorize)
+  const embeddingsFlags = recordFrom(storageFlags.embeddings)
+  const d1Flags = recordFrom(storageFlags.d1)
+
+  const openrouterStatus: FlagStatus = health && hasOwn(health, 'openrouter_configured')
+    ? configuredStatus(health.openrouter_configured)
+    : 'unknown'
+  const sqlStatus: FlagStatus = health && hasOwn(health, 'database_configured')
+    ? configuredStatus(health.database_configured, sqlFlags.enabled)
+    : 'unknown'
+  const r2Status: FlagStatus = health && hasOwn(health, 'r2_configured')
+    ? configuredStatus(health.r2_configured, r2Flags.enabled)
+    : 'unknown'
+  const vectorizeStatus: FlagStatus = health && hasOwn(health, 'vectorize_configured')
+    ? configuredStatus(health.vectorize_configured, health.vectorize_enabled ?? vectorizeFlags.enabled)
+    : 'unknown'
+  const embeddingsStatus: FlagStatus = health && hasOwn(health, 'embeddings_configured')
+    ? configuredStatus(health.embeddings_configured, health.embeddings_enabled ?? embeddingsFlags.enabled)
+    : 'unknown'
+  const d1Status: FlagStatus = health && hasOwn(health, 'd1_configured')
+    ? configuredStatus(health.d1_configured, health.d1_enabled ?? d1Flags.enabled)
+    : 'unknown'
+  const executionStatus: FlagStatus = health ? (executionAdaptersEnabled ? 'ready' : 'disabled') : 'unknown'
+  const laneCount = typeof r2Flags.ecosystem_lane_count === 'number' ? r2Flags.ecosystem_lane_count : null
+
   const flags: FlagProps[] = [
-    { label: 'OpenRouter', active: Boolean(health?.openrouter_configured), detail: 'Model gateway and routing policy', icon: Network },
-    { label: 'SQL persistence', active: Boolean(health?.database_configured), detail: health?.database_dialect ? `${health.database_dialect} conversation store` : 'Conversation database is not configured', icon: Database },
-    { label: 'R2 storage', active: Boolean(health?.r2_configured), detail: 'Uploads and ecosystem artefacts', icon: HardDrive },
-    { label: 'Vector retrieval', active: Boolean(health?.vectorize_configured), detail: 'Semantic file and chunk retrieval', icon: GitBranch },
-    { label: 'Embeddings', active: Boolean(health?.embeddings_configured), detail: 'Vector generation provider', icon: Activity },
-    { label: 'D1 metadata', active: Boolean(health?.d1_configured), detail: 'Skills, previews and execution-review indexes', icon: ShieldCheck },
-    { label: 'Execution adapters', active: executionAdaptersEnabled, detail: executionAdapterDetail, icon: PlayCircle },
+    {
+      label: 'OpenRouter',
+      status: openrouterStatus,
+      detail: configuredText(openrouterStatus, 'Model gateway and routing policy', 'OpenRouter token is missing or not visible to HIVE'),
+      icon: Network,
+    },
+    {
+      label: 'SQL persistence',
+      status: sqlStatus,
+      detail: configuredText(sqlStatus, health?.database_dialect ? `${health.database_dialect} conversation store` : 'Conversation store configured', 'Conversation database is not configured'),
+      icon: Database,
+    },
+    {
+      label: 'R2 storage',
+      status: r2Status,
+      detail: configuredText(r2Status, laneCount ? `${laneCount} R2 ecosystem lanes registered` : 'Uploads and ecosystem artefacts', 'Primary R2 upload storage is not configured'),
+      icon: HardDrive,
+    },
+    {
+      label: 'Vector retrieval',
+      status: vectorizeStatus,
+      detail: configuredText(vectorizeStatus, 'Semantic file and chunk retrieval', 'Vectorize is enabled but missing account, token, or index', 'Vectorize is disabled'),
+      icon: GitBranch,
+    },
+    {
+      label: 'Embeddings',
+      status: embeddingsStatus,
+      detail: configuredText(embeddingsStatus, 'Vector generation provider', 'Embeddings are enabled but missing account, token, or model', 'Embeddings are disabled'),
+      icon: Activity,
+    },
+    {
+      label: 'D1 metadata',
+      status: d1Status,
+      detail: configuredText(d1Status, 'Skills, previews and execution-review indexes', 'D1 is enabled but missing account, token, or database ID', 'D1 metadata is disabled'),
+      icon: ShieldCheck,
+    },
+    { label: 'Execution adapters', status: executionStatus, detail: executionAdapterDetail, icon: PlayCircle },
   ]
 
   function inspect(title: string, value: unknown, description = 'Read-only operational data from the HIVE backend.') {
