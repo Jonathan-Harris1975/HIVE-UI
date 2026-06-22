@@ -55,6 +55,7 @@ export interface PersistedMessage {
 export interface UiMessage extends PersistedMessage {
   pending?: boolean
   error?: string | null
+  warning?: string | null
   local?: boolean
   usage?: UsageSummary | null
   sourceCitation?: SourceCitation | null
@@ -148,6 +149,9 @@ export interface StreamEvent {
   usage?: UsageSummary
   db_recorded?: boolean
   db_error?: string | null
+  finish_reason?: string | null
+  completion_truncated?: boolean
+  partial_response?: boolean
   [key: string]: unknown
 }
 
@@ -513,11 +517,6 @@ export interface ExecutionReviewItem {
   updated_at?: string
   can_execute_now?: boolean
   requires_approval?: boolean
-  adapter_execution_enabled?: boolean
-  execution_state?: string
-  is_open?: boolean
-  is_ready?: boolean
-  is_closed?: boolean
   [key: string]: unknown
 }
 
