@@ -1,8 +1,15 @@
 > **Document status:** Production reference  
-> **Last reviewed:** 16 June 2026  
+> **Last reviewed:** 22 June 2026  
 > **Operational authority:** Current repository README, SECURITY policy and operations guide.
 
 # HIVE-UI changelog
+
+## 0.10.7 — 22 June 2026
+
+- Synced HIVE-UI version markers to `0.10.7`.
+- Fixed the Ops review queue on mobile by rendering review cards instead of a clipped wide table.
+- Kept stream status labels for OpenRouter model attempts, fallback routes and empty-reply retries.
+- Refreshed production documentation review dates.
 
 ## 0.9.1 — 16 June 2026
 

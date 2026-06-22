@@ -1,7 +1,7 @@
 # Operational alerts in HIVE-UI
 
 **Status:** Ready for production events  
-**Last reviewed:** 17 June 2026
+**Last reviewed:** 22 June 2026
 
 The Ops page reads the authenticated HIVE endpoint `GET /v1/system/ops-events`. It presents recent GitHub CI failures, Koyeb deployment failures, Cloudflare Pages failures and repeated runtime failures as compact, inspectable cards. HIVE-UI never receives the event-ingest token.
 

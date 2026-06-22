@@ -1,7 +1,7 @@
 # HIVE-UI production operations
 
 **Status:** Cloudflare Pages production interface  
-**Last reviewed:** 17 June 2026
+**Last reviewed:** 22 June 2026
 
 The authenticated `/ops` route displays HIVE runtime flags, repository health, workflows, review state and recent operational events. MAST appears as a Background Worker and is assessed through HIVE's R2 heartbeat probe.
 

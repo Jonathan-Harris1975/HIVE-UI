@@ -1,8 +1,10 @@
 > **Document status:** Production reference  
-> **Last reviewed:** 16 June 2026  
+> **Last reviewed:** 22 June 2026  
 > **Operational authority:** Current repository README, SECURITY policy and operations guide.
 
-# HIVE-UI v0.7.0 production-readiness record
+# HIVE-UI production-readiness record
+
+**Current UI marker:** `0.10.7` / `version-readiness-sync`.
 
 ## Security boundary
 
