@@ -1,3 +1,9 @@
+## 0.10.10 — 22 June 2026
+
+- Synced UI marker to `0.10.10` / `catalogue-metadata`.
+- Uses backend-enriched skill and task descriptions so catalogue cards no longer depend on blank upstream fields.
+- Added a digital-dust review manifest for superseded root patch notes.
+
 ## 0.10.9 — 22 June 2026
 
 - Raised default chat token caps to reduce mid-answer clipping.
@@ -11,9 +17,9 @@
 
 # HIVE-UI changelog
 
-## 0.10.9 — 22 June 2026
+## 0.10.7 — 22 June 2026
 
-- Synced HIVE-UI version markers to `0.10.9`.
+- Synced HIVE-UI version markers to `0.10.7`.
 - Fixed the Ops review queue on mobile by rendering review cards instead of a clipped wide table.
 - Kept stream status labels for OpenRouter model attempts, fallback routes and empty-reply retries.
 - Refreshed production documentation review dates.
