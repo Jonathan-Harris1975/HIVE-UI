@@ -13,6 +13,7 @@ export function ChatMessage({ message, onInspect }: ChatMessageProps) {
   const [copied, setCopied] = useState(false)
   const assistant = message.role === 'assistant'
   const streamingCount = message.streaming_count ?? message.content.length
+  const streamingStatus = message.streaming_status || 'HIVE is thinking'
 
   async function copyMessage() {
     if (!message.content) return
@@ -40,7 +41,7 @@ export function ChatMessage({ message, onInspect }: ChatMessageProps) {
               {message.pending && (
                 <div className={`${message.content ? 'mt-4 border-t border-white/6 pt-3' : ''} flex items-center gap-2 text-slate-400`} role="status" aria-live="polite">
                   <LoaderCircle className="h-4 w-4 animate-spin" />
-                  <span>HIVE is thinking</span>
+                  <span>{streamingStatus}</span>
                   <span className="text-[11px] text-slate-500">{[message.streaming_model, `~${streamingCount.toLocaleString()} chars`].filter(Boolean).join(' · ')}</span>
                 </div>
               )}
