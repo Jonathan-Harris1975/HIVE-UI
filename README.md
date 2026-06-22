@@ -4,7 +4,7 @@
 
 # HIVE-UI
 
-**Current UI marker:** `0.10.8` / `review-state-sync`.
+**Current UI marker:** `0.10.9` / `chat-persistence-sync`.
 
 HIVE-UI is the private React operator interface for HIVE. It is deployed on Cloudflare Pages and proxies authenticated API traffic to the HIVE backend without exposing the backend bearer token to the browser.
 
