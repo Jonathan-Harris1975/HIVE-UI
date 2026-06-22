@@ -93,10 +93,10 @@ function fileSourceLabel(source: FileSourceSelection): string {
 }
 
 function maxTokensForRoute(mode: ChatMode, hasAttachedFiles: boolean): number {
-  if (hasAttachedFiles) return 1600
-  if (mode === 'code' || mode === 'audit' || mode === 'brand') return 1400
-  if (mode === 'file_analysis') return 1600
-  return 900
+  if (hasAttachedFiles) return 2400
+  if (mode === 'code' || mode === 'audit') return 2600
+  if (mode === 'brand' || mode === 'file_analysis') return 2200
+  return 1800
 }
 
 export function ChatPage() {
@@ -258,6 +258,19 @@ export function ChatPage() {
     }
     return typeof event.message === 'string' && event.message ? event.message : null
   }
+  function streamWarning(event: StreamEvent): string | null {
+    if (event.completion_truncated) {
+      if (event.finish_reason === 'stream_timeout') {
+        return 'The provider stream paused before it formally finished. The partial answer was saved; send “continue” if you want HIVE to carry on from here.'
+      }
+      return 'The reply reached the configured token limit. The answer was saved; send “continue” if you want the rest.'
+    }
+    if (event.db_recorded === false) {
+      return `Reply shown but not saved to persistent history${event.db_error ? `: ${event.db_error}` : '.'}`
+    }
+    return null
+  }
+
 
   function handleStreamEvent(assistantId: string, event: StreamEvent) {
     if (event.event === 'meta') {
@@ -289,6 +302,7 @@ export function ChatPage() {
     if (event.event === 'done') {
       flushTokenBuffer(assistantId)
       if (event.conversation_id) setCurrentConversationId(event.conversation_id)
+      const warning = streamWarning(event)
       setMessages((current) => current.map((message) =>
         message.id === assistantId
           ? {
@@ -298,7 +312,19 @@ export function ChatPage() {
               provider: event.provider || message.provider,
               usage: event.usage || message.usage,
               streaming_status: null,
-              error: event.ok === false ? event.message || 'The model did not complete the response.' : message.error,
+              warning: warning || message.warning,
+              error: event.ok === false && !event.completion_truncated ? event.message || 'The model did not complete the response.' : message.error,
+              metadata: {
+                ...(message.metadata ?? {}),
+                stream: {
+                  ok: event.ok,
+                  db_recorded: event.db_recorded,
+                  db_error: event.db_error,
+                  finish_reason: event.finish_reason,
+                  completion_truncated: event.completion_truncated,
+                  partial_response: event.partial_response,
+                },
+              },
             }
           : message,
       ))
@@ -369,13 +395,16 @@ export function ChatPage() {
       }
       setStreaming(false)
       abortRef.current = null
+      await refreshConversations().catch((refreshError) => {
+        const message = refreshError instanceof Error ? refreshError.message : 'Conversation list could not refresh.'
+        setError(`Persistence refresh failed: ${message}`)
+      })
       if (completedConversationId) {
         const canAutoTitle = wasNewConversation || !currentConversationSummary?.title || currentConversationSummary.auto_titled === false
         if (canAutoTitle) {
           void autoTitleConversation(completedConversationId).catch(() => undefined)
         }
       }
-      await refreshConversations().catch(() => undefined)
     } catch (caught) {
       if (caught instanceof DOMException && caught.name === 'AbortError') {
         setMessages((current) => current.map((message) =>
