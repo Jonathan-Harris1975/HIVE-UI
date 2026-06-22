@@ -198,6 +198,18 @@ function reviewExecutionStatus(review: ExecutionReviewItem): string {
   return review.status || 'pending_review'
 }
 
+const OPEN_REVIEW_STATUSES = new Set(['pending_review', 'needs_changes'])
+
+function normaliseReviewStatus(status: unknown): string {
+  return typeof status === 'string' ? status.trim().toLowerCase().replace(/-/g, '_') : ''
+}
+
+function isOpenReview(review: ExecutionReviewItem): boolean {
+  if (review.is_open === true) return true
+  if (review.is_closed === true || review.is_ready === true || review.can_execute_now) return false
+  return OPEN_REVIEW_STATUSES.has(normaliseReviewStatus(review.status || 'pending_review'))
+}
+
 function reviewString(review: ExecutionReviewItem, ...keys: string[]): string | null {
   for (const key of keys) {
     const value = review[key]
@@ -269,9 +281,10 @@ export function OpsPage() {
       setHygiene(hygieneResult)
       setRepoHealth(repoHealthResult)
       setOpsEvents(opsEventsResult)
+      const activeReviews = (reviewResult.items ?? []).filter(isOpenReview)
       setTemplates(templateResult.templates ?? {})
-      setReviews(reviewResult.items ?? [])
-      setOpenReviewCount(Number(reviewResult.open_count ?? 0))
+      setReviews(activeReviews)
+      setOpenReviewCount(Number(reviewResult.open_count ?? activeReviews.length))
       await refreshHealth()
     } catch (caught) {
       setError(caught instanceof Error ? caught.message : 'Operations data could not be loaded.')
@@ -483,6 +496,7 @@ export function OpsPage() {
         body: JSON.stringify({ decision, reviewer: 'HIVE-UI', note: note.trim() || null }),
       })
       if (!response.ok) throw new Error(response.error_code || 'Review decision could not be recorded.')
+      await loadOps(false)
     } catch (caught) {
       setError(caught instanceof Error ? caught.message : 'Review decision could not be recorded.')
       await loadOps()
@@ -717,7 +731,7 @@ export function OpsPage() {
               <div>
                 <p className="text-xs font-semibold uppercase tracking-[0.2em] text-violet-300/70">Human gate</p>
                 <h3 className="mt-2 text-lg font-semibold text-white">Execution review queue</h3>
-                <p className="mt-1 text-xs text-slate-300">Approval marks an allow-listed production handoff as ready when backend execution adapters are enabled. It does not auto-run repository mutations or background jobs.</p>
+                <p className="mt-1 text-xs text-slate-300">Approval marks an allow-listed production handoff as ready when backend execution adapters are enabled, then removes the item from this active queue. It does not auto-run repository mutations or background jobs.</p>
               </div>
               <button type="button" onClick={() => void loadOps()} className="flex h-9 items-center justify-center gap-2 rounded-xl border border-white/8 bg-white/[0.035] px-3 text-xs text-slate-300"><RefreshCw className="h-4 w-4" /> Refresh queue</button>
             </div>
@@ -814,7 +828,7 @@ export function OpsPage() {
       <ConfirmDialog
         open={Boolean(pendingReviewDecision)}
         title={pendingReviewDecision ? reviewDecisionLabel(pendingReviewDecision.decision) : 'Review decision'}
-        summary={pendingReviewDecision?.decision === 'approved' ? 'This will record approval for the review item. High-risk or production-adjacent work remains gated by backend execution policy.' : 'This will record the review decision and remove the item from the active queue.'}
+        summary={pendingReviewDecision?.decision === 'approved' ? 'This will record approval, mark the handoff ready where adapters allow it, and remove the item from the active queue.' : 'This will record the review decision and remove the item from the active queue.'}
         objectName={pendingReviewDecision ? reviewTitle(pendingReviewDecision.review) : undefined}
         systems={['D1 execution review rows', 'PostgreSQL review records where mirrored', 'Backend execution-review audit trail']}
         confirmLabel={pendingReviewDecision ? reviewDecisionLabel(pendingReviewDecision.decision) : 'Confirm'}
