@@ -4,7 +4,7 @@ interface Env {
   CF_PAGES_URL?: string
 }
 
-const VERSION = '0.10.5'
+const VERSION = '0.10.7'
 
 function responseHeaders(): Headers {
   return new Headers({
