@@ -47,6 +47,7 @@ export interface PersistedMessage {
   cost_usd?: number | null
   streaming_model?: string | null
   streaming_count?: number
+  streaming_status?: string | null
   metadata?: Record<string, unknown> | null
   created_at?: string | null
 }
