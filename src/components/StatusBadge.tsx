@@ -11,31 +11,37 @@ function normalise(status: string): string {
 
 function tone(status: string, variant?: StatusBadgeProps['variant']): string {
   const value = normalise(status)
+  const neutralStatuses = ['unknown', 'not_configured', 'not-configured', 'disabled', 'unavailable']
+  if (neutralStatuses.includes(value)) return 'border-cyan-300/20 bg-cyan-300/8 text-cyan-200'
+
   if (variant === 'liveness') {
     if (['healthy', 'online', 'active', 'ok', 'ready'].includes(value)) return 'border-emerald-300/20 bg-emerald-300/8 text-emerald-200'
     if (['down', 'offline', 'failed', 'error'].includes(value)) return 'border-rose-300/20 bg-rose-300/8 text-rose-200'
-    return 'border-amber-300/20 bg-amber-300/8 text-amber-200'
+    if (['blocked', 'auth_blocked', 'forbidden', 'unauthorised', 'unauthorized'].includes(value)) return 'border-amber-300/20 bg-amber-300/8 text-amber-200'
+    return 'border-white/10 bg-white/[0.04] text-slate-400'
   }
   if (variant === 'readiness') {
     if (['ready', 'healthy', 'ok'].includes(value)) return 'border-emerald-300/20 bg-emerald-300/8 text-emerald-200'
-    if (['not_ready', 'not-ready', 'blocked', 'down', 'failed', 'error'].includes(value)) return 'border-rose-300/20 bg-rose-300/8 text-rose-200'
-    return 'border-amber-300/20 bg-amber-300/8 text-amber-200'
+    if (['not_ready', 'not-ready', 'down', 'failed', 'error'].includes(value)) return 'border-rose-300/20 bg-rose-300/8 text-rose-200'
+    if (['blocked', 'auth_blocked', 'forbidden', 'unauthorised', 'unauthorized', 'partial', 'degraded'].includes(value)) return 'border-amber-300/20 bg-amber-300/8 text-amber-200'
+    return 'border-white/10 bg-white/[0.04] text-slate-400'
   }
   if (variant === 'operational') {
     if (['healthy', 'ok', 'active', 'ready'].includes(value)) return 'border-emerald-300/20 bg-emerald-300/8 text-emerald-200'
-    if (['blocked', 'down', 'failed', 'error', 'critical'].includes(value)) return 'border-rose-300/20 bg-rose-300/8 text-rose-200'
-    return 'border-amber-300/20 bg-amber-300/8 text-amber-200'
+    if (['down', 'failed', 'error', 'critical'].includes(value)) return 'border-rose-300/20 bg-rose-300/8 text-rose-200'
+    if (['blocked', 'auth_blocked', 'forbidden', 'unauthorised', 'unauthorized', 'degraded', 'partial'].includes(value)) return 'border-amber-300/20 bg-amber-300/8 text-amber-200'
+    return 'border-white/10 bg-white/[0.04] text-slate-400'
   }
   if (['complete', 'completed', 'approved', 'healthy', 'ready', 'ready_for_execution', 'ok', 'active'].includes(value)) {
     return 'border-emerald-300/20 bg-emerald-300/8 text-emerald-200'
   }
-  if (['blocked', 'rejected', 'failed', 'error', 'high', 'down'].includes(value)) {
+  if (['blocked', 'rejected', 'failed', 'error', 'high', 'down', 'critical'].includes(value)) {
     return 'border-rose-300/20 bg-rose-300/8 text-rose-200'
   }
-  if (['review_required', 'pending_review', 'approved_handoff_pending', 'needs_changes', 'medium', 'warning', 'degraded', 'partial'].includes(value)) {
+  if (['review_required', 'pending_review', 'approved_handoff_pending', 'needs_changes', 'medium', 'warning', 'degraded', 'partial', 'auth_blocked'].includes(value)) {
     return 'border-amber-300/20 bg-amber-300/8 text-amber-200'
   }
-  if (['planned', 'queued', 'readonly', 'low', 'not_configured', 'disabled'].includes(value)) {
+  if (['planned', 'queued', 'readonly', 'low', 'not_configured', 'disabled', 'unknown', 'unavailable'].includes(value)) {
     return 'border-cyan-300/20 bg-cyan-300/8 text-cyan-200'
   }
   return 'border-white/10 bg-white/[0.04] text-slate-400'
@@ -43,20 +49,29 @@ function tone(status: string, variant?: StatusBadgeProps['variant']): string {
 
 function display(status: string, variant?: StatusBadgeProps['variant']): string {
   const value = normalise(status)
+  if (value === 'unknown') return 'Unknown'
+  if (['disabled', 'unavailable'].includes(value)) return 'Disabled'
+  if (['not_configured', 'not-configured'].includes(value)) return 'Not configured'
+
   if (variant === 'liveness') {
     if (['healthy', 'online', 'active', 'ok', 'ready'].includes(value)) return 'Online'
+    if (['blocked', 'auth_blocked', 'forbidden', 'unauthorised', 'unauthorized'].includes(value)) return 'Blocked'
     if (['down', 'offline', 'failed', 'error'].includes(value)) return 'Offline'
     return 'Unknown'
   }
   if (variant === 'readiness') {
     if (['ready', 'healthy', 'ok'].includes(value)) return 'Ready'
-    if (['not_ready', 'not-ready', 'blocked', 'down', 'failed', 'error'].includes(value)) return 'Not ready'
-    return 'Partial'
+    if (['blocked', 'auth_blocked', 'forbidden', 'unauthorised', 'unauthorized'].includes(value)) return 'Auth blocked'
+    if (['not_ready', 'not-ready', 'down', 'failed', 'error'].includes(value)) return 'Not ready'
+    if (['partial', 'degraded'].includes(value)) return 'Partial'
+    return 'Unknown'
   }
   if (variant === 'operational') {
     if (['healthy', 'ok', 'active', 'ready'].includes(value)) return 'Healthy'
-    if (['blocked', 'down', 'failed', 'error', 'critical'].includes(value)) return 'Blocked'
-    return 'Degraded'
+    if (['blocked', 'auth_blocked', 'forbidden', 'unauthorised', 'unauthorized'].includes(value)) return 'Blocked'
+    if (['down', 'failed', 'error', 'critical'].includes(value)) return 'Down'
+    if (['partial', 'degraded'].includes(value)) return 'Degraded'
+    return 'Unknown'
   }
   return status.replace(/_/g, ' ').replace(/\b\w/g, (character) => character.toUpperCase())
 }
