@@ -725,7 +725,41 @@ export function OpsPage() {
             {reviews.length === 0 ? (
               <div className="mt-5"><EmptyState icon={<ShieldCheck className="h-8 w-8" />} title="No executions pending review." body="Review queue is clear." /></div>
             ) : (
-              <div className="mt-5 overflow-x-auto rounded-2xl border border-white/8">
+              <>
+              <div className="mt-5 space-y-3 md:hidden">
+                {reviews.map((review) => {
+                  const id = reviewId(review)
+                  const busy = decisionBusy?.startsWith(`${id}:`) ?? false
+                  return (
+                    <article key={id} className="rounded-2xl border border-white/8 bg-[#0a192d]/65 p-4">
+                      <button type="button" onClick={() => inspect('Execution review', review, id)} className="w-full text-left">
+                        <span className="block text-sm font-semibold leading-6 text-white">{reviewTitle(review)}</span>
+                        <span className="mt-1 block break-all text-[11px] text-slate-500">{id}</span>
+                        <span className="mt-2 block text-[11px] text-slate-400">{reviewString(review, 'action_type', 'action') || 'review_gated_plan'} · {reviewString(review, 'skill_name', 'skill') || 'no skill linked'}</span>
+                        <span className="mt-2 line-clamp-3 block text-[11px] leading-5 text-slate-400">{reviewEvidenceSummary(review)}</span>
+                      </button>
+                      <div className="mt-3 grid grid-cols-2 gap-2 text-[11px] text-slate-400">
+                        <span><span className="block uppercase tracking-[0.12em] text-slate-500">Target</span><span className="text-slate-200">{reviewString(review, 'target', 'repo') || review.repo || 'Shared'}</span></span>
+                        <span><span className="block uppercase tracking-[0.12em] text-slate-500">Created</span>{formatDate(review.created_at || review.updated_at)}</span>
+                      </div>
+                      <div className="mt-3 flex flex-wrap gap-2">
+                        <StatusBadge status={reviewRisk(review)} compact />
+                        <StatusBadge status={review.status} compact />
+                        <StatusBadge status={reviewExecutionStatus(review)} compact />
+                      </div>
+                      <div className="mt-4 flex flex-wrap gap-1.5">
+                        <button type="button" disabled={busy} onClick={() => void openEvidence(review)} className="rounded-lg border border-white/8 bg-white/[0.035] px-2.5 py-1.5 text-[11px] text-slate-300 disabled:opacity-40">Evidence</button>
+                        <button type="button" disabled={busy} onClick={() => requestReviewDecision(review, 'approved')} className="rounded-lg border border-emerald-300/15 bg-emerald-300/7 px-2.5 py-1.5 text-[11px] text-emerald-200 disabled:opacity-40">Approve</button>
+                        <button type="button" disabled={busy} onClick={() => requestReviewDecision(review, 'needs_changes')} className="rounded-lg border border-amber-300/15 bg-amber-300/7 px-2.5 py-1.5 text-[11px] text-amber-200 disabled:opacity-40">Needs changes</button>
+                        <button type="button" disabled={busy} onClick={() => requestReviewDecision(review, 'rejected')} className="rounded-lg border border-rose-300/15 bg-rose-300/7 px-2.5 py-1.5 text-[11px] text-rose-200 disabled:opacity-40">Reject</button>
+                      </div>
+                      {busy && <span className="mt-2 flex items-center gap-1.5 text-[11px] text-slate-400"><LoaderCircle className="h-3 w-3 animate-spin" /> Updating review</span>}
+                    </article>
+                  )
+                })}
+              </div>
+
+              <div className="mt-5 hidden overflow-x-auto rounded-2xl border border-white/8 md:block">
                 <table className="w-full min-w-[900px] border-collapse text-left">
                   <thead className="bg-[#071426] text-[11px] uppercase tracking-[0.14em] text-slate-400">
                     <tr>
@@ -747,7 +781,7 @@ export function OpsPage() {
                           <td className="max-w-[420px] px-4 py-4">
                             <button type="button" onClick={() => inspect('Execution review', review, id)} className="text-left">
                               <span className="block text-sm font-medium text-white">{reviewTitle(review)}</span>
-                              <span className="mt-1 block text-[11px] text-slate-400">{reviewString(review, 'action_type', 'action') || 'review'} · {reviewString(review, 'skill_name', 'skill') || 'no skill linked'}</span>
+                              <span className="mt-1 block text-[11px] text-slate-400">{reviewString(review, 'action_type', 'action') || 'review_gated_plan'} · {reviewString(review, 'skill_name', 'skill') || 'no skill linked'}</span>
                               <span className="mt-1 line-clamp-2 block text-[11px] leading-5 text-slate-400">{reviewEvidenceSummary(review)}</span>
                             </button>
                           </td>
@@ -771,6 +805,7 @@ export function OpsPage() {
                   </tbody>
                 </table>
               </div>
+              </>
             )}
           </section>
         )}
