@@ -92,6 +92,13 @@ function fileSourceLabel(source: FileSourceSelection): string {
   return source.name || source.object_key.split('/').pop() || source.object_key
 }
 
+function maxTokensForRoute(mode: ChatMode, hasAttachedFiles: boolean): number {
+  if (hasAttachedFiles) return 1600
+  if (mode === 'code' || mode === 'audit' || mode === 'brand') return 1400
+  if (mode === 'file_analysis') return 1600
+  return 900
+}
+
 export function ChatPage() {
   const {
     conversations,
@@ -238,13 +245,32 @@ export function ChatPage() {
     setOpen(true)
   }
 
+  function streamStatusLabel(event: StreamEvent): string | null {
+    if (event.type === 'model_attempt') {
+      const modelName = typeof event.model_used === 'string' ? event.model_used : 'selected model'
+      return `Trying ${modelName}`
+    }
+    if (event.type === 'model_fallback') {
+      return 'Fallback route engaged'
+    }
+    if (event.type === 'empty_reply_retry') {
+      return 'Empty reply detected, trying fallback'
+    }
+    return typeof event.message === 'string' && event.message ? event.message : null
+  }
+
   function handleStreamEvent(assistantId: string, event: StreamEvent) {
     if (event.event === 'meta') {
       const eventModel = typeof event.model_used === 'string' ? event.model_used : typeof event.model === 'string' ? event.model : null
       if (event.conversation_id && event.type === 'conversation') setCurrentConversationId(event.conversation_id)
-      if (eventModel) {
+      const status = streamStatusLabel(event)
+      if (eventModel || status) {
         setMessages((current) => current.map((message) =>
-          message.id === assistantId ? { ...message, streaming_model: eventModel } : message,
+          message.id === assistantId ? {
+            ...message,
+            streaming_model: eventModel || message.streaming_model,
+            streaming_status: status || message.streaming_status,
+          } : message,
         ))
       }
       if (event.type === 'conversation') return
@@ -256,7 +282,7 @@ export function ChatPage() {
     if (event.event === 'error') {
       flushTokenBuffer(assistantId)
       setMessages((current) => current.map((message) =>
-        message.id === assistantId ? { ...message, pending: false, error: event.message || 'Streaming failed.' } : message,
+        message.id === assistantId ? { ...message, pending: false, streaming_status: null, error: event.message || 'Streaming failed.' } : message,
       ))
       return
     }
@@ -271,6 +297,7 @@ export function ChatPage() {
               model: event.model_used || message.model || message.streaming_model,
               provider: event.provider || message.provider,
               usage: event.usage || message.usage,
+              streaming_status: null,
               error: event.ok === false ? event.message || 'The model did not complete the response.' : message.error,
             }
           : message,
@@ -301,8 +328,8 @@ export function ChatPage() {
       model: model || null,
       conversation_id: currentConversationId,
       use_persisted_history: true,
-      db_history_limit: 40,
-      max_tokens: 2048,
+      db_history_limit: 12,
+      max_tokens: maxTokensForRoute(mode, hasAttachedFiles),
       skill_id: attachedSkillId,
       skill_title: attachedSkillTitle,
       use_skills: useSkillContext && !hasAttachedFiles,
