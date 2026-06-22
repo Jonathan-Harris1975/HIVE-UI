@@ -513,6 +513,11 @@ export interface ExecutionReviewItem {
   updated_at?: string
   can_execute_now?: boolean
   requires_approval?: boolean
+  adapter_execution_enabled?: boolean
+  execution_state?: string
+  is_open?: boolean
+  is_ready?: boolean
+  is_closed?: boolean
   [key: string]: unknown
 }
 
