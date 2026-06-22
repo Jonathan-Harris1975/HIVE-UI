@@ -1,0 +1,19 @@
+HIVE-UI v0.10.7 version and Ops mobile patch
+
+Date: 22 June 2026
+
+Updated files:
+- package.json
+- package-lock.json
+- functions/api/[[path]].ts
+- functions/health.ts
+- src/lib/build.ts
+- src/pages/OpsPage.tsx
+- docs/CHANGELOG.md
+- README.md and current production docs
+
+Purpose:
+- Sync UI-visible version labels to 0.10.7.
+- Preserve OpenRouter stream status labels from v0.10.6.
+- Render the execution review queue as cards on mobile so columns do not clip off-screen.
+- Refresh current documentation review dates.

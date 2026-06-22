@@ -1,7 +1,7 @@
 # HIVE-UI security policy
 
 **Status:** Production-controlled  
-**Last reviewed:** 16 June 2026
+**Last reviewed:** 22 June 2026
 
 HIVE-UI uses a Cloudflare Pages Function to protect HIVE credentials. The browser submits the UI access key during login; the function validates it and issues a signed `HttpOnly`, `Secure`, `SameSite=Strict` session cookie. The backend bearer token is injected only inside the server-side proxy.
 
