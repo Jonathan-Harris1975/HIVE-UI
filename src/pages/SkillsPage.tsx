@@ -36,6 +36,15 @@ function skillTitle(skill: SkillItem, index = 0): string {
   return String(skill.title || skill.name || metadata.title || `Skill ${index + 1}`)
 }
 
+function skillDescription(skill: SkillItem): string {
+  const metadata = meta(skill)
+  const direct = skill.description || metadata.description || metadata.short_description
+  if (direct) return String(direct)
+  const category = String(metadata.catalogue_category || metadata.category || metadata.hive_lane || 'operational work')
+  const title = skillTitle(skill)
+  return `${title} supports ${category.toLowerCase()} using governed HIVE skill metadata.`
+}
+
 const KNOWN_REPOS = ['AIMS', 'HIVE', 'HIVE-UI', 'RAMS', 'Website', 'Shared']
 const KNOWN_RISKS = ['low', 'medium', 'high']
 
@@ -232,7 +241,7 @@ export function SkillsPage() {
     setPayload({
       eyebrow: 'Skill registry',
       title: String(skill.title || skill.name || metadata.title || 'Skill'),
-      description: String(skill.description || metadata.description || 'Shared ecosystem skill metadata.'),
+      description: skillDescription(skill),
       rows: [
         { label: 'Repository', value: field(skill, 'repo', 'Unspecified') },
         { label: 'Lane', value: field(skill, 'hive_lane', field(skill, 'lane', 'Unspecified')) },
@@ -371,7 +380,7 @@ export function SkillsPage() {
                         </div>
                       </div>
                       <h3 className="mt-4 text-sm font-semibold text-white">{title}</h3>
-                      <p className="mt-2 line-clamp-3 min-h-[60px] text-xs leading-5 text-slate-400">{String(skill.description || metadata.description || 'No description supplied.')}</p>
+                      <p className="mt-2 line-clamp-3 min-h-[60px] text-xs leading-5 text-slate-400">{skillDescription(skill)}</p>
                       <div className="mt-4 flex flex-wrap gap-1.5 border-t border-white/6 pt-3 text-[11px] text-slate-400">
                         <span>{field(skill, 'repo', 'Shared')}</span><span>·</span><span>{field(skill, 'hive_lane', field(skill, 'lane', 'General'))}</span>
                       </div>
