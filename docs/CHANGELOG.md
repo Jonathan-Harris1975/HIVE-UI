@@ -1,12 +1,19 @@
+## 0.10.9 — 22 June 2026
+
+- Raised default chat token caps to reduce mid-answer clipping.
+- Surfaced completion and persistence warnings in chat bubbles.
+- Stores stream finish/persistence metadata in Inspect.
+- Updated UI marker to `0.10.9` / `chat-persistence-sync`.
+
 > **Document status:** Production reference  
 > **Last reviewed:** 22 June 2026  
 > **Operational authority:** Current repository README, SECURITY policy and operations guide.
 
 # HIVE-UI changelog
 
-## 0.10.7 — 22 June 2026
+## 0.10.9 — 22 June 2026
 
-- Synced HIVE-UI version markers to `0.10.7`.
+- Synced HIVE-UI version markers to `0.10.9`.
 - Fixed the Ops review queue on mobile by rendering review cards instead of a clipped wide table.
 - Kept stream status labels for OpenRouter model attempts, fallback routes and empty-reply retries.
 - Refreshed production documentation review dates.

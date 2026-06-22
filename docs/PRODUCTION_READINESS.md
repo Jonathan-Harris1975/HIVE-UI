@@ -4,7 +4,7 @@
 
 # HIVE-UI production-readiness record
 
-**Current UI marker:** `0.10.7` / `version-readiness-sync`.
+**Current UI marker:** `0.10.9` / `chat-persistence-sync`.
 
 ## Security boundary
 
