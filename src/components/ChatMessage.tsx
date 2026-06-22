@@ -45,6 +45,7 @@ export function ChatMessage({ message, onInspect }: ChatMessageProps) {
                   <span className="text-[11px] text-slate-500">{[message.streaming_model, `~${streamingCount.toLocaleString()} chars`].filter(Boolean).join(' · ')}</span>
                 </div>
               )}
+              {message.warning && <p className="mt-3 rounded-lg border border-amber-300/20 bg-amber-300/8 px-3 py-2 text-xs text-amber-100" role="status">{message.warning}</p>}
               {message.error && <p className="mt-3 rounded-lg border border-rose-400/20 bg-rose-400/8 px-3 py-2 text-xs text-rose-200" role="alert">{message.error}</p>}
               {!message.pending && (message.model || (message.usage?.cost ?? message.cost_usd) != null) && (
                 <div className="mt-4 flex flex-wrap items-center gap-2 border-t border-white/6 pt-3 text-[11px] uppercase tracking-[0.12em] text-slate-400">
