@@ -15,7 +15,7 @@ import {
   Pencil,
   X,
 } from 'lucide-react'
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { NavLink, Outlet, useLocation, useNavigate } from 'react-router'
 import { useAuth } from '../context/AuthContext'
 import { useChat } from '../context/ChatContext'
@@ -165,7 +165,8 @@ function ConversationSection({ closeMobile }: { closeMobile?: () => void }) {
                   {(conversation.total_tokens ?? conversation.token_total) != null ? Number(conversation.total_tokens ?? conversation.token_total).toLocaleString() : '—'} tokens · {conversation.total_cost_usd != null || conversation.cost_usd != null ? formatCost(conversation.total_cost_usd ?? conversation.cost_usd) : '—'}
                 </div>
               </button>
-              <div className="absolute right-2 top-2 flex opacity-0 transition group-hover:opacity-100 group-focus-within:opacity-100">
+              {/* Visible by default on touch/small screens (no hover state exists there); fades in on hover/focus for pointer devices at lg+. */}
+              <div className="absolute right-2 top-2 flex opacity-100 transition lg:opacity-0 lg:group-hover:opacity-100 lg:group-focus-within:opacity-100">
                 <button
                   type="button"
                   aria-label="Rename conversation"
@@ -343,12 +344,62 @@ function HeaderActions({ health, open, toggle }: { health: ReturnType<typeof use
   )
 }
 
+function useMobileDrawer(open: boolean, close: () => void) {
+  const drawerRef = useRef<HTMLElement | null>(null)
+  const previousFocusRef = useRef<HTMLElement | null>(null)
+
+  useEffect(() => {
+    if (!open) return undefined
+    previousFocusRef.current = document.activeElement instanceof HTMLElement ? document.activeElement : null
+    document.body.style.overflow = 'hidden'
+    const raf = window.requestAnimationFrame(() => {
+      drawerRef.current?.querySelector<HTMLElement>('button, [href], input, [tabindex]:not([tabindex="-1"])')?.focus()
+    })
+
+    function onKeyDown(event: KeyboardEvent) {
+      if (event.key === 'Escape') {
+        event.preventDefault()
+        close()
+        return
+      }
+      if (event.key !== 'Tab' || !drawerRef.current) return
+      const items = Array.from(
+        drawerRef.current.querySelectorAll<HTMLElement>(
+          'button:not([disabled]), [href], input:not([disabled]), [tabindex]:not([tabindex="-1"])',
+        ),
+      )
+      if (!items.length) return
+      const first = items[0]
+      const last = items[items.length - 1]
+      if (event.shiftKey && document.activeElement === first) {
+        event.preventDefault()
+        last.focus()
+      } else if (!event.shiftKey && document.activeElement === last) {
+        event.preventDefault()
+        first.focus()
+      }
+    }
+
+    document.addEventListener('keydown', onKeyDown)
+    return () => {
+      window.cancelAnimationFrame(raf)
+      document.removeEventListener('keydown', onKeyDown)
+      document.body.style.overflow = ''
+      previousFocusRef.current?.focus()
+    }
+  }, [open, close])
+
+  return drawerRef
+}
+
 export function AppShell() {
   const { pathname } = useLocation()
   const { health } = useAuth()
   const online = useOnlineStatus()
   const { open, toggle } = useInspector()
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
+  const closeMobileMenu = () => setMobileMenuOpen(false)
+  const mobileDrawerRef = useMobileDrawer(mobileMenuOpen, closeMobileMenu)
   const meta = pageMeta[pathname] ?? { title: 'HIVE', subtitle: 'Private operations console' }
 
   useEffect(() => {
@@ -364,9 +415,15 @@ export function AppShell() {
 
       {mobileMenuOpen && (
         <div className="fixed inset-0 z-50 lg:hidden">
-          <button type="button" aria-label="Close navigation" className="absolute inset-0 bg-black/65 backdrop-blur-sm" onClick={() => setMobileMenuOpen(false)} />
-          <aside className="absolute inset-y-0 left-0 w-[min(320px,90vw)] border-r border-white/10 bg-[#0a192d] shadow-2xl">
-            <SidebarContent closeMobile={() => setMobileMenuOpen(false)} />
+          <button type="button" aria-label="Close navigation" className="absolute inset-0 bg-black/65 backdrop-blur-sm" onClick={closeMobileMenu} />
+          <aside
+            ref={mobileDrawerRef}
+            role="dialog"
+            aria-modal="true"
+            aria-label="Navigation"
+            className="absolute inset-y-0 left-0 w-[min(320px,90vw)] border-r border-white/10 bg-[#0a192d] shadow-2xl"
+          >
+            <SidebarContent closeMobile={closeMobileMenu} />
           </aside>
         </div>
       )}

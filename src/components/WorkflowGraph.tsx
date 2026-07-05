@@ -50,7 +50,7 @@ export function WorkflowGraph({ nodes, edges = [], onInspect }: WorkflowGraphPro
               <StatusBadge status={node.status} compact />
             </button>
             {next && linked && (
-              <div className="flex h-9 items-center pl-[31px] text-slate-400">
+              <div className="flex h-9 items-center pl-[31px] text-slate-400" aria-hidden="true">
                 <ArrowDown className="h-4 w-4" />
               </div>
             )}
