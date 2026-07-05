@@ -1,10 +1,10 @@
 > **Document status:** Production reference  
-> **Last reviewed:** 22 June 2026  
+> **Last reviewed:** 5 July 2026  
 > **Operational authority:** Current repository README, SECURITY policy and operations guide.
 
 # HIVE-UI
 
-**Current UI marker:** `0.10.10` / `catalogue-metadata`.
+**Current UI marker:** `0.10.11` / `a11y-hardening-pass`.
 
 HIVE-UI is the private React operator interface for HIVE. It is deployed on Cloudflare Pages and proxies authenticated API traffic to the HIVE backend without exposing the backend bearer token to the browser.
 
