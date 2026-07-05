@@ -3,6 +3,7 @@ import {
   BrainCircuit,
   Check,
   Copy,
+  Database,
   Files,
   LogOut,
   Menu,
@@ -32,6 +33,7 @@ const navigation = [
   { to: '/chat', label: 'Chat', icon: MessageSquareText },
   { to: '/files', label: 'Files', icon: Files },
   { to: '/skills', label: 'Skills', icon: BrainCircuit },
+  { to: '/memory', label: 'Memory', icon: Database },
   { to: '/ops', label: 'Ops', icon: Activity },
 ]
 
@@ -39,6 +41,7 @@ const pageMeta: Record<string, { title: string; subtitle: string }> = {
   '/chat': { title: 'Chat', subtitle: 'Private model routing and persistent conversations' },
   '/files': { title: 'Files', subtitle: 'Browse authenticated R2 lanes and bring evidence into chat' },
   '/skills': { title: 'Skills', subtitle: 'Search the shared HIVE skill registry' },
+  '/memory': { title: 'Memory', subtitle: 'Persistent repository knowledge that survives cleanup' },
   '/ops': { title: 'Operations', subtitle: 'Health, workflow previews and review gates' },
 }
 
