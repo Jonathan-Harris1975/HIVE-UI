@@ -11,6 +11,9 @@ const ChatPage = lazy(() => import('./pages/ChatPage').then((module) => ({ defau
 const FilesPage = lazy(() => import('./pages/FilesPage').then((module) => ({ default: module.FilesPage })))
 const SkillsPage = lazy(() => import('./pages/SkillsPage').then((module) => ({ default: module.SkillsPage })))
 const OpsPage = lazy(() => import('./pages/OpsPage').then((module) => ({ default: module.OpsPage })))
+const RepositoryMemoryPage = lazy(() =>
+  import('./pages/RepositoryMemoryPage').then((module) => ({ default: module.RepositoryMemoryPage })),
+)
 
 function LoadingScreen({ compact = false }: { compact?: boolean }) {
   return (
@@ -36,6 +39,7 @@ export default function App() {
               <Route path="chat" element={<ChatPage />} />
               <Route path="files" element={<FilesPage />} />
               <Route path="skills" element={<SkillsPage />} />
+              <Route path="memory" element={<RepositoryMemoryPage />} />
               <Route path="ops" element={<OpsPage />} />
               <Route path="*" element={<Navigate to="/chat" replace />} />
             </Route>
