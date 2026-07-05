@@ -555,3 +555,67 @@ export interface R2LanesResponse {
   note?: string
   error?: string
 }
+
+export const REPOSITORY_MEMORY_SCALAR_FIELDS = [
+  'project_dna',
+  'architecture_summary',
+  'coding_standards',
+  'build_profile',
+  'deployment_profile',
+  'environment_schema',
+] as const
+
+export const REPOSITORY_MEMORY_HISTORY_FIELDS = [
+  'known_issues',
+  'learned_patterns',
+  'previous_patches',
+  'optimisation_history',
+  'qa_history',
+  'repository_council_history',
+] as const
+
+export type RepositoryMemoryScalarField = (typeof REPOSITORY_MEMORY_SCALAR_FIELDS)[number]
+export type RepositoryMemoryHistoryField = (typeof REPOSITORY_MEMORY_HISTORY_FIELDS)[number]
+export type RepositoryMemoryFieldName = RepositoryMemoryScalarField | RepositoryMemoryHistoryField
+
+export interface RepositoryMemoryResponse {
+  repository_id: string
+  fields: {
+    scalar: readonly string[]
+    history: readonly string[]
+  }
+  memory: Record<string, unknown>
+}
+
+export interface RepositoryMemoryFieldResponse {
+  repository_id: string
+  field_name: string
+  content: unknown
+  updated_at?: string | null
+}
+
+export interface RepositoryMemorySearchItem {
+  id?: string
+  source_type?: string
+  source_id?: string
+  title?: string
+  metadata?: Record<string, unknown>
+  updated_at?: string
+  [key: string]: unknown
+}
+
+export interface RepositoryMemorySearchResponse {
+  ok?: boolean
+  count?: number
+  items?: RepositoryMemorySearchItem[]
+  error?: string
+}
+
+export interface AiSearchDiagnosticsResponse {
+  ok?: boolean
+  configured?: boolean
+  status?: string
+  index?: string
+  error?: string
+  [key: string]: unknown
+}
