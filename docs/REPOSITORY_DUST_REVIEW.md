@@ -1,6 +1,6 @@
 > **Document status:** Current cleanup review  
-> **Last reviewed:** 22 June 2026  
-> **UI marker:** `0.10.10` / `catalogue-metadata`
+> **Last reviewed:** 5 July 2026  
+> **UI marker:** `0.10.11` / `a11y-hardening-pass`
 
 # HIVE-UI repository dust review
 

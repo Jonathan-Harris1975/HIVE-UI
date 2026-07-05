@@ -1,3 +1,12 @@
+## 0.10.11 — 5 July 2026
+
+- Added focus trap, Escape-to-close and body scroll lock to the mobile navigation drawer (`AppShell.tsx`).
+- Made conversation row actions (rename/delete) visible by default on touch/mobile instead of hover-only.
+- Marked the decorative workflow-graph connector arrow `aria-hidden` so screen readers skip it.
+- Removed the dead `Inter` font-stack entry (no `@font-face`/host was ever wired up; CSP blocks it anyway).
+- Added OpenGraph/Twitter link-preview metadata to `index.html`.
+- Synced UI marker to `0.10.11` / `a11y-hardening-pass`.
+
 ## 0.10.10 — 22 June 2026
 
 - Synced UI marker to `0.10.10` / `catalogue-metadata`.
@@ -12,7 +21,7 @@
 - Updated UI marker to `0.10.9` / `chat-persistence-sync`.
 
 > **Document status:** Production reference  
-> **Last reviewed:** 22 June 2026  
+> **Last reviewed:** 5 July 2026  
 > **Operational authority:** Current repository README, SECURITY policy and operations guide.
 
 # HIVE-UI changelog
