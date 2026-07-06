@@ -9,7 +9,7 @@
     "lint": "eslint .",
     "preview": "vite preview",
     "typecheck": "tsc -b --pretty false && tsc -p tsconfig.functions.json --pretty false",
-    "check": "npm run verify:lock && npm run verify:source && npm run test:security && npm run typecheck && npm run lint && npm run test:unit && npm run build && npm run verify:dist",
+    "check": "npm run verify:lock && npm run verify:source && npm run test:security && npm run test:ux-contract && npm run typecheck && npm run lint && npm run test:unit && npm run build && npm run verify:dist",
     "test:unit": "vitest run --coverage",
     "test:unit:watch": "vitest",
     "test:e2e": "playwright test",
@@ -17,7 +17,8 @@
     "check:bundle-budget": "node scripts/check-bundle-budget.mjs dist",
     "verify:lock": "node scripts/verify-lockfile.mjs",
     "verify:source": "node scripts/verify-source.mjs",
-    "test:security": "rm -rf .security-test && tsc -p tsconfig.security-test.json && node --test scripts/security.test.mjs"
+    "test:security": "rm -rf .security-test && tsc -p tsconfig.security-test.json && node --test scripts/security.test.mjs",
+    "test:ux-contract": "node --test scripts/ux-contract.test.mjs"
   },
   "dependencies": {
     "lucide-react": "^1.18.0",
