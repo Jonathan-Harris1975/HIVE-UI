@@ -1,0 +1,41 @@
+HIVE-UI v0.10.5 Helper Orchestration Patch
+==========================================
+
+Purpose
+-------
+Make HIVE feel responsive again by stopping optional helpers from blocking ordinary chat and reducing React render pressure during streaming.
+
+Frontend changes
+----------------
+1. Added an explicit Skills on/off toggle in the chat composer.
+   - Default is off for normal chat.
+   - When enabled, HIVE sends use_skills=true for that request.
+   - File chat continues using its own selected-skill/workflow mechanisms.
+
+2. Ordinary chat payloads now send use_skills=false unless the Skills toggle is on.
+   - This keeps D1/R2 skill retrieval out of casual chat by default.
+   - Skill helpers remain available deliberately rather than silently running every time.
+
+3. Streaming token updates are buffered.
+   - Tokens are flushed to React state every ~75ms instead of on every tiny token event.
+   - Reduces mobile/Android jank and markdown re-render churn.
+
+4. Auto-title generation is fire-and-forget.
+   - The UI stops showing the request as busy when the actual assistant answer is complete.
+   - Auto-title still runs and refreshes the sidebar later.
+
+5. Version drift tidied in the UI layer.
+   - package.json/package-lock.json: 0.10.5
+   - src/lib/build.ts: 0.10.5 helper-orchestration
+   - Cloudflare Pages health/proxy version headers: 0.10.5
+
+Validation
+----------
+HIVE-UI checks:
+- npm ci: passed
+- npm run check: passed
+- security tests: 4 passed
+- typecheck: passed
+- lint: passed
+- production build: passed
+- dist verification: passed

@@ -1,0 +1,15 @@
+HIVE-UI v0.10.2 - file-to-skill review flow
+
+Purpose
+- Fix the Files page UX where Add skill immediately registered the selected object as a skill.
+- Add an explicit review/confirmation step before a file becomes a searchable skill descriptor.
+
+Changed
+- Files page Add skill now opens a mobile-friendly registration sheet instead of writing immediately.
+- The operator can edit the skill title, description, repo, skill lane, priority, risk level and tags.
+- The selected file and source R2 lane are shown before confirmation.
+- The final write still uses POST /v1/skills/from-file, but only after Confirm add skill.
+
+Result
+- Uploaded files no longer create bare filename skill cards by accident.
+- Skills added from files now have readable titles and useful descriptions for search/routing.

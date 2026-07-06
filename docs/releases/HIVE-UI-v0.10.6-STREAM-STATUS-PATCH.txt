@@ -1,0 +1,16 @@
+HIVE-UI v0.10.6 stream status and fast-chat patch
+
+Updated files:
+- package.json
+- package-lock.json
+- functions/api/[[path]].ts
+- src/pages/ChatPage.tsx
+- src/components/ChatMessage.tsx
+- src/types/api.ts
+
+Purpose:
+- Surface backend stream metadata such as current model attempt and fallback state.
+- Replace opaque "HIVE is thinking ~0 chars" with live routing status while waiting for first visible token.
+- Reduce normal chat response budget from 2048 to 900 tokens, with larger caps kept for code/audit/file routes.
+- Reduce persisted-history replay from 40 turns to 12 to keep mobile chat responsive on Koyeb e-medium.
+- Bump UI version header/package to 0.10.6.

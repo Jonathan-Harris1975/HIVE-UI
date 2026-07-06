@@ -1,0 +1,9 @@
+HIVE-UI v0.10.8 review state sync
+
+Date: 22 June 2026
+
+Fixes:
+- Active execution review queue now hides approved, rejected and archived items.
+- Approved items are still retained in backend evidence/audit history, but no longer sit in the active review list looking unprocessed.
+- Review decision success now refreshes Ops data after the backend confirms the decision.
+- Updated UI marker to 0.10.8 / review-state-sync.
