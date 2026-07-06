@@ -4,6 +4,20 @@
 @theme {
   --font-sans: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
   --font-mono: "SFMono-Regular", Consolas, "Liberation Mono", monospace;
+
+  /* Centralised brand palette. These were previously repeated as literal
+     hex values across 15+ files (bg-[#061126], bg-[#071426], etc — see
+     docs/production-readiness.md for the audit that flagged this). Prefer
+     bg-hive-canvas / bg-hive-panel / bg-hive-panel-deep / bg-hive-surface /
+     bg-hive-accent-deep over new hex literals going forward; existing
+     literals are being migrated incrementally (see FilesPage/LoginScreen
+     for the converted pattern) rather than in one unverified mass edit,
+     since that migration needs visual-regression coverage to be safe. */
+  --color-hive-canvas: #061126;
+  --color-hive-panel: #0a192d;
+  --color-hive-panel-deep: #0b1b31;
+  --color-hive-surface: #071426;
+  --color-hive-accent-deep: #052035;
 }
 
 :root {
