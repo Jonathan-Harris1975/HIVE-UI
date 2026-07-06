@@ -46,3 +46,14 @@ The following files were superseded by `README.md`, `docs/CHANGELOG.md`, `docs/P
 - `SECURITY.md`
 
 Those files still serve as current or intentionally archived documentation.
+
+## Follow-up: production-readiness closeout pass
+
+The duplicate `HIVE-UI-UX-AUDIT-2026-06-21.md` that was still sitting at the
+repository root (byte-identical to `docs/HIVE-UI-UX-AUDIT-2026-06-21.md`)
+has been removed; the `docs/` copy remains the single authoritative one.
+All `HIVE-UI-v0.x-*` patch notes and `V0.x.x_UPDATED_FILES_MANIFEST.txt`
+files, plus `HIVE-UI-PATCH-MANIFEST.txt` and the CI-fix manifest/report,
+have been moved into `docs/releases/` alongside existing release history.
+The repository root now only carries the current autonomous review,
+the current production-readiness report, `README.md`, and `SECURITY.md`.
