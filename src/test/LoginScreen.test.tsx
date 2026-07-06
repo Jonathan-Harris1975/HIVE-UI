@@ -1,13 +1,16 @@
 import { render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
-import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
 import { AuthProvider, useAuth } from '../context/AuthContext'
 import { LoginScreen } from '../components/LoginScreen'
 
-// Vitest runs with import.meta.env.DEV === false by default (mode "test"),
-// so AuthProvider already takes the real-backend branch (loginUi/authFetch
-// against fetch) rather than the short-circuited dev-session path.
+// Vitest's default mode is "test", not "production", so Vite computes
+// import.meta.env.DEV as true unless told otherwise. AuthContext uses DEV to
+// short-circuit auth via a local dev session (no fetch calls at all), which
+// bypasses the fetch mocks below entirely. Force DEV false here so
+// AuthProvider takes the real-backend branch (loginUi/authFetch against
+// fetch) that these tests are actually exercising.
 
 function jsonResponse(body: unknown, init: { status?: number; headers?: Record<string, string> } = {}) {
   const headers = new Headers(init.headers)
@@ -29,7 +32,12 @@ function Harness() {
 describe('Login / session flow', () => {
   beforeEach(() => {
     vi.restoreAllMocks()
+    vi.stubEnv('DEV', false)
     window.sessionStorage.clear()
+  })
+
+  afterEach(() => {
+    vi.unstubAllEnvs()
   })
 
   it('renders the login form when signed out', async () => {
