@@ -33,6 +33,9 @@ jobs:
       - name: Typecheck, lint, build and verify
         run: npm run check
 
+      - name: Enforce production bundle size budget
+        run: npm run check:bundle-budget
+
       - name: Audit dependencies
         run: npm audit --audit-level=high
 
@@ -44,9 +47,50 @@ jobs:
           if-no-files-found: error
           retention-days: 14
 
+  e2e:
+    name: Playwright end-to-end
+    needs: [verify]
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Use Node.js 22
+        uses: actions/setup-node@v6
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install locked dependencies
+        run: npm ci --no-audit --no-fund
+
+      - name: Install Playwright browsers
+        run: npx playwright install --with-deps chromium
+
+      - name: Build production bundle
+        run: npm run build
+
+      - name: Run Playwright e2e suite
+        run: npm run test:e2e
+        # To run this against a real Cloudflare Pages preview deployment
+        # instead of a local preview server, set HIVE_UI_E2E_BASE_URL to
+        # that deployment's URL (e.g. via a repository variable populated
+        # by the Cloudflare Pages deploy step for this PR).
+        env:
+          HIVE_UI_E2E_BASE_URL: ${{ vars.HIVE_UI_E2E_BASE_URL || '' }}
+
+      - name: Upload Playwright report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-report-${{ github.sha }}
+          path: playwright-report
+          retention-days: 14
+
   notify_failure:
     name: Notify central operations on CI failure
-    needs: [verify]
+    needs: [verify, e2e]
     if: ${{ always() && (contains(needs.*.result, 'failure') || contains(needs.*.result, 'cancelled')) }}
     runs-on: ubuntu-latest
     continue-on-error: true
