@@ -14,6 +14,9 @@ const OpsPage = lazy(() => import('./pages/OpsPage').then((module) => ({ default
 const RepositoryMemoryPage = lazy(() =>
   import('./pages/RepositoryMemoryPage').then((module) => ({ default: module.RepositoryMemoryPage })),
 )
+const ModelRegistryPage = lazy(() =>
+  import('./pages/ModelRegistryPage').then((module) => ({ default: module.ModelRegistryPage })),
+)
 
 function LoadingScreen({ compact = false }: { compact?: boolean }) {
   return (
@@ -40,6 +43,7 @@ export default function App() {
               <Route path="files" element={<FilesPage />} />
               <Route path="skills" element={<SkillsPage />} />
               <Route path="memory" element={<RepositoryMemoryPage />} />
+              <Route path="models" element={<ModelRegistryPage />} />
               <Route path="ops" element={<OpsPage />} />
               <Route path="*" element={<Navigate to="/chat" replace />} />
             </Route>
