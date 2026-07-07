@@ -1,7 +1,0 @@
-HIVE-UI v0.10.9 chat persistence sync
-
-- Raises chat max_tokens so normal replies are not clipped at the old 900-token mobile fast-lane cap.
-- Shows amber warnings when a stream hits token/idle limits.
-- Shows persistence-refresh failures instead of silently leaving the sidebar empty.
-- Stores stream finish/persistence metadata in Inspect.
-- Updates UI marker to 0.10.9 / chat-persistence-sync.
