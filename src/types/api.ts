@@ -619,3 +619,48 @@ export interface AiSearchDiagnosticsResponse {
   error?: string
   [key: string]: unknown
 }
+
+export const MODEL_REGISTRY_CATEGORIES = [
+  'coding',
+  'reasoning',
+  'planning',
+  'vision',
+  'research',
+  'fast',
+  'cheap',
+  'creative',
+  'long_context',
+] as const
+
+export type ModelRegistryCategory = (typeof MODEL_REGISTRY_CATEGORIES)[number]
+
+export interface ModelRegistryEntry {
+  model_id: string
+  score: number
+  provider: string | null
+  notes: string | null
+  registered_at: number
+}
+
+export interface ModelRegistryCategoriesResponse {
+  categories: readonly string[]
+}
+
+export interface ModelRegistryOverviewResponse {
+  registry: Record<string, ModelRegistryEntry[]>
+}
+
+export interface ModelRegistryCategoryResponse {
+  category: string
+  default_model: string | null
+  models: ModelRegistryEntry[]
+}
+
+export interface ModelRegistryMutationResponse {
+  category: string
+  default_model?: string | null
+  model_count?: number
+  model_id?: string
+  removed?: boolean
+  persisted?: boolean
+}
