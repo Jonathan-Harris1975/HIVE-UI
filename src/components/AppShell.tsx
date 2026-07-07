@@ -3,6 +3,7 @@ import {
   BrainCircuit,
   Check,
   Copy,
+  Cpu,
   Database,
   Files,
   LogOut,
@@ -34,6 +35,7 @@ const navigation = [
   { to: '/files', label: 'Files', icon: Files },
   { to: '/skills', label: 'Skills', icon: BrainCircuit },
   { to: '/memory', label: 'Memory', icon: Database },
+  { to: '/models', label: 'Models', icon: Cpu },
   { to: '/ops', label: 'Ops', icon: Activity },
 ]
 
@@ -42,6 +44,7 @@ const pageMeta: Record<string, { title: string; subtitle: string }> = {
   '/files': { title: 'Files', subtitle: 'Browse authenticated R2 lanes and bring evidence into chat' },
   '/skills': { title: 'Skills', subtitle: 'Search the shared HIVE skill registry' },
   '/memory': { title: 'Memory', subtitle: 'Persistent repository knowledge that survives cleanup' },
+  '/models': { title: 'Models', subtitle: 'Ranked model registry that drives routing defaults' },
   '/ops': { title: 'Operations', subtitle: 'Health, workflow previews and review gates' },
 }
 
