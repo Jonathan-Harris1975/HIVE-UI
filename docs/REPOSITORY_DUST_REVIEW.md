@@ -1,6 +1,14 @@
-> **Document status:** Current cleanup review  
-> **Last reviewed:** 5 July 2026  
-> **UI marker:** `0.10.11` / `a11y-hardening-pass`
+> **Document status:** Historical cleanup review — see correction note below  
+> **Last reviewed:** 7 July 2026  
+> **UI marker:** `0.11.0` / `repository-memory-ui`
+
+> **Correction (7 July 2026):** This document previously stated the root-level
+> cleanup below had been completed. It had not — the 19 files listed as
+> "removed" were still present in the repository as shipped. The 7 July
+> pass actually deleted them (verifying each was byte-identical to its
+> `docs/releases/` copy first) and archived the 5 July autonomous review
+> itself into `docs/releases/`. See `HIVE-UI-AUTONOMOUS-REVIEW-2026-07-07.md`
+> for the full record.
 
 # HIVE-UI repository dust review
 

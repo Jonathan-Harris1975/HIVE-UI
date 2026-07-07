@@ -1,3 +1,34 @@
+## 0.11.0 — 7 July 2026
+
+- Repository hygiene pass: removed 18 duplicate/superseded root-level files
+  (old CI-fix notes, per-version patch manifests, an old production-readiness
+  report and UX audit) that were already archived byte-identical under
+  `docs/releases/`. The `docs/REPOSITORY_DUST_REVIEW.md` from 5 July had
+  documented this cleanup as done, but the files were still present in the
+  shipped repository — this pass actually removes them and corrects the
+  record in that document.
+- Fixed a real version-marker split: `src/lib/build.ts` (shown in the UI)
+  had already moved to `0.11.0` for the Repository Memory work, while
+  `package.json`, `package-lock.json` and `functions/health.ts` were still
+  on `0.10.11`. All four now agree on `0.11.0`.
+- Verified (by source reading — no build tool available in this pass) that
+  the five a11y/UX fixes from the 5 July review are intact: mobile drawer
+  focus trap, always-visible touch row actions, `aria-hidden` on the
+  decorative workflow connector, the dead `Inter` font-stack entry staying
+  removed, and OpenGraph/Twitter metadata in `index.html`.
+- Confirmed every declared dependency is actually imported (no unused
+  packages) and no leftover `console.log`/`TODO`/`FIXME`/`debugger` markers
+  exist in `src/` or `functions/`.
+- Confirmed every `<img>` in `src/` has `alt` text and the Cloudflare Pages
+  `_headers` file still carries a full strict-CSP/HSTS/COOP/CORP/no-store
+  posture appropriate for a private, noindex console.
+- Left the repeated literal surface-colour hex values (`#0a192d`,
+  `#071426`, etc., ~118 occurrences across 13 files, heaviest in
+  `FilesPage.tsx` and `OpsPage.tsx`) as a recommendation rather than a
+  blind global replace — centralising them into Tailwind v4 `@theme`
+  tokens is safe and worthwhile, but not verifiable without a real build in
+  this environment. See `HIVE-UI-AUTONOMOUS-REVIEW-2026-07-07.md`.
+
 ## 0.10.11 — 5 July 2026
 
 - Added focus trap, Escape-to-close and body scroll lock to the mobile navigation drawer (`AppShell.tsx`).
