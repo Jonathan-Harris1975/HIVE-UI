@@ -112,7 +112,98 @@ function RepoIcon({ category }: { category?: string }) {
   return <Activity className="h-3.5 w-3.5" />
 }
 
-function RepoHealthCard({ item, onInspect }: { item: RepoHealthItem; onInspect: () => void }) {
+type WakeTicket = {
+  ticket_id: string
+  repo: string
+  status: 'running' | 'ready' | 'timeout' | 'failed'
+  phase: string
+  events: Array<{ phase: string; [key: string]: unknown }>
+  result?: { ready: boolean; already_online: boolean; elapsed_seconds: number; attempts: number } | null
+  error?: string | null
+}
+
+function wakePhaseLabel(phase: string): string {
+  switch (phase) {
+    case 'queued': return 'Queued'
+    case 'already-online': return 'Already online'
+    case 'requesting-resume': return 'Requesting resume from MAST'
+    case 'resume-request-failed': return 'Resume request failed'
+    case 'starting': return 'Starting'
+    case 'polling': return 'Waiting for health check'
+    case 'ready': return 'Ready'
+    case 'timeout': return 'Timed out'
+    default: return phase.replace(/-/g, ' ')
+  }
+}
+
+/** Lets an operator manually trigger the same transparent wake-up flow HIVE runs
+ * automatically when a user action needs a Standby service: request a MAST resume,
+ * then poll a ticket for startup progress. */
+function ServiceWakeControl({ repo, onWoken }: { repo: 'AIMS' | 'RAMS'; onWoken: () => void }) {
+  const [ticket, setTicket] = useState<WakeTicket | null>(null)
+  const [starting, setStarting] = useState(false)
+
+  useEffect(() => {
+    if (!ticket || ticket.status !== 'running' || !ticket.ticket_id) return
+    const timer = setTimeout(async () => {
+      try {
+        const next = await apiFetch<WakeTicket>(`/v1/services/${repo}/ensure-ready/${ticket.ticket_id}`)
+        setTicket(next)
+        if (next.status === 'ready') onWoken()
+      } catch {
+        setTicket((current) => (current ? { ...current, status: 'failed', error: 'Lost connection while polling.' } : current))
+      }
+    }, 2000)
+    return () => clearTimeout(timer)
+  }, [ticket, repo, onWoken])
+
+  const start = useCallback(async () => {
+    setStarting(true)
+    try {
+      const response = await apiFetch<{ wake_id: string }>(`/v1/services/${repo}/ensure-ready`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({}),
+      })
+      setTicket({ ticket_id: response.wake_id, repo, status: 'running', phase: 'queued', events: [] })
+    } catch {
+      setTicket({ ticket_id: '', repo, status: 'failed', phase: 'failed', events: [], error: 'Could not start wake-up request.' })
+    } finally {
+      setStarting(false)
+    }
+  }, [repo])
+
+  if (!ticket) {
+    return (
+      <button
+        type="button"
+        onClick={(event) => { event.stopPropagation(); void start() }}
+        disabled={starting}
+        className="mt-2 inline-flex items-center gap-1.5 rounded-lg border border-violet-300/20 bg-violet-300/8 px-2.5 py-1 text-[11px] text-violet-200 transition hover:bg-violet-300/12 disabled:opacity-50"
+      >
+        <RefreshCw className={`h-3 w-3 ${starting ? 'animate-spin' : ''}`} /> {starting ? 'Requesting…' : 'Wake up'}
+      </button>
+    )
+  }
+
+  const tone = ticket.status === 'ready' ? 'text-emerald-200 border-emerald-300/15 bg-emerald-300/5'
+    : ticket.status === 'timeout' || ticket.status === 'failed' ? 'text-rose-200 border-rose-300/15 bg-rose-300/5'
+    : 'text-violet-200 border-violet-300/15 bg-violet-300/5'
+
+  return (
+    <div className={`mt-2 rounded-lg border px-2.5 py-1.5 text-[11px] ${tone}`}>
+      {ticket.status === 'ready'
+        ? `Ready in ${ticket.result?.elapsed_seconds ?? 0}s`
+        : ticket.status === 'timeout'
+          ? 'Wake-up timed out — try again shortly.'
+          : ticket.status === 'failed'
+            ? (ticket.error || 'Wake-up failed.')
+            : `${wakePhaseLabel(ticket.phase)}…`}
+    </div>
+  )
+}
+
+function RepoHealthCard({ item, onInspect, onRefresh }: { item: RepoHealthItem; onInspect: () => void; onRefresh: () => void }) {
   const latency = item.liveness?.latency_ms
   const operationalStatus = item.operational?.status
   const category = item.category === 'background_worker'
@@ -126,7 +217,7 @@ function RepoHealthCard({ item, onInspect }: { item: RepoHealthItem; onInspect: 
         : 'Core API'
 
   return (
-    <button type="button" onClick={onInspect} className="min-w-0 rounded-xl border border-white/8 bg-[#071426] p-3 text-left transition hover:border-cyan-300/20 hover:bg-[#0b1b31]">
+    <div role="button" tabIndex={0} onClick={onInspect} onKeyDown={(event) => { if (event.key === 'Enter' || event.key === ' ') onInspect() }} className="min-w-0 cursor-pointer rounded-xl border border-white/8 bg-[#071426] p-3 text-left transition hover:border-cyan-300/20 hover:bg-[#0b1b31]">
       <div className="flex items-center gap-2.5">
         <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg border border-cyan-300/12 bg-cyan-300/6 text-cyan-200">
           <RepoIcon category={item.category} />
@@ -148,7 +239,10 @@ function RepoHealthCard({ item, onInspect }: { item: RepoHealthItem; onInspect: 
         <span>{typeof latency === 'number' ? `${latency} ms` : 'No latency'}</span>
         {operationalStatus && <span>Operational: {operationalStatus.replace(/_/g, ' ')}</span>}
       </div>
-    </button>
+      {(item.repo === 'AIMS' || item.repo === 'RAMS') && !['healthy', 'busy'].includes(item.status) && (
+        <ServiceWakeControl repo={item.repo} onWoken={onRefresh} />
+      )}
+    </div>
   )
 }
 
@@ -565,7 +659,7 @@ export function OpsPage() {
               {repoHealth?.repos?.length ? (
                 <div className="mt-3 grid grid-cols-2 gap-2">
                   {repoHealth.repos.map((item) => (
-                    <RepoHealthCard key={item.repo} item={item} onInspect={() => inspect(`${item.repo} health`, item, item.description)} />
+                    <RepoHealthCard key={item.repo} item={item} onInspect={() => inspect(`${item.repo} health`, item, item.description)} onRefresh={() => void loadOps(true)} />
                   ))}
                 </div>
               ) : (
