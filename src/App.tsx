@@ -17,6 +17,27 @@ const RepositoryMemoryPage = lazy(() =>
 const ModelRegistryPage = lazy(() =>
   import('./pages/ModelRegistryPage').then((module) => ({ default: module.ModelRegistryPage })),
 )
+const RepositoriesPage = lazy(() =>
+  import('./pages/RepositoriesPage').then((module) => ({ default: module.RepositoriesPage })),
+)
+const RepositoryIntelligencePage = lazy(() =>
+  import('./pages/RepositoryIntelligencePage').then((module) => ({ default: module.RepositoryIntelligencePage })),
+)
+const IntegrationsPage = lazy(() =>
+  import('./pages/IntegrationsPage').then((module) => ({ default: module.IntegrationsPage })),
+)
+const CouncilPage = lazy(() =>
+  import('./pages/CouncilPage').then((module) => ({ default: module.CouncilPage })),
+)
+const ExecutionReviewsPage = lazy(() =>
+  import('./pages/ExecutionReviewsPage').then((module) => ({ default: module.ExecutionReviewsPage })),
+)
+const ExecutionSimulationPage = lazy(() =>
+  import('./pages/ExecutionSimulationPage').then((module) => ({ default: module.ExecutionSimulationPage })),
+)
+const OptimisationPage = lazy(() =>
+  import('./pages/OptimisationPage').then((module) => ({ default: module.OptimisationPage })),
+)
 
 function LoadingScreen({ compact = false }: { compact?: boolean }) {
   return (
@@ -43,6 +64,13 @@ export default function App() {
               <Route path="files" element={<FilesPage />} />
               <Route path="skills" element={<SkillsPage />} />
               <Route path="memory" element={<RepositoryMemoryPage />} />
+              <Route path="repositories" element={<RepositoriesPage />} />
+              <Route path="intelligence" element={<RepositoryIntelligencePage />} />
+              <Route path="integrations" element={<IntegrationsPage />} />
+              <Route path="council" element={<CouncilPage />} />
+              <Route path="execution-reviews" element={<ExecutionReviewsPage />} />
+              <Route path="execution-simulation" element={<ExecutionSimulationPage />} />
+              <Route path="optimisation" element={<OptimisationPage />} />
               <Route path="models" element={<ModelRegistryPage />} />
               <Route path="ops" element={<OpsPage />} />
               <Route path="*" element={<Navigate to="/chat" replace />} />
