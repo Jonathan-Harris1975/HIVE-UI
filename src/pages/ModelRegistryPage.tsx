@@ -15,10 +15,34 @@ import { useInspector } from '../context/InspectorContext'
 import { apiFetch } from '../lib/api'
 import {
   MODEL_REGISTRY_CATEGORIES,
+  MODEL_REGISTRY_CONFIDENCE_LEVELS,
   type ModelRegistryCategoryResponse,
+  type ModelRegistryConfidence,
   type ModelRegistryEntry,
   type ModelRegistryMutationResponse,
 } from '../types/api'
+
+const CONFIDENCE_LABELS: Record<ModelRegistryConfidence, string> = {
+  measured: 'Measured',
+  heuristic: 'Heuristic',
+  unverified: 'Unverified',
+}
+
+const CONFIDENCE_TONE: Record<ModelRegistryConfidence, string> = {
+  measured: 'border-emerald-300/25 bg-emerald-300/8 text-emerald-200',
+  heuristic: 'border-amber-300/25 bg-amber-300/8 text-amber-200',
+  unverified: 'border-white/10 bg-white/[0.04] text-slate-400',
+}
+
+function formatLatency(value?: number | null): string | null {
+  if (value == null || Number.isNaN(value)) return null
+  return `${Math.round(value)}ms`
+}
+
+function formatCost(value?: number | null): string | null {
+  if (value == null || Number.isNaN(value)) return null
+  return `$${value.toFixed(4)}/1k tok`
+}
 
 const CATEGORY_LABELS: Record<string, string> = {
   coding: 'Coding',
@@ -53,9 +77,22 @@ interface RegisterDraft {
   score: string
   provider: string
   notes: string
+  benchmark_score: string
+  confidence: ModelRegistryConfidence
+  latency_ms: string
+  cost_per_1k_tokens: string
 }
 
-const EMPTY_DRAFT: RegisterDraft = { model_id: '', score: '0.8', provider: '', notes: '' }
+const EMPTY_DRAFT: RegisterDraft = {
+  model_id: '',
+  score: '0.8',
+  provider: '',
+  notes: '',
+  benchmark_score: '',
+  confidence: 'unverified',
+  latency_ms: '',
+  cost_per_1k_tokens: '',
+}
 
 export function ModelRegistryPage() {
   const { setPayload, setOpen } = useInspector()
@@ -106,6 +143,18 @@ export function ModelRegistryPage() {
       setError('Score must be a number.')
       return
     }
+    // Optional context fields - empty string means "not provided", not zero.
+    const benchmarkScore = draft.benchmark_score.trim() ? Number.parseFloat(draft.benchmark_score) : null
+    const latencyMs = draft.latency_ms.trim() ? Number.parseFloat(draft.latency_ms) : null
+    const costPer1k = draft.cost_per_1k_tokens.trim() ? Number.parseFloat(draft.cost_per_1k_tokens) : null
+    if (
+      (benchmarkScore != null && Number.isNaN(benchmarkScore)) ||
+      (latencyMs != null && Number.isNaN(latencyMs)) ||
+      (costPer1k != null && Number.isNaN(costPer1k))
+    ) {
+      setError('Benchmark score, latency and cost must be numbers.')
+      return
+    }
     setRegistering(true)
     setError(null)
     setNotice(null)
@@ -119,6 +168,10 @@ export function ModelRegistryPage() {
             score,
             provider: draft.provider.trim() || null,
             notes: draft.notes.trim() || null,
+            benchmark_score: benchmarkScore,
+            confidence: draft.confidence,
+            latency_ms: latencyMs,
+            cost_per_1k_tokens: costPer1k,
           }),
         },
       )
@@ -163,6 +216,10 @@ export function ModelRegistryPage() {
         { label: 'Category', value: category },
         { label: 'Score', value: String(model.score) },
         { label: 'Provider', value: model.provider ?? 'Unspecified' },
+        { label: 'Benchmark score', value: model.benchmark_score != null ? String(model.benchmark_score) : 'Not recorded' },
+        { label: 'Confidence', value: CONFIDENCE_LABELS[model.confidence] ?? model.confidence },
+        { label: 'Latency', value: formatLatency(model.latency_ms) ?? 'Not recorded' },
+        { label: 'Cost', value: formatCost(model.cost_per_1k_tokens) ?? 'Not recorded' },
         { label: 'Registered', value: formatRegisteredAt(model.registered_at) },
       ],
       json: model,
@@ -259,6 +316,22 @@ export function ModelRegistryPage() {
                         Score {model.score.toFixed(2)}
                         {model.provider ? ` · ${model.provider}` : ''} · Registered {formatRegisteredAt(model.registered_at)}
                       </p>
+                      <div className="mt-1.5 flex flex-wrap items-center gap-1.5">
+                        <span
+                          className={`inline-flex h-5 items-center rounded-md border px-1.5 text-[10px] font-medium ${CONFIDENCE_TONE[model.confidence]}`}
+                        >
+                          {CONFIDENCE_LABELS[model.confidence] ?? model.confidence}
+                        </span>
+                        {model.benchmark_score != null && (
+                          <span className="text-[11px] text-slate-500">Benchmark {model.benchmark_score.toFixed(1)}</span>
+                        )}
+                        {formatLatency(model.latency_ms) && (
+                          <span className="text-[11px] text-slate-500">{formatLatency(model.latency_ms)}</span>
+                        )}
+                        {formatCost(model.cost_per_1k_tokens) && (
+                          <span className="text-[11px] text-slate-500">{formatCost(model.cost_per_1k_tokens)}</span>
+                        )}
+                      </div>
                       {model.notes && <p className="mt-1 truncate text-xs text-slate-500">{model.notes}</p>}
                     </button>
                     <button
@@ -320,6 +393,52 @@ export function ModelRegistryPage() {
                 value={draft.notes}
                 onChange={(event) => setDraft((current) => ({ ...current, notes: event.target.value }))}
                 placeholder="Why this model/score"
+                className="h-10 w-full rounded-xl border border-white/8 bg-[#071426] px-3 text-sm text-slate-200 outline-none placeholder:text-slate-500 focus:border-cyan-300/30"
+              />
+            </label>
+            <label>
+              <span className="mb-1 block text-xs text-slate-400">Benchmark score (0–100, optional)</span>
+              <input
+                value={draft.benchmark_score}
+                onChange={(event) => setDraft((current) => ({ ...current, benchmark_score: event.target.value }))}
+                inputMode="decimal"
+                placeholder="e.g. 82.5"
+                className="h-10 w-full rounded-xl border border-white/8 bg-[#071426] px-3 text-sm text-slate-200 outline-none placeholder:text-slate-500 focus:border-cyan-300/30"
+              />
+            </label>
+            <label>
+              <span className="mb-1 block text-xs text-slate-400">Confidence</span>
+              <select
+                value={draft.confidence}
+                onChange={(event) =>
+                  setDraft((current) => ({ ...current, confidence: event.target.value as ModelRegistryConfidence }))
+                }
+                className="h-10 w-full rounded-xl border border-white/8 bg-[#071426] px-3 text-sm text-slate-200 outline-none focus:border-cyan-300/30"
+              >
+                {MODEL_REGISTRY_CONFIDENCE_LEVELS.map((level) => (
+                  <option key={level} value={level}>
+                    {CONFIDENCE_LABELS[level]}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <label>
+              <span className="mb-1 block text-xs text-slate-400">Latency, ms (optional)</span>
+              <input
+                value={draft.latency_ms}
+                onChange={(event) => setDraft((current) => ({ ...current, latency_ms: event.target.value }))}
+                inputMode="decimal"
+                placeholder="e.g. 420"
+                className="h-10 w-full rounded-xl border border-white/8 bg-[#071426] px-3 text-sm text-slate-200 outline-none placeholder:text-slate-500 focus:border-cyan-300/30"
+              />
+            </label>
+            <label>
+              <span className="mb-1 block text-xs text-slate-400">Cost per 1k tokens, USD (optional)</span>
+              <input
+                value={draft.cost_per_1k_tokens}
+                onChange={(event) => setDraft((current) => ({ ...current, cost_per_1k_tokens: event.target.value }))}
+                inputMode="decimal"
+                placeholder="e.g. 0.015"
                 className="h-10 w-full rounded-xl border border-white/8 bg-[#071426] px-3 text-sm text-slate-200 outline-none placeholder:text-slate-500 focus:border-cyan-300/30"
               />
             </label>
