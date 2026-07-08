@@ -2,7 +2,6 @@ import {
   AlertTriangle,
   ArrowRightLeft,
   Boxes,
-  Database,
   FileCode2,
   FolderGit2,
   LoaderCircle,
