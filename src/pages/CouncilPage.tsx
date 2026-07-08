@@ -232,7 +232,7 @@ export function CouncilPage() {
                           min={0}
                           max={1}
                           step={0.05}
-                          value={(candidate as Record<string, unknown>)[key] as number | undefined ?? ''}
+                          value={(candidate as unknown as Record<string, unknown>)[key] as number | undefined ?? ''}
                           onChange={(event) =>
                             updateCandidate(index, {
                               [key]: event.target.value === '' ? undefined : Number(event.target.value),
