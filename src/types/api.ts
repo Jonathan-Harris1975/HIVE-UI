@@ -636,12 +636,20 @@ export const MODEL_REGISTRY_CATEGORIES = [
 
 export type ModelRegistryCategory = (typeof MODEL_REGISTRY_CATEGORIES)[number]
 
+export const MODEL_REGISTRY_CONFIDENCE_LEVELS = ['measured', 'heuristic', 'unverified'] as const
+
+export type ModelRegistryConfidence = (typeof MODEL_REGISTRY_CONFIDENCE_LEVELS)[number]
+
 export interface ModelRegistryEntry {
   model_id: string
   score: number
   provider: string | null
   notes: string | null
   registered_at: number
+  benchmark_score: number | null
+  confidence: ModelRegistryConfidence
+  latency_ms: number | null
+  cost_per_1k_tokens: number | null
 }
 
 export interface ModelRegistryCategoriesResponse {
