@@ -350,7 +350,7 @@ export interface RepoHealthItem {
   label?: string
   category?: 'core_api' | 'frontend' | 'background_api' | 'background_worker' | 'static_service' | string
   description?: string
-  status: 'healthy' | 'degraded' | 'down' | 'not_configured' | string
+  status: 'healthy' | 'degraded' | 'down' | 'not_configured' | 'standby' | 'starting' | 'busy' | 'maintenance' | string
   detail?: string
   liveness?: RepoHealthProbe | null
   operational?: RepoHealthProbe | null
@@ -396,6 +396,8 @@ export interface RepoHealthResponse {
     degraded?: number
     down?: number
     not_configured?: number
+    standby?: number
+    starting?: number
   }
   repos?: RepoHealthItem[]
   note?: string
