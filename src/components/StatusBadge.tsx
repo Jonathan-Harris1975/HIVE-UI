@@ -14,6 +14,12 @@ function tone(status: string, variant?: StatusBadgeProps['variant']): string {
   const neutralStatuses = ['unknown', 'not_configured', 'not-configured', 'disabled', 'unavailable']
   if (neutralStatuses.includes(value)) return 'border-cyan-300/20 bg-cyan-300/8 text-cyan-200'
 
+  // Standby/Maintenance are intentional, not faults: a distinct violet tone keeps
+  // them visually separate from both "healthy" green and "fault" red/amber.
+  if (['standby', 'maintenance'].includes(value)) return 'border-violet-300/20 bg-violet-300/8 text-violet-200'
+  if (['starting'].includes(value)) return 'border-sky-300/20 bg-sky-300/8 text-sky-200'
+  if (['busy'].includes(value)) return 'border-amber-300/20 bg-amber-300/8 text-amber-200'
+
   if (variant === 'liveness') {
     if (['healthy', 'online', 'active', 'ok', 'ready'].includes(value)) return 'border-emerald-300/20 bg-emerald-300/8 text-emerald-200'
     if (['down', 'offline', 'failed', 'error'].includes(value)) return 'border-rose-300/20 bg-rose-300/8 text-rose-200'
@@ -52,6 +58,10 @@ function display(status: string, variant?: StatusBadgeProps['variant']): string 
   if (value === 'unknown') return 'Unknown'
   if (['disabled', 'unavailable'].includes(value)) return 'Disabled'
   if (['not_configured', 'not-configured'].includes(value)) return 'Not configured'
+  if (value === 'standby') return 'Standby'
+  if (value === 'maintenance') return 'Maintenance'
+  if (value === 'starting') return 'Starting'
+  if (value === 'busy') return 'Busy'
 
   if (variant === 'liveness') {
     if (['healthy', 'online', 'active', 'ok', 'ready'].includes(value)) return 'Online'
