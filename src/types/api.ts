@@ -666,3 +666,358 @@ export interface ModelRegistryMutationResponse {
   removed?: boolean
   persisted?: boolean
 }
+
+export interface RepositoryDependencyFinding {
+  manifest_path: string
+  ecosystem: string
+  declared: string[]
+}
+
+export interface RepositorySummary {
+  repository_id: string
+  source_filename: string
+  fingerprint: string
+  file_count: number
+  total_bytes: number
+  created_at: number
+  updated_at: number
+  indexed_version: number
+}
+
+export interface RepositoryManifest extends RepositorySummary {
+  languages: Record<string, number>
+  dependencies: RepositoryDependencyFinding[]
+}
+
+export interface RepositoryListResponse {
+  repositories: RepositorySummary[]
+}
+
+export interface RepositoryDiffResponse {
+  added: string[]
+  removed: string[]
+  changed: string[]
+}
+
+export interface RepositoryDeleteResponse {
+  repository_id: string
+  removed: boolean
+}
+
+export interface RepositoryCleanupResponse {
+  removed: string[]
+  removed_count: number
+}
+
+export interface RepositoryQaCheck {
+  name: string
+  status: 'ok' | 'warning' | 'skipped' | string
+  summary: string
+  details: Record<string, unknown>
+}
+
+export interface RepositoryQaReport {
+  repository_id: string
+  score: number
+  warning_count: number
+  checks: RepositoryQaCheck[]
+}
+
+export interface RepositoryCouncilDimensionScore {
+  dimension: string
+  score: number
+  rationale: string
+  confidence: 'measured' | 'heuristic' | string
+}
+
+export interface RepositoryCouncilReport {
+  repository_id: string
+  occurred_at: string
+  overall_score: number
+  dimensions: RepositoryCouncilDimensionScore[]
+  recommendations: string[]
+  heuristic_dimensions: string[]
+  has_unmeasured_signal: boolean
+}
+
+export interface RepositoryCouncilHistoryResponse {
+  repository_id: string
+  runs: RepositoryCouncilReport[]
+}
+
+export interface RepositoryLearningEntryResponse {
+  summary?: string
+  success?: boolean
+  files_changed?: string[]
+  pattern?: string
+  context?: string
+  recorded_at?: string
+  [key: string]: unknown
+}
+
+export interface RepositoryProjectDnaResponse {
+  patch_summary?: string
+  pattern_summary?: string
+  latest_qa_score?: number | null
+  latest_council_score?: number | null
+  [key: string]: unknown
+}
+
+export interface ConnectorReport {
+  name: string
+  configured: boolean
+  healthy: boolean
+  authenticated: boolean
+  capabilities: string[]
+  rate_limit: Record<string, unknown> | null
+  diagnostics: Record<string, unknown> | null
+  error: string | null
+}
+
+export interface ConnectorsResponse {
+  connectors: ConnectorReport[]
+}
+
+export interface BucketsResponse {
+  buckets: string[]
+}
+
+export interface AiCouncilPromotion {
+  category: string
+  model_id: string
+  score: number
+  provider: string
+}
+
+export interface AiCouncilRunReport {
+  run_id: string
+  occurred_at: string
+  providers_discovered: number
+  models_seen: number
+  new_models: string[]
+  retired_models: string[]
+  promotions: AiCouncilPromotion[]
+  weights_used: Record<string, number>
+}
+
+export interface AiCouncilHistoryResponse {
+  runs: AiCouncilRunReport[]
+}
+
+export interface BenchmarkMetricKeysResponse {
+  metric_keys: readonly string[]
+}
+
+export interface BenchmarkCandidateInput {
+  model_id: string
+  coding_benchmark?: number
+  reasoning_benchmark?: number
+  cost?: number
+  latency?: number
+  reliability?: number
+  long_context?: number
+  json_reliability?: number
+  structured_output?: number
+  community_maturity?: number
+  internal_historical_performance?: number
+}
+
+export interface BenchmarkRankResult {
+  model_id: string
+  score: number
+  confidence: number
+  metrics: Record<string, number>
+}
+
+export interface BenchmarkRankResponse {
+  ranking: BenchmarkRankResult[]
+}
+
+export interface ExecutionReviewSummary {
+  id: string
+  plan_id: string
+  status: string
+  task: string
+  repo: string | null
+  target: string
+  workflow_preset: string | null
+  requested_by: string | null
+  created_at: string | null
+  updated_at: string | null
+  requires_approval: boolean
+  can_execute_now: boolean
+  adapter_execution_enabled: boolean
+  execution_state: string
+  execution_mode: string
+  risk_level: string | null
+  skill_name: string | null
+  description: string | null
+  evidence_summary: string | null
+  decision_count: number
+}
+
+export interface ExecutionReviewListResponse {
+  ok: boolean
+  count: number
+  total_count: number
+  open_count: number
+  ready_count: number
+  closed_count: number
+  items: ExecutionReviewSummary[]
+  safety_note: string
+}
+
+export interface ExecutionReviewDetailResponse {
+  ok: boolean
+  error_code?: string
+  plan_id: string
+  review: Record<string, unknown>
+  safety_note: string
+}
+
+export interface ExecutionReviewCreateResponse {
+  ok: boolean
+  error_code?: string
+  message?: string
+  dry_run: boolean
+  plan_id: string
+  status: string
+  title: string
+  review: Record<string, unknown>
+  safety_note: string
+}
+
+export interface ExecutionReviewDecisionResponse {
+  ok: boolean
+  error_code?: string
+  allowed_decisions?: string[]
+  plan_id: string
+  decision: string
+  review: Record<string, unknown>
+  safety_note: string
+}
+
+export interface PolicyProfile {
+  label: string
+  can_execute_now: boolean
+  can_execute_after_approval: boolean
+  allows_repo_mutation: boolean
+  allows_r2_write: boolean
+  requires_human_approval: boolean
+  description: string
+}
+
+export interface PolicyProfilesResponse {
+  ok: boolean
+  count: number
+  profiles: Record<string, PolicyProfile>
+}
+
+export interface WorkflowSimulationResponse {
+  ok: boolean
+  error_code?: string
+  simulation_id?: string
+  preview_id?: string
+  task?: string
+  repo?: string | null
+  policy_profile?: string
+  policy?: PolicyProfile
+  execution_mode?: string
+  can_execute_now?: boolean
+  adapter_execution_enabled?: boolean
+  execution_state?: string
+  required_services?: string[]
+  affected_repos?: string[]
+  affected_buckets?: string[]
+  risk_summary?: Record<string, unknown>
+  estimated_cost?: Record<string, unknown>
+  missing_prerequisites?: string[]
+  rollback_notes?: string[]
+  workflow_graph?: WorkflowGraphResponse
+  next_required_actions?: string[]
+  safety_note?: string
+}
+
+export interface SavedExecutionPreviewSummary {
+  id: string
+  preview_id: string
+  task: string
+  repo: string | null
+  policy_profile: string | null
+  status: string
+  can_execute_now: boolean
+  created_at: string | null
+  updated_at: string | null
+}
+
+export interface ExecutionPreviewHistoryResponse {
+  ok: boolean
+  count: number
+  items: SavedExecutionPreviewSummary[]
+}
+
+export interface ExecutionPreviewDetailResponse {
+  ok: boolean
+  error_code?: string
+  preview: Record<string, unknown>
+}
+
+export interface ExecutionPreviewSaveResponse {
+  ok: boolean
+  error_code?: string
+  dry_run: boolean
+  preview_id: string
+  preview?: Record<string, unknown>
+  would_save?: Record<string, unknown>
+  can_execute_now: boolean
+  safety_note: string
+}
+
+export interface OptimisationDecision {
+  decision_id: string
+  decision_type: string
+  description: string
+  previous_state: unknown
+  new_state: unknown
+  confidence: number
+  status: 'applied' | 'reverted' | string
+  created_at: string
+  reverted_at: string | null
+}
+
+export interface OptimisationExperiment {
+  experiment_id: string
+  name: string
+  hypothesis: string
+  outcome: string
+  success: boolean
+  created_at: string
+}
+
+export interface OptimisationDecisionsResponse {
+  decisions: OptimisationDecision[]
+}
+
+export interface OptimisationExperimentsResponse {
+  experiments: OptimisationExperiment[]
+}
+
+export interface OptimisationStatsResponse {
+  decision_count: number
+  applied_count: number
+  reverted_count: number
+  rollback_rate: number
+  experiment_count: number
+  experiment_success_rate: number
+}
+
+export interface EnvironmentAuditResponse {
+  env_example_path: string
+  env_example_found: boolean
+  total_settings_fields: number
+  documented_field_count: number
+  undocumented_field_count: number
+  undocumented_fields: { field: string; expected_env_names: string[] }[]
+  extra_in_env_example: string[]
+  coverage_ratio: number
+}
