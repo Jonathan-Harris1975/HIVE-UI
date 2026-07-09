@@ -1029,3 +1029,31 @@ export interface EnvironmentAuditResponse {
   extra_in_env_example: string[]
   coverage_ratio: number
 }
+
+export interface RuntimeStatsResponse {
+  ok: boolean
+  build?: string
+  sampled_at?: number
+  repository_manager?: {
+    registered_count: number
+    latest_updated_at?: number | null
+  }
+  model_registry?: {
+    total_models: number
+    categories_populated: string[]
+    default_coding_model?: string | null
+  }
+  providers?: {
+    count: number
+    names: string[]
+  }
+  storage?: {
+    sql?: { enabled: boolean; dialect?: string | null }
+    d1?: { enabled: boolean }
+    r2?: { enabled: boolean; write_enabled: boolean; bucket?: string | null }
+  }
+  ops_events?: {
+    ingest_enabled: boolean
+    memory_limit: number
+  }
+}
