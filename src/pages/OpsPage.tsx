@@ -35,6 +35,7 @@ import type {
   RepoHealthItem,
   RepoHealthResponse,
   RepoHygieneResponse,
+  RuntimeStatsResponse,
   WorkflowGraphResponse,
   WorkflowNode,
   WorkflowTemplate,
@@ -339,6 +340,7 @@ export function OpsPage() {
   const [hygiene, setHygiene] = useState<RepoHygieneResponse | null>(null)
   const [repoHealth, setRepoHealth] = useState<RepoHealthResponse | null>(null)
   const [opsEvents, setOpsEvents] = useState<OpsEventsResponse | null>(null)
+  const [runtimeStats, setRuntimeStats] = useState<RuntimeStatsResponse | null>(null)
   const [templates, setTemplates] = useState<Record<string, WorkflowTemplate>>({})
   const [reviews, setReviews] = useState<ExecutionReviewItem[]>([])
   const [openReviewCount, setOpenReviewCount] = useState(0)
@@ -363,18 +365,20 @@ export function OpsPage() {
     setLoading(true)
     setError(null)
     try {
-      const [healthResult, hygieneResult, templateResult, reviewResult, repoHealthResult, opsEventsResult] = await Promise.all([
+      const [healthResult, hygieneResult, templateResult, reviewResult, repoHealthResult, opsEventsResult, runtimeStatsResult] = await Promise.all([
         apiFetch<HealthResponse>('/health'),
         apiFetch<RepoHygieneResponse>('/v1/system/repo-hygiene?include_hashes=false&max_files=5000'),
         apiFetch<WorkflowTemplatesResponse>('/v1/workflow-graphs/templates'),
         apiFetch<ExecutionReviewsResponse>('/v1/execution-reviews?limit=50'),
         apiFetch<RepoHealthResponse>(`/v1/system/repo-health?force_refresh=${forceRepoHealth}`).catch(() => null),
         apiFetch<OpsEventsResponse>('/v1/system/ops-events?limit=30').catch(() => null),
+        apiFetch<RuntimeStatsResponse>('/v1/system/runtime-stats').catch(() => null),
       ])
       setHealth(healthResult)
       setHygiene(hygieneResult)
       setRepoHealth(repoHealthResult)
       setOpsEvents(opsEventsResult)
+      setRuntimeStats(runtimeStatsResult)
       const activeReviews = (reviewResult.items ?? []).filter(isOpenReview)
       setTemplates(templateResult.templates ?? {})
       setReviews(activeReviews)
@@ -712,6 +716,31 @@ export function OpsPage() {
                 <h3 className="mt-1 text-xs font-medium uppercase tracking-[0.14em] text-slate-400">Open reviews</h3>
               </button>
             </section>
+
+            {runtimeStats && (
+              <section className="mt-5 grid grid-cols-2 gap-3 sm:grid-cols-4">
+                <button type="button" onClick={() => inspect('Runtime stats', runtimeStats, 'Live runtime values from the HIVE backend.')} className="rounded-2xl border border-white/8 bg-[#0a192d]/70 p-4 text-left transition hover:border-cyan-300/20 hover:bg-[#0d2038]">
+                  <Database className="h-4 w-4 text-cyan-300" />
+                  <p className="mt-3 text-xl font-semibold text-white">{runtimeStats.repository_manager?.registered_count ?? 0}</p>
+                  <h3 className="mt-0.5 text-[11px] font-medium uppercase tracking-[0.14em] text-slate-400">Repos registered</h3>
+                </button>
+                <button type="button" onClick={() => inspect('Model Registry', runtimeStats.model_registry, 'Live model registry state.')} className="rounded-2xl border border-white/8 bg-[#0a192d]/70 p-4 text-left transition hover:border-cyan-300/20 hover:bg-[#0d2038]">
+                  <Sparkles className="h-4 w-4 text-emerald-300" />
+                  <p className="mt-3 text-xl font-semibold text-white">{runtimeStats.model_registry?.total_models ?? 0}</p>
+                  <h3 className="mt-0.5 text-[11px] font-medium uppercase tracking-[0.14em] text-slate-400">Registered models</h3>
+                </button>
+                <button type="button" onClick={() => inspect('Providers', runtimeStats.providers, 'Configured AI providers.')} className="rounded-2xl border border-white/8 bg-[#0a192d]/70 p-4 text-left transition hover:border-cyan-300/20 hover:bg-[#0d2038]">
+                  <Network className="h-4 w-4 text-violet-300" />
+                  <p className="mt-3 text-xl font-semibold text-white">{runtimeStats.providers?.count ?? 0}</p>
+                  <h3 className="mt-0.5 text-[11px] font-medium uppercase tracking-[0.14em] text-slate-400">Active providers</h3>
+                </button>
+                <button type="button" onClick={() => inspect('Default coding model', { model: runtimeStats.model_registry?.default_coding_model }, 'AI Council top-ranked coding model.')} className="rounded-2xl border border-white/8 bg-[#0a192d]/70 p-4 text-left transition hover:border-cyan-300/20 hover:bg-[#0d2038]">
+                  <Activity className="h-4 w-4 text-amber-300" />
+                  <p className="mt-3 truncate text-sm font-semibold text-white" title={runtimeStats.model_registry?.default_coding_model ?? 'None'}>{runtimeStats.model_registry?.default_coding_model ?? '—'}</p>
+                  <h3 className="mt-0.5 text-[11px] font-medium uppercase tracking-[0.14em] text-slate-400">Default coding model</h3>
+                </button>
+              </section>
+            )}
 
             <section className="mt-5 rounded-3xl border border-white/8 bg-[#0a192d]/70 p-5 sm:p-6">
               <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
