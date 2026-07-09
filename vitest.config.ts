@@ -23,6 +23,15 @@ export default defineConfig({
       reporter: ['text', 'lcov'],
       include: ['src/**/*.{ts,tsx}'],
       exclude: ['src/main.tsx', 'src/**/*.d.ts', 'src/test/**'],
+      // RC1 fix — Audit Finding #5: enforce a coverage floor that fails CI
+      // when coverage drops below the agreed threshold (mirrors HIVE backend's
+      // --cov-fail-under=72).  All four axes must pass to keep the gate clean.
+      thresholds: {
+        lines: 72,
+        branches: 72,
+        functions: 72,
+        statements: 72,
+      },
     },
   },
 })
