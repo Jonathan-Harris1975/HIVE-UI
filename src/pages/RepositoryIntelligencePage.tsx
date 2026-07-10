@@ -12,6 +12,7 @@ import {
   RefreshCcw,
   ShieldAlert,
   Sparkles,
+  Star,
   Wand2,
   XCircle,
 } from 'lucide-react'
@@ -21,6 +22,7 @@ import { EmptyState } from '../components/EmptyState'
 import { StatusBadge } from '../components/StatusBadge'
 import { apiFetch } from '../lib/api'
 import { formatDate } from '../lib/format'
+import { MODEL_REGISTRY_CATEGORIES } from '../types/api'
 import type {
   RepositoryCouncilHistoryResponse,
   RepositoryCouncilReport,
@@ -70,6 +72,10 @@ export function RepositoryIntelligencePage() {
   const [patternText, setPatternText] = useState('')
   const [patternContext, setPatternContext] = useState('')
   const [patternSaving, setPatternSaving] = useState(false)
+  const [preferredCategory, setPreferredCategory] = useState<string>(MODEL_REGISTRY_CATEGORIES[0])
+  const [preferredModelId, setPreferredModelId] = useState('')
+  const [preferredReason, setPreferredReason] = useState('')
+  const [preferredSaving, setPreferredSaving] = useState(false)
 
   const loadCouncilHistory = useCallback(async (repo: string) => {
     setCouncilHistoryLoading(true)
@@ -215,6 +221,34 @@ export function RepositoryIntelligencePage() {
       setError(caught instanceof Error ? caught.message : 'Coding pattern could not be recorded.')
     } finally {
       setPatternSaving(false)
+    }
+  }
+
+  async function submitPreferredModel(event: FormEvent) {
+    event.preventDefault()
+    if (!preferredModelId.trim()) return
+    setPreferredSaving(true)
+    setError(null)
+    setNotice(null)
+    try {
+      await apiFetch<RepositoryLearningEntryResponse>(
+        `/v1/repositories/${encodeURIComponent(repositoryId)}/learning/preferred-model`,
+        {
+          method: 'POST',
+          body: JSON.stringify({
+            category: preferredCategory,
+            model_id: preferredModelId.trim(),
+            reason: preferredReason.trim(),
+          }),
+        },
+      )
+      setNotice(`Preferred model recorded for ${repositoryId}: ${preferredModelId.trim()} (${preferredCategory}).`)
+      setPreferredModelId('')
+      setPreferredReason('')
+    } catch (caught) {
+      setError(caught instanceof Error ? caught.message : 'Preferred model could not be recorded.')
+    } finally {
+      setPreferredSaving(false)
     }
   }
 
@@ -447,7 +481,7 @@ export function RepositoryIntelligencePage() {
             </div>
           )}
 
-          <div className="mt-4 grid gap-4 lg:grid-cols-2">
+          <div className="mt-4 grid gap-4 lg:grid-cols-3">
             <form onSubmit={submitPatchOutcome} className="rounded-2xl border border-white/8 bg-white/[0.02] p-4">
               <h4 className="flex items-center gap-1.5 text-xs font-semibold text-slate-200"><BadgeCheck className="h-3.5 w-3.5" /> Record patch outcome</h4>
               <textarea
@@ -500,6 +534,45 @@ export function RepositoryIntelligencePage() {
                   className="flex h-8 items-center gap-1.5 rounded-lg border border-cyan-300/20 bg-cyan-300/10 px-3 text-xs text-cyan-100 disabled:opacity-50"
                 >
                   {patternSaving ? <LoaderCircle className="h-3.5 w-3.5 animate-spin" /> : <BookMarked className="h-3.5 w-3.5" />} Record
+                </button>
+              </div>
+            </form>
+
+            <form onSubmit={submitPreferredModel} className="rounded-2xl border border-white/8 bg-white/[0.02] p-4">
+              <h4 className="flex items-center gap-1.5 text-xs font-semibold text-slate-200"><Star className="h-3.5 w-3.5" /> Record preferred model</h4>
+              <p className="mt-1 text-[11px] leading-4 text-slate-500">
+                Captures this repository's observed model preference as a learned pattern. Doesn't change the global
+                Model Registry ranking — see the Model Registry page for that.
+              </p>
+              <select
+                value={preferredCategory}
+                onChange={(event) => setPreferredCategory(event.target.value)}
+                className="mt-2 h-9 w-full rounded-lg border border-white/8 bg-[#071426] px-3 text-xs text-slate-100 outline-none focus:border-cyan-300/30"
+              >
+                {MODEL_REGISTRY_CATEGORIES.map((item) => (
+                  <option key={item} value={item}>{item.replace(/_/g, ' ')}</option>
+                ))}
+              </select>
+              <input
+                value={preferredModelId}
+                onChange={(event) => setPreferredModelId(event.target.value)}
+                placeholder="Model id (e.g. anthropic/claude-sonnet-5)"
+                className="mt-2 h-9 w-full rounded-lg border border-white/8 bg-[#071426] px-3 text-xs text-slate-100 outline-none placeholder:text-slate-500 focus:border-cyan-300/30"
+              />
+              <textarea
+                value={preferredReason}
+                onChange={(event) => setPreferredReason(event.target.value)}
+                placeholder="Why this model works well here (optional)"
+                rows={2}
+                className="mt-2 w-full resize-none rounded-lg border border-white/8 bg-[#071426] px-3 py-2 text-xs text-slate-100 outline-none placeholder:text-slate-500 focus:border-cyan-300/30"
+              />
+              <div className="mt-2 flex justify-end">
+                <button
+                  type="submit"
+                  disabled={preferredSaving || !preferredModelId.trim()}
+                  className="flex h-8 items-center gap-1.5 rounded-lg border border-cyan-300/20 bg-cyan-300/10 px-3 text-xs text-cyan-100 disabled:opacity-50"
+                >
+                  {preferredSaving ? <LoaderCircle className="h-3.5 w-3.5 animate-spin" /> : <Star className="h-3.5 w-3.5" />} Record
                 </button>
               </div>
             </form>
