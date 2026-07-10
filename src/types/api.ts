@@ -690,6 +690,10 @@ export interface RepositorySummary {
   created_at: number
   updated_at: number
   indexed_version: number
+  /** True if this repository was rehydrated from an R2 manifest after a backend
+   * restart and has no local working copy. Reindex/diff will fail until the
+   * repository is re-uploaded. */
+  rehydrated?: boolean
 }
 
 export interface RepositoryManifest extends RepositorySummary {
