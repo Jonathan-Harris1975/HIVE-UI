@@ -312,8 +312,18 @@ export function RepositoriesPage() {
                         <h4 className="truncate text-sm font-semibold text-white">{repo.repository_id}</h4>
                         <p className="mt-0.5 truncate text-xs text-slate-400">{repo.source_filename}</p>
                       </button>
-                      <StatusBadge status="active" compact />
+                      {repo.rehydrated ? (
+                        <StatusBadge status="degraded" label="Re-upload required" compact />
+                      ) : (
+                        <StatusBadge status="active" compact />
+                      )}
                     </div>
+                    {repo.rehydrated && (
+                      <p className="mt-2 rounded-lg border border-amber-300/20 bg-amber-300/[0.06] px-2.5 py-1.5 text-[11px] text-amber-200">
+                        This repository's indexed metadata was restored after a restart, but its working copy
+                        was not. Re-upload it to enable reindex or diff.
+                      </p>
+                    )}
                     <div className="mt-3 flex flex-wrap items-center gap-2 text-[11px] text-slate-400">
                       <span className="rounded-full border border-white/10 px-2 py-0.5">{repo.file_count} files</span>
                       <span className="rounded-full border border-white/10 px-2 py-0.5">{formatBytes(repo.total_bytes)}</span>
@@ -333,15 +343,18 @@ export function RepositoriesPage() {
                       <button
                         type="button"
                         onClick={() => void runDiff(repo.repository_id)}
-                        className="flex h-8 items-center gap-1.5 rounded-lg border border-white/8 bg-white/[0.04] px-3 text-xs text-slate-300 hover:bg-white/[0.07]"
+                        disabled={repo.rehydrated}
+                        title={repo.rehydrated ? 'Re-upload required: no working copy to diff against.' : undefined}
+                        className="flex h-8 items-center gap-1.5 rounded-lg border border-white/8 bg-white/[0.04] px-3 text-xs text-slate-300 hover:bg-white/[0.07] disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:bg-white/[0.04]"
                       >
                         <ArrowRightLeft className="h-3.5 w-3.5" /> Diff
                       </button>
                       <button
                         type="button"
                         onClick={() => void runReindex(repo.repository_id)}
-                        disabled={reindexingId === repo.repository_id}
-                        className="flex h-8 items-center gap-1.5 rounded-lg border border-cyan-300/20 bg-cyan-300/10 px-3 text-xs text-cyan-100 disabled:opacity-50"
+                        disabled={reindexingId === repo.repository_id || repo.rehydrated}
+                        title={repo.rehydrated ? 'Re-upload required: no working copy to reindex.' : undefined}
+                        className="flex h-8 items-center gap-1.5 rounded-lg border border-cyan-300/20 bg-cyan-300/10 px-3 text-xs text-cyan-100 disabled:cursor-not-allowed disabled:opacity-50"
                       >
                         {reindexingId === repo.repository_id ? (
                           <LoaderCircle className="h-3.5 w-3.5 animate-spin" />
