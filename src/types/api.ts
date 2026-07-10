@@ -757,6 +757,42 @@ export interface RepositoryCouncilHistoryResponse {
   runs: RepositoryCouncilReport[]
 }
 
+export interface ProvidersResponse {
+  providers: string[]
+  count: number
+}
+
+export interface ProviderHealthEntry {
+  provider: string
+  ok: boolean
+  latency_ms: number | null
+  model_count: number | null
+  error: string | null
+}
+
+export interface ProvidersHealthResponse {
+  provider_count: number
+  providers: ProviderHealthEntry[]
+}
+
+export interface ProviderModel {
+  model_id: string
+  name: string
+  context_length: number | null
+  pricing_prompt: number | null
+  pricing_completion: number | null
+  supports_tools: boolean
+  supports_structured_output: boolean
+  input_modalities: string[]
+  output_modalities: string[]
+}
+
+export interface ProviderModelsResponse {
+  provider: string
+  model_count: number
+  models: ProviderModel[]
+}
+
 export interface RepositoryLearningEntryResponse {
   summary?: string
   success?: boolean
