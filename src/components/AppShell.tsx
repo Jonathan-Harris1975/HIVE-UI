@@ -80,16 +80,19 @@ function ConversationSection({ closeMobile }: { closeMobile?: () => void }) {
   const {
     conversations,
     conversationsLoading,
+    conversationsError,
     currentConversationId,
     openConversation,
     newConversation,
     renameConversation,
     deleteConversation,
+    refreshConversations,
   } = useChat()
   const [query, setQuery] = useState('')
   const [pendingDialog, setPendingDialog] = useState<PendingConversationDialog | null>(null)
   const [renameValue, setRenameValue] = useState('')
   const [dialogBusy, setDialogBusy] = useState(false)
+  const [dialogError, setDialogError] = useState<string | null>(null)
 
   const filtered = useMemo(() => {
     const needle = query.trim().toLowerCase()
@@ -113,16 +116,19 @@ function ConversationSection({ closeMobile }: { closeMobile?: () => void }) {
 
   function openRename(id: string, existingTitle: string) {
     setRenameValue(existingTitle)
+    setDialogError(null)
     setPendingDialog({ type: 'rename', id, title: existingTitle })
   }
 
   function openDelete(id: string, title: string) {
+    setDialogError(null)
     setPendingDialog({ type: 'delete', id, title })
   }
 
   async function confirmDialog() {
     if (!pendingDialog) return
     setDialogBusy(true)
+    setDialogError(null)
     try {
       if (pendingDialog.type === 'rename') {
         const cleanTitle = renameValue.trim()
@@ -131,6 +137,8 @@ function ConversationSection({ closeMobile }: { closeMobile?: () => void }) {
         await deleteConversation(pendingDialog.id)
       }
       setPendingDialog(null)
+    } catch (caught) {
+      setDialogError(caught instanceof Error ? caught.message : 'The request could not be completed.')
     } finally {
       setDialogBusy(false)
     }
@@ -166,7 +174,14 @@ function ConversationSection({ closeMobile }: { closeMobile?: () => void }) {
             {[0, 1, 2].map((item) => <div key={item} className="h-14 animate-pulse rounded-xl bg-white/5" />)}
           </div>
         )}
-        {!conversationsLoading && !filtered.length && (
+        {!conversationsLoading && conversationsError && !conversations.length && (
+          <EmptyState
+            title="Conversations could not be loaded."
+            body={conversationsError}
+            action={{ label: 'Retry', onClick: () => void refreshConversations().catch(() => undefined) }}
+          />
+        )}
+        {!conversationsLoading && !conversationsError && !filtered.length && (
           <EmptyState title={noResultsTitle} body={query.trim() ? 'The sidebar filter is hiding every stored conversation.' : 'Start a clean HIVE thread and it will appear here once persisted.'} action={noResultsAction} />
         )}
         {filtered.map((conversation) => {
@@ -228,9 +243,13 @@ function ConversationSection({ closeMobile }: { closeMobile?: () => void }) {
         tone={pendingDialog?.type === 'delete' ? 'destructive' : 'default'}
         busy={dialogBusy}
         confirmDisabled={pendingDialog?.type === 'rename' ? !renameValue.trim() : false}
+        error={dialogError}
         textInput={pendingDialog?.type === 'rename' ? { label: 'Conversation title', value: renameValue, onChange: setRenameValue, required: true } : undefined}
         onConfirm={() => void confirmDialog()}
-        onCancel={() => setPendingDialog(null)}
+        onCancel={() => {
+          setDialogError(null)
+          setPendingDialog(null)
+        }}
       />
     </div>
   )

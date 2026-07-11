@@ -28,6 +28,7 @@ interface ConfirmDialogProps {
   tone?: 'default' | 'destructive'
   busy?: boolean
   confirmDisabled?: boolean
+  error?: string | null
   children?: ReactNode
   textInput?: ConfirmDialogTextInput
   onConfirm: () => void
@@ -53,6 +54,7 @@ export function ConfirmDialog({
   tone = 'default',
   busy = false,
   confirmDisabled = false,
+  error = null,
   children,
   textInput,
   onConfirm,
@@ -167,6 +169,10 @@ export function ConfirmDialog({
               />
             )}
           </label>
+        )}
+
+        {error && (
+          <p className="mt-4 rounded-xl border border-rose-400/20 bg-rose-400/8 px-3 py-2.5 text-xs text-rose-200">{error}</p>
         )}
 
         <div className="mt-6 flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
