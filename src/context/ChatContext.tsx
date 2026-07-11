@@ -18,6 +18,7 @@ import type {
 interface ChatContextValue {
   conversations: ConversationSummary[]
   conversationsLoading: boolean
+  conversationsError: string | null
   currentConversationId: string | null
   messages: UiMessage[]
   conversationLoading: boolean
@@ -36,6 +37,7 @@ const ChatContext = createContext<ChatContextValue | null>(null)
 export function ChatProvider({ children }: { children: ReactNode }) {
   const [conversations, setConversations] = useState<ConversationSummary[]>([])
   const [conversationsLoading, setConversationsLoading] = useState(false)
+  const [conversationsError, setConversationsError] = useState<string | null>(null)
   const [currentConversationId, setCurrentConversationId] = useState<string | null>(null)
   const [messages, setMessages] = useState<UiMessage[]>([])
   const [conversationLoading, setConversationLoading] = useState(false)
@@ -46,6 +48,10 @@ export function ChatProvider({ children }: { children: ReactNode }) {
       const response = await apiFetch<ConversationListResponse>('/v1/chat/conversations?limit=100')
       if (!response.ok) throw new Error(response.error || 'Conversation storage is unavailable.')
       setConversations(response.conversations ?? [])
+      setConversationsError(null)
+    } catch (caught) {
+      setConversationsError(caught instanceof Error ? caught.message : 'Conversations could not be loaded.')
+      throw caught
     } finally {
       setConversationsLoading(false)
     }
@@ -97,6 +103,7 @@ export function ChatProvider({ children }: { children: ReactNode }) {
   const value = useMemo<ChatContextValue>(() => ({
     conversations,
     conversationsLoading,
+    conversationsError,
     currentConversationId,
     messages,
     conversationLoading,
@@ -111,6 +118,7 @@ export function ChatProvider({ children }: { children: ReactNode }) {
   }), [
     conversations,
     conversationsLoading,
+    conversationsError,
     currentConversationId,
     messages,
     conversationLoading,
