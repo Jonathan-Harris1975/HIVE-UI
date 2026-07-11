@@ -382,6 +382,7 @@ export interface OpsEventsResponse {
   persistent_store_error?: string | null
   count?: number
   items?: OpsEventItem[]
+  error?: string
 }
 
 export interface RepoHealthResponse {
