@@ -53,8 +53,9 @@ export function ExecutionSimulationPage() {
     try {
       const response = await apiFetch<ExecutionPreviewHistoryResponse>('/v1/execution-preview/history')
       setHistory(response.items ?? [])
-    } catch {
+    } catch (caught) {
       setHistory([])
+      setError(caught instanceof Error ? caught.message : 'Execution preview history could not be loaded.')
     } finally {
       setHistoryLoading(false)
     }

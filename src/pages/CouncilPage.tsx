@@ -49,8 +49,9 @@ export function CouncilPage() {
     try {
       const response = await apiFetch<AiCouncilHistoryResponse>('/v1/ai-council/history?limit=20')
       setHistory(response.runs ?? [])
-    } catch {
+    } catch (caught) {
       setHistory([])
+      setError(caught instanceof Error ? caught.message : 'Council history could not be loaded.')
     } finally {
       setHistoryLoading(false)
     }

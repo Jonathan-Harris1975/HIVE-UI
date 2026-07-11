@@ -370,8 +370,19 @@ export function OpsPage() {
         apiFetch<RepoHygieneResponse>('/v1/system/repo-hygiene?include_hashes=false&max_files=5000'),
         apiFetch<WorkflowTemplatesResponse>('/v1/workflow-graphs/templates'),
         apiFetch<ExecutionReviewsResponse>('/v1/execution-reviews?limit=50'),
-        apiFetch<RepoHealthResponse>(`/v1/system/repo-health?force_refresh=${forceRepoHealth}`).catch(() => null),
-        apiFetch<OpsEventsResponse>('/v1/system/ops-events?limit=30').catch(() => null),
+        apiFetch<RepoHealthResponse>(`/v1/system/repo-health?force_refresh=${forceRepoHealth}`).catch(
+          (caught): RepoHealthResponse => ({
+            ok: false,
+            overall_status: 'error',
+            error: caught instanceof Error ? caught.message : 'Repo health could not be loaded.',
+          }),
+        ),
+        apiFetch<OpsEventsResponse>('/v1/system/ops-events?limit=30').catch(
+          (caught): OpsEventsResponse => ({
+            ok: false,
+            error: caught instanceof Error ? caught.message : 'Ops events could not be loaded.',
+          }),
+        ),
         apiFetch<RuntimeStatsResponse>('/v1/system/runtime-stats').catch(() => null),
       ])
       setHealth(healthResult)
@@ -677,7 +688,19 @@ export function OpsPage() {
                   <h3 className="text-base font-semibold text-white">Operational alerts</h3>
                   <p className="mt-1 text-xs text-slate-400">Central, redacted events from runtime services and deployment watchers.</p>
                 </div>
-                <StatusBadge status={(opsEvents?.items?.some((item) => item.severity === 'critical') ? 'critical' : opsEvents?.items?.length ? 'warning' : 'healthy')} label={`${opsEvents?.count ?? 0} events`} compact />
+                <StatusBadge
+                  status={
+                    opsEvents?.error
+                      ? 'error'
+                      : opsEvents?.items?.some((item) => item.severity === 'critical')
+                        ? 'critical'
+                        : opsEvents?.items?.length
+                          ? 'warning'
+                          : 'healthy'
+                  }
+                  label={opsEvents?.error ? 'unavailable' : `${opsEvents?.count ?? 0} events`}
+                  compact
+                />
               </div>
               {opsEvents?.items?.length ? (
                 <div className="mt-4 grid gap-2 lg:grid-cols-2">
@@ -740,6 +763,9 @@ export function OpsPage() {
                   <h3 className="mt-0.5 text-[11px] font-medium uppercase tracking-[0.14em] text-slate-400">Default coding model</h3>
                 </button>
               </section>
+            )}
+            {!runtimeStats && !loading && (
+              <p className="mt-5 text-xs text-amber-200/80">Runtime statistics could not be loaded from the backend.</p>
             )}
 
             <section className="mt-5 rounded-3xl border border-white/8 bg-[#0a192d]/70 p-5 sm:p-6">

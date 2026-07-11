@@ -84,8 +84,9 @@ export function RepositoryIntelligencePage() {
         `/v1/repositories/${encodeURIComponent(repo)}/council/history`,
       )
       setCouncilHistory(response.runs ?? [])
-    } catch {
+    } catch (caught) {
       setCouncilHistory([])
+      setError(caught instanceof Error ? caught.message : 'Repository Council history could not be loaded.')
     } finally {
       setCouncilHistoryLoading(false)
     }

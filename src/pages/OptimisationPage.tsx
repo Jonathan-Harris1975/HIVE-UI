@@ -64,8 +64,9 @@ export function OptimisationPage() {
     try {
       const response = await apiFetch<EnvironmentAuditResponse>('/v1/environment/audit')
       setAudit(response)
-    } catch {
+    } catch (caught) {
       setAudit(null)
+      setError(caught instanceof Error ? caught.message : 'Environment audit could not be loaded.')
     } finally {
       setAuditLoading(false)
     }
