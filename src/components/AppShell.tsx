@@ -1,6 +1,7 @@
 import {
   Activity,
   BrainCircuit,
+  CalendarClock,
   Check,
   ClipboardList,
   Copy,
@@ -49,6 +50,7 @@ const navigation = [
   { to: '/execution-reviews', label: 'Reviews', icon: ClipboardList },
   { to: '/execution-simulation', label: 'Simulation', icon: PlayCircle },
   { to: '/optimisation', label: 'Optimisation', icon: SlidersHorizontal },
+  { to: '/monthly-review', label: 'Monthly Review', icon: CalendarClock },
   { to: '/models', label: 'Models', icon: Cpu },
   { to: '/ops', label: 'Ops', icon: Activity },
 ]
@@ -65,6 +67,7 @@ const pageMeta: Record<string, { title: string; subtitle: string }> = {
   '/execution-reviews': { title: 'Execution Reviews', subtitle: 'Approval-gated execution plans, audit trails and evidence packs' },
   '/execution-simulation': { title: 'Execution Simulation', subtitle: 'Pretend-mode workflow simulation, saved previews and policy profiles' },
   '/optimisation': { title: 'Optimisation', subtitle: 'Decision ledger, experiments and environment variable coverage' },
+  '/monthly-review': { title: 'Monthly Review', subtitle: 'Consolidated system, AI, cost and governance report per month' },
   '/models': { title: 'Models', subtitle: 'Ranked model registry that drives routing defaults' },
   '/ops': { title: 'Operations', subtitle: 'Health, workflow previews and review gates' },
 }
