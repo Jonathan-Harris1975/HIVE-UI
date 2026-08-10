@@ -105,6 +105,8 @@ export function ModelRegistryPage() {
   const [category, setCategory] = useState<string>(MODEL_REGISTRY_CATEGORIES[0])
   const [models, setModels] = useState<ModelRegistryEntry[]>([])
   const [defaultModel, setDefaultModel] = useState<string | null>(null)
+  const [qualityFloor, setQualityFloor] = useState<number>(0.72)
+  const [hiddenLowScoreCount, setHiddenLowScoreCount] = useState(0)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [notice, setNotice] = useState<string | null>(null)
@@ -130,10 +132,13 @@ export function ModelRegistryPage() {
       )
       setModels(response.models ?? [])
       setDefaultModel(response.default_model ?? null)
+      setQualityFloor(response.min_visible_score ?? 0.72)
+      setHiddenLowScoreCount(response.hidden_low_score_count ?? 0)
     } catch (caught) {
       setError(caught instanceof Error ? caught.message : 'Model Registry could not be loaded.')
       setModels([])
       setDefaultModel(null)
+      setHiddenLowScoreCount(0)
     } finally {
       setLoading(false)
     }
@@ -311,8 +316,11 @@ export function ModelRegistryPage() {
               <p className="text-xs font-semibold uppercase tracking-[0.2em] text-cyan-300/70">Model registry</p>
               <h2 className="mt-2 text-2xl font-semibold text-white">Ranked models per task category</h2>
               <p className="mt-2 max-w-2xl text-sm leading-6 text-slate-400">
-                The highest-scored model in a category becomes its default for routing. Registrations are mirrored
-                into the HIVE D1 metadata store so rankings survive a process restart.
+                Only models clearing the quality floor are shown or eligible for automatic routing. The monthly AI
+                Council refreshes benchmark evidence and persists qualified rankings in D1.
+              </p>
+              <p className="mt-2 text-[11px] text-slate-500">
+                Quality floor {(qualityFloor * 100).toFixed(0)}%{hiddenLowScoreCount > 0 ? ` · ${hiddenLowScoreCount} lower-ranked model${hiddenLowScoreCount === 1 ? '' : 's'} hidden` : ''}
               </p>
             </div>
             <button
@@ -433,7 +441,13 @@ export function ModelRegistryPage() {
           </div>
         </section>
 
-        <section className="mt-4 rounded-3xl border border-white/8 bg-[#0a192d]/60 p-5 sm:p-7">
+        <details className="group mt-4 border-t border-white/8 pt-4">
+          <summary className="flex cursor-pointer list-none items-center justify-between py-2 text-xs font-medium text-slate-400 hover:text-slate-200">
+            <span>Advanced model management</span>
+            <ChevronDown className="h-4 w-4 transition-transform group-open:rotate-180" />
+          </summary>
+
+        <section className="mt-3 border-b border-white/8 pb-5">
           <div className="flex flex-wrap items-center justify-between gap-3">
             <div className="flex items-center gap-2">
               <Radio className="h-4 w-4 text-cyan-300" />
@@ -530,7 +544,7 @@ export function ModelRegistryPage() {
           )}
         </section>
 
-        <section className="mt-4 rounded-3xl border border-white/8 bg-[#0a192d]/60 p-5 sm:p-7">
+        <section className="mt-4 pb-2">
           <div className="flex items-center gap-2">
             <Sparkles className="h-4 w-4 text-cyan-300" />
             <h3 className="text-sm font-semibold text-slate-100">Register a model in {categoryLabel(category)}</h3>
@@ -628,6 +642,7 @@ export function ModelRegistryPage() {
             </button>
           </form>
         </section>
+        </details>
       </div>
     </div>
   )
