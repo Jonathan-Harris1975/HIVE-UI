@@ -3,6 +3,7 @@ import {
   BrainCircuit,
   CalendarClock,
   Check,
+  ChevronDown,
   ClipboardList,
   Copy,
   Cpu,
@@ -38,22 +39,48 @@ import { EmptyState } from './EmptyState'
 import { HiveLogo } from './HiveLogo'
 
 // Header overflow strategy: keep only two mobile-visible actions in HeaderActions. A future third action should move into a HeaderActionsSheet bottom sheet triggered by MoreHorizontal.
-const navigation = [
-  { to: '/chat', label: 'Chat', icon: MessageSquareText },
-  { to: '/files', label: 'Files', icon: Files },
-  { to: '/skills', label: 'Skills', icon: BrainCircuit },
-  { to: '/memory', label: 'Memory', icon: Database },
-  { to: '/repositories', label: 'Repositories', icon: FolderGit2 },
-  { to: '/intelligence', label: 'Intelligence', icon: Gavel },
-  { to: '/integrations', label: 'Integrations', icon: Plug },
-  { to: '/council', label: 'Council', icon: Gauge },
-  { to: '/execution-reviews', label: 'Reviews', icon: ClipboardList },
-  { to: '/execution-simulation', label: 'Simulation', icon: PlayCircle },
-  { to: '/optimisation', label: 'Optimisation', icon: SlidersHorizontal },
-  { to: '/monthly-review', label: 'Monthly Review', icon: CalendarClock },
-  { to: '/models', label: 'Models', icon: Cpu },
-  { to: '/ops', label: 'Ops', icon: Activity },
+const navigationGroups = [
+  {
+    id: 'workspace',
+    label: 'Workspace',
+    items: [
+      { to: '/chat', label: 'Chat', icon: MessageSquareText },
+      { to: '/files', label: 'Files', icon: Files },
+      { to: '/skills', label: 'Skills', icon: BrainCircuit },
+    ],
+  },
+  {
+    id: 'repositories',
+    label: 'Repositories',
+    items: [
+      { to: '/memory', label: 'Memory', icon: Database },
+      { to: '/repositories', label: 'Repositories', icon: FolderGit2 },
+      { to: '/intelligence', label: 'Intelligence', icon: Gavel },
+    ],
+  },
+  {
+    id: 'governance',
+    label: 'Governance',
+    items: [
+      { to: '/council', label: 'Council', icon: Gauge },
+      { to: '/models', label: 'Models', icon: Cpu },
+      { to: '/optimisation', label: 'Optimisation', icon: SlidersHorizontal },
+      { to: '/monthly-review', label: 'Monthly Review', icon: CalendarClock },
+      { to: '/execution-reviews', label: 'Reviews', icon: ClipboardList },
+      { to: '/execution-simulation', label: 'Simulation', icon: PlayCircle },
+    ],
+  },
+  {
+    id: 'operations',
+    label: 'Operations',
+    items: [
+      { to: '/integrations', label: 'Integrations', icon: Plug },
+      { to: '/ops', label: 'Ops', icon: Activity },
+    ],
+  },
 ]
+
+const navigation = navigationGroups.flatMap((group) => group.items)
 
 const pageMeta: Record<string, { title: string; subtitle: string }> = {
   '/chat': { title: 'Chat', subtitle: 'Private model routing and persistent conversations' },
@@ -261,6 +288,14 @@ function ConversationSection({ closeMobile }: { closeMobile?: () => void }) {
 function SidebarContent({ closeMobile }: { closeMobile?: () => void }) {
   const { logout } = useAuth()
   const { pathname } = useLocation()
+  const activeGroup = navigationGroups.find((group) => group.items.some((item) => item.to === pathname))?.id ?? 'workspace'
+  const [openGroups, setOpenGroups] = useState<Record<string, boolean>>(() =>
+    Object.fromEntries(navigationGroups.map((group) => [group.id, group.id === 'workspace' || group.id === activeGroup])),
+  )
+
+  useEffect(() => {
+    setOpenGroups((current) => ({ ...current, [activeGroup]: true }))
+  }, [activeGroup])
 
   return (
     <div className="flex h-full flex-col p-4">
@@ -273,20 +308,55 @@ function SidebarContent({ closeMobile }: { closeMobile?: () => void }) {
         )}
       </div>
 
-      <nav className="mt-6 grid grid-cols-4 gap-1 lg:grid-cols-1">
-        {navigation.map(({ to, label, icon: Icon }) => (
-          <NavLink
-            key={to}
-            to={to}
-            onClick={closeMobile}
-            aria-label={label}
-            title={label}
-            className={({ isActive }) => `flex items-center justify-center gap-3 rounded-xl px-3 py-2.5 text-sm transition lg:justify-start ${isActive ? 'bg-white/8 text-white' : 'text-slate-400 hover:bg-white/[0.04] hover:text-slate-200'}`}
-          >
-            <Icon className="h-4.5 w-4.5" />
-            <span className="hidden lg:inline">{label}</span>
-          </NavLink>
-        ))}
+      <nav className="mt-6">
+        <div className="grid grid-cols-4 gap-1 lg:hidden">
+          {navigation.map(({ to, label, icon: Icon }) => (
+            <NavLink
+              key={to}
+              to={to}
+              onClick={closeMobile}
+              aria-label={label}
+              title={label}
+              className={({ isActive }) => `flex items-center justify-center rounded-xl px-3 py-2.5 transition ${isActive ? 'bg-white/8 text-white' : 'text-slate-400 hover:bg-white/[0.04] hover:text-slate-200'}`}
+            >
+              <Icon className="h-4.5 w-4.5" />
+            </NavLink>
+          ))}
+        </div>
+
+        <div className="hidden space-y-2 lg:block">
+          {navigationGroups.map((group) => {
+            const expanded = openGroups[group.id] ?? false
+            return (
+              <section key={group.id}>
+                <button
+                  type="button"
+                  onClick={() => setOpenGroups((current) => ({ ...current, [group.id]: !expanded }))}
+                  aria-expanded={expanded}
+                  className="flex w-full items-center justify-between rounded-lg px-3 py-1.5 text-[10px] font-semibold uppercase tracking-[0.14em] text-slate-500 transition hover:bg-white/[0.03] hover:text-slate-300"
+                >
+                  <span>{group.label}</span>
+                  <ChevronDown className={`h-3.5 w-3.5 transition-transform ${expanded ? 'rotate-180' : ''}`} />
+                </button>
+                {expanded && (
+                  <div className="mt-1 space-y-1">
+                    {group.items.map(({ to, label, icon: Icon }) => (
+                      <NavLink
+                        key={to}
+                        to={to}
+                        onClick={closeMobile}
+                        className={({ isActive }) => `flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm transition ${isActive ? 'bg-white/8 text-white' : 'text-slate-400 hover:bg-white/[0.04] hover:text-slate-200'}`}
+                      >
+                        <Icon className="h-4.5 w-4.5" />
+                        <span>{label}</span>
+                      </NavLink>
+                    ))}
+                  </div>
+                )}
+              </section>
+            )
+          })}
+        </div>
       </nav>
 
       {pathname === '/chat' ? <ConversationSection closeMobile={closeMobile} /> : <div className="flex-1" />}
