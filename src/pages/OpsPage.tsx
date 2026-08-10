@@ -223,15 +223,19 @@ function RepoHealthCard({ item, onInspect, onRefresh }: { item: RepoHealthItem; 
           </div>
           <p className="mt-0.5 truncate text-[11px] text-slate-400" title={item.detail || item.description}>{item.detail || item.description || 'No health detail returned.'}</p>
         </div>
-        <div className="flex flex-col items-end gap-1">
-          <StatusBadge status={item.liveness?.status || item.status} variant="liveness" compact />
-          <StatusBadge status={item.readiness?.status || item.operational?.status || item.status} variant="readiness" compact />
-          <StatusBadge status={item.operational?.status || item.status} variant="operational" compact />
+        <div className="flex items-center">
+          <StatusBadge
+            status={item.operational?.status || item.readiness?.status || item.liveness?.status || item.status}
+            variant="operational"
+            compact
+          />
         </div>
       </div>
       <div className="mt-2 flex items-center gap-2 text-[11px] text-slate-400">
         <span>{typeof latency === 'number' ? `${latency} ms` : 'No latency'}</span>
-        {operationalStatus && <span>Operational: {operationalStatus.replace(/_/g, ' ')}</span>}
+        {item.category === 'background_worker'
+          ? <span>Worker heartbeat</span>
+          : operationalStatus && <span>{operationalStatus.replace(/_/g, ' ')}</span>}
       </div>
       {(item.repo === 'AIMS' || item.repo === 'RAMS') && !['healthy', 'busy'].includes(item.status) && (
         <ServiceWakeControl repo={item.repo} onWoken={onRefresh} />
