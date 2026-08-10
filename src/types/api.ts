@@ -664,6 +664,8 @@ export interface ModelRegistryOverviewResponse {
 export interface ModelRegistryCategoryResponse {
   category: string
   default_model: string | null
+  min_visible_score?: number
+  hidden_low_score_count?: number
   models: ModelRegistryEntry[]
 }
 
