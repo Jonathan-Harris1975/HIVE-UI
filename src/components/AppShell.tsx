@@ -1,18 +1,12 @@
 import {
   Activity,
-  BrainCircuit,
   CalendarClock,
   Check,
   ChevronDown,
-  ClipboardList,
   Copy,
   Cpu,
-  Database,
   Files,
   FolderGit2,
-  Gavel,
-  Gauge,
-  Plug,
   LogOut,
   Menu,
   MessageSquareText,
@@ -23,11 +17,10 @@ import {
   SlidersHorizontal,
   Trash2,
   Pencil,
-  PlayCircle,
   X,
 } from 'lucide-react'
 import { useEffect, useMemo, useRef, useState } from 'react'
-import { NavLink, Outlet, useLocation, useNavigate } from 'react-router'
+import { Link, NavLink, Outlet, useLocation, useNavigate } from 'react-router'
 import { useAuth } from '../context/AuthContext'
 import { useChat } from '../context/ChatContext'
 import { useInspector, type InspectorRow } from '../context/InspectorContext'
@@ -38,65 +31,61 @@ import { ConfirmDialog } from './ConfirmDialog'
 import { EmptyState } from './EmptyState'
 import { HiveLogo } from './HiveLogo'
 
-// Header overflow strategy: keep only two mobile-visible actions in HeaderActions. A future third action should move into a HeaderActionsSheet bottom sheet triggered by MoreHorizontal.
+// Keep the shell deliberately small. Secondary tools remain available as contextual
+// tabs inside their parent workspace rather than permanent sidebar destinations.
 const navigationGroups = [
   {
     id: 'workspace',
     label: 'Workspace',
     items: [
-      { to: '/chat', label: 'Chat', icon: MessageSquareText },
-      { to: '/files', label: 'Files', icon: Files },
-      { to: '/skills', label: 'Skills', icon: BrainCircuit },
+      { to: '/chat', label: 'Chat', icon: MessageSquareText, routes: ['/chat'] },
+      { to: '/files', label: 'Files', icon: Files, routes: ['/files', '/skills'] },
+      { to: '/repositories', label: 'Repositories', icon: FolderGit2, routes: ['/repositories', '/memory', '/intelligence'] },
     ],
   },
   {
-    id: 'repositories',
-    label: 'Repositories',
+    id: 'intelligence',
+    label: 'Intelligence',
     items: [
-      { to: '/memory', label: 'Memory', icon: Database },
-      { to: '/repositories', label: 'Repositories', icon: FolderGit2 },
-      { to: '/intelligence', label: 'Intelligence', icon: Gavel },
+      { to: '/models', label: 'Models', icon: Cpu, routes: ['/models', '/council'] },
+      { to: '/optimisation', label: 'Optimisation', icon: SlidersHorizontal, routes: ['/optimisation', '/execution-reviews', '/execution-simulation'] },
     ],
   },
   {
-    id: 'governance',
-    label: 'Governance',
+    id: 'system',
+    label: 'System',
     items: [
-      { to: '/council', label: 'Council', icon: Gauge },
-      { to: '/models', label: 'Models', icon: Cpu },
-      { to: '/optimisation', label: 'Optimisation', icon: SlidersHorizontal },
-      { to: '/monthly-review', label: 'Monthly Review', icon: CalendarClock },
-      { to: '/execution-reviews', label: 'Reviews', icon: ClipboardList },
-      { to: '/execution-simulation', label: 'Simulation', icon: PlayCircle },
-    ],
-  },
-  {
-    id: 'operations',
-    label: 'Operations',
-    items: [
-      { to: '/integrations', label: 'Integrations', icon: Plug },
-      { to: '/ops', label: 'Ops', icon: Activity },
+      { to: '/ops', label: 'Operations', icon: Activity, routes: ['/ops', '/integrations'] },
+      { to: '/monthly-review', label: 'Review', icon: CalendarClock, routes: ['/monthly-review'] },
     ],
   },
 ]
 
 const navigation = navigationGroups.flatMap((group) => group.items)
 
+const sectionTabs = [
+  { routes: ['/files', '/skills'], items: [{ to: '/files', label: 'Files' }, { to: '/skills', label: 'Skills' }] },
+  { routes: ['/repositories', '/memory', '/intelligence'], items: [{ to: '/repositories', label: 'Overview' }, { to: '/memory', label: 'Memory' }, { to: '/intelligence', label: 'Intelligence' }] },
+  { routes: ['/models', '/council'], items: [{ to: '/models', label: 'Registry' }, { to: '/council', label: 'AI Council' }] },
+  { routes: ['/optimisation', '/execution-reviews', '/execution-simulation'], items: [{ to: '/optimisation', label: 'Overview' }, { to: '/execution-reviews', label: 'Reviews' }, { to: '/execution-simulation', label: 'Simulation' }] },
+  { routes: ['/ops', '/integrations'], items: [{ to: '/ops', label: 'System' }, { to: '/integrations', label: 'Integrations' }] },
+]
+
 const pageMeta: Record<string, { title: string; subtitle: string }> = {
   '/chat': { title: 'Chat', subtitle: 'Private model routing and persistent conversations' },
-  '/files': { title: 'Files', subtitle: 'Browse authenticated R2 lanes and bring evidence into chat' },
-  '/skills': { title: 'Skills', subtitle: 'Search the shared HIVE skill registry' },
-  '/memory': { title: 'Memory', subtitle: 'Persistent repository knowledge that survives cleanup' },
-  '/repositories': { title: 'Repositories', subtitle: 'Registered snapshots, manifests and diff previews' },
-  '/intelligence': { title: 'Intelligence', subtitle: 'Repository QA, Council review and learned patterns' },
-  '/integrations': { title: 'Integrations', subtitle: 'External connector health and accessible storage' },
-  '/council': { title: 'Council', subtitle: 'Provider discovery, promotion and benchmark ranking' },
-  '/execution-reviews': { title: 'Execution Reviews', subtitle: 'Approval-gated execution plans, audit trails and evidence packs' },
-  '/execution-simulation': { title: 'Execution Simulation', subtitle: 'Pretend-mode workflow simulation, saved previews and policy profiles' },
-  '/optimisation': { title: 'Optimisation', subtitle: 'Decision ledger, experiments and environment variable coverage' },
-  '/monthly-review': { title: 'Monthly Review', subtitle: 'Consolidated system, AI, cost and governance report per month' },
-  '/models': { title: 'Models', subtitle: 'Ranked model registry that drives routing defaults' },
-  '/ops': { title: 'Operations', subtitle: 'Health, workflow previews and review gates' },
+  '/files': { title: 'Files', subtitle: 'Authenticated files, storage and reusable skills' },
+  '/skills': { title: 'Files', subtitle: 'Authenticated files, storage and reusable skills' },
+  '/repositories': { title: 'Repositories', subtitle: 'Snapshots, memory, QA and repository intelligence' },
+  '/memory': { title: 'Repositories', subtitle: 'Snapshots, memory, QA and repository intelligence' },
+  '/intelligence': { title: 'Repositories', subtitle: 'Snapshots, memory, QA and repository intelligence' },
+  '/models': { title: 'Models', subtitle: 'Ranked models, providers and evidence-based model review' },
+  '/council': { title: 'Models', subtitle: 'Ranked models, providers and evidence-based model review' },
+  '/optimisation': { title: 'Optimisation', subtitle: 'Decisions, reviews, simulations and reversible changes' },
+  '/execution-reviews': { title: 'Optimisation', subtitle: 'Decisions, reviews, simulations and reversible changes' },
+  '/execution-simulation': { title: 'Optimisation', subtitle: 'Decisions, reviews, simulations and reversible changes' },
+  '/ops': { title: 'Operations', subtitle: 'Live runtime health, infrastructure and integrations' },
+  '/integrations': { title: 'Operations', subtitle: 'Live runtime health, infrastructure and integrations' },
+  '/monthly-review': { title: 'Review', subtitle: 'Consolidated monthly system, cost and governance review' },
 }
 
 interface PendingConversationDialog {
@@ -288,7 +277,7 @@ function ConversationSection({ closeMobile }: { closeMobile?: () => void }) {
 function SidebarContent({ closeMobile }: { closeMobile?: () => void }) {
   const { logout } = useAuth()
   const { pathname } = useLocation()
-  const activeGroup = navigationGroups.find((group) => group.items.some((item) => item.to === pathname))?.id ?? 'workspace'
+  const activeGroup = navigationGroups.find((group) => group.items.some((item) => item.routes.includes(pathname)))?.id ?? 'workspace'
   const [openGroups, setOpenGroups] = useState<Record<string, boolean>>(() =>
     Object.fromEntries(navigationGroups.map((group) => [group.id, group.id === 'workspace' || group.id === activeGroup])),
   )
@@ -310,18 +299,22 @@ function SidebarContent({ closeMobile }: { closeMobile?: () => void }) {
 
       <nav className="mt-6">
         <div className="grid grid-cols-4 gap-1 lg:hidden">
-          {navigation.map(({ to, label, icon: Icon }) => (
-            <NavLink
-              key={to}
-              to={to}
-              onClick={closeMobile}
-              aria-label={label}
-              title={label}
-              className={({ isActive }) => `flex items-center justify-center rounded-xl px-3 py-2.5 transition ${isActive ? 'bg-white/8 text-white' : 'text-slate-400 hover:bg-white/[0.04] hover:text-slate-200'}`}
-            >
-              <Icon className="h-4.5 w-4.5" />
-            </NavLink>
-          ))}
+          {navigation.map(({ to, label, icon: Icon, routes }) => {
+            const active = routes.includes(pathname)
+            return (
+              <Link
+                key={to}
+                to={to}
+                onClick={closeMobile}
+                aria-label={label}
+                aria-current={active ? 'page' : undefined}
+                title={label}
+                className={`flex items-center justify-center rounded-xl px-3 py-2.5 transition ${active ? 'bg-white/8 text-white' : 'text-slate-400 hover:bg-white/[0.04] hover:text-slate-200'}`}
+              >
+                <Icon className="h-4.5 w-4.5" />
+              </Link>
+            )
+          })}
         </div>
 
         <div className="hidden space-y-2 lg:block">
@@ -340,17 +333,21 @@ function SidebarContent({ closeMobile }: { closeMobile?: () => void }) {
                 </button>
                 {expanded && (
                   <div className="mt-1 space-y-1">
-                    {group.items.map(({ to, label, icon: Icon }) => (
-                      <NavLink
-                        key={to}
-                        to={to}
-                        onClick={closeMobile}
-                        className={({ isActive }) => `flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm transition ${isActive ? 'bg-white/8 text-white' : 'text-slate-400 hover:bg-white/[0.04] hover:text-slate-200'}`}
-                      >
-                        <Icon className="h-4.5 w-4.5" />
-                        <span>{label}</span>
-                      </NavLink>
-                    ))}
+                    {group.items.map(({ to, label, icon: Icon, routes }) => {
+                      const active = routes.includes(pathname)
+                      return (
+                        <Link
+                          key={to}
+                          to={to}
+                          onClick={closeMobile}
+                          aria-current={active ? 'page' : undefined}
+                          className={`flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm transition ${active ? 'bg-white/8 text-white' : 'text-slate-400 hover:bg-white/[0.04] hover:text-slate-200'}`}
+                        >
+                          <Icon className="h-4.5 w-4.5" />
+                          <span>{label}</span>
+                        </Link>
+                      )
+                    })}
                   </div>
                 )}
               </section>
@@ -439,6 +436,27 @@ function InspectorPanel() {
         </div>
       </div>
     </aside>
+  )
+}
+
+function ContextTabs({ pathname }: { pathname: string }) {
+  const section = sectionTabs.find((entry) => entry.routes.includes(pathname))
+  if (!section) return null
+
+  return (
+    <nav aria-label="Section navigation" className="min-w-0 overflow-x-auto border-t border-white/6 bg-[#071426]/85 px-4 sm:px-6">
+      <div className="flex h-10 min-w-max items-center gap-1">
+        {section.items.map((item) => (
+          <NavLink
+            key={item.to}
+            to={item.to}
+            className={({ isActive }) => `rounded-lg px-3 py-1.5 text-xs font-medium transition ${isActive ? 'bg-cyan-300/10 text-cyan-100' : 'text-slate-400 hover:bg-white/[0.04] hover:text-slate-200'}`}
+          >
+            {item.label}
+          </NavLink>
+        ))}
+      </div>
+    </nav>
   )
 }
 
@@ -565,6 +583,7 @@ export function AppShell() {
           </div>
           <HeaderActions health={health} open={open} toggle={toggle} />
         </header>
+        <ContextTabs pathname={pathname} />
 
         <main id="hive-main-content" className="min-h-0 flex-1 overflow-hidden" tabIndex={-1}>
           <Outlet />
