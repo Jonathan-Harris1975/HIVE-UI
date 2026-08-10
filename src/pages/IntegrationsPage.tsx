@@ -3,7 +3,7 @@ import { useCallback, useEffect, useState } from 'react'
 import { EmptyState } from '../components/EmptyState'
 import { StatusBadge } from '../components/StatusBadge'
 import { apiFetch } from '../lib/api'
-import type { BucketsResponse, ConnectorReport, ConnectorsResponse } from '../types/api'
+import type { BucketSummary, BucketsResponse, ConnectorReport, ConnectorsResponse } from '../types/api'
 
 function connectorStatus(connector: ConnectorReport): string {
   if (!connector.configured) return 'not_configured'
@@ -17,7 +17,7 @@ export function IntegrationsPage() {
   const [connectorsLoading, setConnectorsLoading] = useState(true)
   const [connectorsError, setConnectorsError] = useState<string | null>(null)
 
-  const [buckets, setBuckets] = useState<string[]>([])
+  const [buckets, setBuckets] = useState<BucketSummary[]>([])
   const [bucketsLoading, setBucketsLoading] = useState(true)
   const [bucketsError, setBucketsError] = useState<string | null>(null)
 
@@ -40,7 +40,12 @@ export function IntegrationsPage() {
     setBucketsError(null)
     try {
       const response = await apiFetch<BucketsResponse>('/v1/buckets')
-      setBuckets(response.buckets ?? [])
+      const normalised = (response.buckets ?? []).map((item) =>
+        typeof item === 'string'
+          ? { bucket: item, configured: true, readable: true, writable: false, access_mode: 'read_only' }
+          : item,
+      )
+      setBuckets(normalised)
     } catch (caught) {
       setBucketsError(caught instanceof Error ? caught.message : 'Bucket list could not be loaded.')
       setBuckets([])
@@ -164,12 +169,29 @@ export function IntegrationsPage() {
               </div>
             )
           ) : (
-            <div className="mt-3 flex flex-wrap gap-2">
-              {buckets.map((bucket) => (
-                <span key={bucket} className="rounded-full border border-white/10 bg-white/[0.03] px-3 py-1.5 text-xs text-slate-300">
-                  {bucket}
-                </span>
-              ))}
+            <div className="mt-3 grid gap-2 sm:grid-cols-2">
+              {buckets.map((bucket) => {
+                const status = !bucket.configured
+                  ? 'not_configured'
+                  : bucket.writable
+                    ? 'healthy'
+                    : bucket.readable
+                      ? 'ready'
+                      : 'degraded'
+                return (
+                  <article key={`${bucket.lane ?? 'bucket'}:${bucket.bucket}`} className="rounded-xl border border-white/8 bg-white/[0.025] px-3 py-2.5">
+                    <div className="flex items-start justify-between gap-3">
+                      <div className="min-w-0">
+                        <p className="truncate text-xs font-medium text-slate-100">{bucket.bucket}</p>
+                        <p className="mt-0.5 text-[11px] text-slate-500">
+                          {bucket.lane ? `${bucket.lane.replace(/_/g, ' ')} · ` : ''}{bucket.access_mode ?? 'unknown access'}
+                        </p>
+                      </div>
+                      <StatusBadge status={status} variant="readiness" compact />
+                    </div>
+                  </article>
+                )
+              })}
             </div>
           )}
         </section>

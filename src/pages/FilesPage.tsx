@@ -345,9 +345,12 @@ export function FilesPage() {
         `${selected.length} file${selected.length === 1 ? "" : "s"} uploaded to ${laneLabel(activeLane)} with human-readable R2 keys${readableKeys.length ? `: ${readableKeys.join(", ")}` : "."}`,
       );
       setPrefix(rootPrefixForLane(activeLane));
+      setSearchInput("");
+      setActiveSearch("");
       setCurrentCursor(null);
       setCursorHistory([]);
-      await loadObjects();
+      setSelectedObjects({});
+      await loadLanes();
       setSelectedAction(null);
     } catch (caught) {
       setError(caught instanceof Error ? caught.message : "Upload failed.");
@@ -376,9 +379,12 @@ export function FilesPage() {
       );
       setTextContent("");
       setPrefix(rootPrefixForLane(activeLane));
+      setSearchInput("");
+      setActiveSearch("");
       setCurrentCursor(null);
       setCursorHistory([]);
-      await loadObjects();
+      setSelectedObjects({});
+      await loadLanes();
       setSelectedAction(null);
     } catch (caught) {
       setError(
