@@ -1,6 +1,7 @@
 import {
   AlertTriangle,
   Check,
+  ChevronDown,
   Cpu,
   LoaderCircle,
   Plus,
@@ -323,22 +324,28 @@ export function ModelRegistryPage() {
             </button>
           </div>
 
-          <div className="mt-6 flex flex-wrap gap-2 border-t border-white/8 pt-5">
-            {MODEL_REGISTRY_CATEGORIES.map((item) => (
-              <button
-                key={item}
-                type="button"
-                onClick={() => setCategory(item)}
-                className={`h-9 rounded-xl border px-3 text-xs font-medium transition ${
-                  item === category
-                    ? 'border-cyan-300/30 bg-cyan-300/10 text-cyan-100'
-                    : 'border-white/8 bg-white/[0.03] text-slate-300 hover:bg-white/[0.06]'
-                }`}
-              >
-                {categoryLabel(item)}
-              </button>
-            ))}
-          </div>
+          <details className="group mt-6 border-t border-white/8 pt-5">
+            <summary className="flex cursor-pointer list-none items-center justify-between rounded-xl border border-white/8 bg-white/[0.025] px-3 py-2.5 text-xs font-medium text-slate-300 hover:bg-white/[0.045]">
+              <span>Category <strong className="ml-1 font-semibold text-cyan-100">{categoryLabel(category)}</strong></span>
+              <ChevronDown className="h-4 w-4 text-slate-500 transition-transform group-open:rotate-180" />
+            </summary>
+            <div className="mt-2 grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
+              {MODEL_REGISTRY_CATEGORIES.map((item) => (
+                <button
+                  key={item}
+                  type="button"
+                  onClick={() => setCategory(item)}
+                  className={`h-9 rounded-lg border px-3 text-left text-xs font-medium transition ${
+                    item === category
+                      ? 'border-cyan-300/30 bg-cyan-300/10 text-cyan-100'
+                      : 'border-white/8 bg-white/[0.02] text-slate-300 hover:bg-white/[0.05]'
+                  }`}
+                >
+                  {categoryLabel(item)}
+                </button>
+              ))}
+            </div>
+          </details>
         </section>
 
         {error && (

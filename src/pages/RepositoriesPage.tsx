@@ -29,6 +29,21 @@ import type {
 
 type PendingDelete = { repositoryId: string }
 
+function repositoryStatus(repo: RepositorySummary): { status: string; label: string; detail: string } {
+  if (repo.rehydrated) {
+    return {
+      status: 'readonly',
+      label: 'Manifest stored',
+      detail: 'Persistent manifest restored from R2. Re-upload the repository only when a local working copy is needed for diff or reindex.',
+    }
+  }
+  return {
+    status: 'ready',
+    label: 'Ready',
+    detail: 'Working copy is available and the repository can be inspected, diffed and reindexed.',
+  }
+}
+
 function languageBreakdown(languages: Record<string, number>): { name: string; bytes: number; pct: number }[] {
   const total = Object.values(languages).reduce((sum, value) => sum + value, 0)
   if (total <= 0) return []
@@ -231,8 +246,8 @@ export function RepositoriesPage() {
               <p className="text-xs font-semibold uppercase tracking-[0.2em] text-cyan-300/70">Repository manager</p>
               <h2 className="mt-2 text-2xl font-semibold text-white">Registered repository snapshots</h2>
               <p className="mt-2 max-w-2xl text-sm leading-6 text-slate-400">
-                Upload a zipped repository to index it for QA, learning and council review. Snapshots live in temporary
-                storage and expire automatically once idle.
+                Upload a zipped repository to index it for QA, learning and council review. Manifests persist in R2;
+                local working copies remain temporary and are cleaned up when idle.
               </p>
             </div>
             <div className="flex gap-2">
@@ -298,7 +313,9 @@ export function RepositoriesPage() {
               </div>
             ) : (
               <div className="mt-3 space-y-2">
-                {repositories.map((repo) => (
+                {repositories.map((repo) => {
+                  const availability = repositoryStatus(repo)
+                  return (
                   <article
                     key={repo.repository_id}
                     className={`rounded-2xl border p-4 transition ${
@@ -312,18 +329,11 @@ export function RepositoriesPage() {
                         <h4 className="truncate text-sm font-semibold text-white">{repo.repository_id}</h4>
                         <p className="mt-0.5 truncate text-xs text-slate-400">{repo.source_filename}</p>
                       </button>
-                      {repo.rehydrated ? (
-                        <StatusBadge status="degraded" label="Re-upload required" compact />
-                      ) : (
-                        <StatusBadge status="active" compact />
-                      )}
+                      <StatusBadge status={availability.status} label={availability.label} compact />
                     </div>
-                    {repo.rehydrated && (
-                      <p className="mt-2 rounded-lg border border-amber-300/20 bg-amber-300/[0.06] px-2.5 py-1.5 text-[11px] text-amber-200">
-                        This repository's indexed metadata was restored after a restart, but its working copy
-                        was not. Re-upload it to enable reindex or diff.
-                      </p>
-                    )}
+                    <p className={`mt-2 text-[11px] leading-5 ${repo.rehydrated ? 'text-cyan-200/80' : 'text-slate-500'}`}>
+                      {availability.detail}
+                    </p>
                     <div className="mt-3 flex flex-wrap items-center gap-2 text-[11px] text-slate-400">
                       <span className="rounded-full border border-white/10 px-2 py-0.5">{repo.file_count} files</span>
                       <span className="rounded-full border border-white/10 px-2 py-0.5">{formatBytes(repo.total_bytes)}</span>
@@ -372,7 +382,8 @@ export function RepositoriesPage() {
                       </button>
                     </div>
                   </article>
-                ))}
+                  )
+                })}
               </div>
             )}
           </section>

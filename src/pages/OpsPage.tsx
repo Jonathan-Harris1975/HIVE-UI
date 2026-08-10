@@ -519,7 +519,7 @@ export function OpsPage() {
           <div>
             <p className="text-xs font-semibold uppercase tracking-[0.2em] text-cyan-300/70">Control plane</p>
             <h2 className="mt-2 text-2xl font-semibold text-white">Operational health and controlled workflow planning</h2>
-            <p className="mt-2 text-sm text-slate-400">Build {health?.build ?? 'unknown'} · {health?.env ?? 'environment unknown'} · {executionAdapterSummary}</p>
+            <p className="mt-2 text-sm text-slate-400">Build {health?.build ?? (loading ? 'checking…' : 'unavailable')} · {health?.env ?? (loading ? 'checking environment…' : 'environment unavailable')} · {executionAdapterSummary}</p>
           </div>
           <button type="button" onClick={() => void loadOps(true)} className="flex h-10 items-center justify-center gap-2 rounded-xl border border-white/8 bg-white/[0.04] px-4 text-xs text-slate-300 hover:bg-white/[0.07]">
             <RefreshCw className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`} /> Refresh status
