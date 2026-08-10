@@ -827,8 +827,21 @@ export interface ConnectorsResponse {
   connectors: ConnectorReport[]
 }
 
+export interface BucketSummary {
+  bucket: string
+  lane?: string | null
+  configured?: boolean
+  readable?: boolean
+  writable?: boolean
+  access_mode?: string
+}
+
 export interface BucketsResponse {
-  buckets: string[]
+  ok?: boolean
+  count?: number
+  buckets: Array<BucketSummary | string>
+  source?: string
+  note?: string
 }
 
 export interface AiCouncilPromotion {
