@@ -2,18 +2,16 @@ import {
   Activity,
   BellRing,
   Database,
-  FileWarning,
-  GitBranch,
   HardDrive,
   LoaderCircle,
   Monitor,
   Network,
   ServerCog,
   PlayCircle,
+  Power,
   RefreshCw,
   ShieldCheck,
   Sparkles,
-  XCircle,
 } from 'lucide-react'
 import { useCallback, useEffect, useMemo, useState, type FormEvent } from 'react'
 import { Link } from 'react-router'
@@ -120,7 +118,7 @@ function wakePhaseLabel(phase: string): string {
   switch (phase) {
     case 'queued': return 'Queued'
     case 'already-online': return 'Already online'
-    case 'requesting-resume': return 'Requesting resume from MAST'
+    case 'requesting-resume': return 'Requesting Koyeb resume'
     case 'resume-request-failed': return 'Resume request failed'
     case 'starting': return 'Starting'
     case 'polling': return 'Waiting for health check'
@@ -131,7 +129,7 @@ function wakePhaseLabel(phase: string): string {
 }
 
 /** Lets an operator manually trigger the same transparent wake-up flow HIVE runs
- * automatically when a user action needs a Standby service: request a MAST resume,
+ * automatically when a user action needs a Standby service: request a Koyeb resume,
  * then poll a ticket for startup progress. */
 function ServiceWakeControl({ repo, onWoken }: { repo: 'AIMS' | 'RAMS'; onWoken: () => void }) {
   const [ticket, setTicket] = useState<WakeTicket | null>(null)
@@ -193,6 +191,37 @@ function ServiceWakeControl({ repo, onWoken }: { repo: 'AIMS' | 'RAMS'; onWoken:
           : ticket.status === 'failed'
             ? (ticket.error || 'Wake-up failed.')
             : `${wakePhaseLabel(ticket.phase)}…`}
+    </div>
+  )
+}
+
+function HivePowerControl({ onRefresh }: { onRefresh: () => void }) {
+  const [busy, setBusy] = useState<'wake' | 'sleep' | null>(null)
+  const [message, setMessage] = useState<string | null>(null)
+
+  const act = useCallback(async (action: 'wake' | 'sleep') => {
+    setBusy(action)
+    setMessage(null)
+    try {
+      await apiFetch<{ ok: boolean }>(`/control/hive/${action}`, { method: 'POST' })
+      setMessage(action === 'wake' ? 'HIVE resume requested.' : 'HIVE sleep requested.')
+      if (action === 'wake') window.setTimeout(onRefresh, 5000)
+    } catch (caught) {
+      setMessage(caught instanceof Error ? caught.message : `HIVE ${action} request failed.`)
+    } finally {
+      setBusy(null)
+    }
+  }, [onRefresh])
+
+  return (
+    <div className="flex flex-wrap items-center gap-2">
+      <button type="button" onClick={() => void act('wake')} disabled={busy !== null} className="inline-flex h-9 items-center gap-2 rounded-xl border border-emerald-300/15 bg-emerald-300/7 px-3 text-xs text-emerald-100 disabled:opacity-50">
+        <RefreshCw className={`h-3.5 w-3.5 ${busy === 'wake' ? 'animate-spin' : ''}`} /> Wake HIVE
+      </button>
+      <button type="button" onClick={() => void act('sleep')} disabled={busy !== null} className="inline-flex h-9 items-center gap-2 rounded-xl border border-violet-300/15 bg-violet-300/7 px-3 text-xs text-violet-100 disabled:opacity-50">
+        <Power className="h-3.5 w-3.5" /> Sleep HIVE
+      </button>
+      {message && <span className="text-[11px] text-slate-400">{message}</span>}
     </div>
   )
 }
@@ -525,9 +554,12 @@ export function OpsPage() {
             <h2 className="mt-2 text-2xl font-semibold text-white">Operational health and controlled workflow planning</h2>
             <p className="mt-2 text-sm text-slate-400">Build {health?.build ?? (loading ? 'checking…' : 'unavailable')} · {health?.env ?? (loading ? 'checking environment…' : 'environment unavailable')} · {executionAdapterSummary}</p>
           </div>
-          <button type="button" onClick={() => void loadOps(true)} className="flex h-10 items-center justify-center gap-2 rounded-xl border border-white/8 bg-white/[0.04] px-4 text-xs text-slate-300 hover:bg-white/[0.07]">
-            <RefreshCw className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`} /> Refresh status
-          </button>
+          <div className="flex flex-col items-stretch gap-2 sm:items-end">
+            <button type="button" onClick={() => void loadOps(true)} className="flex h-10 items-center justify-center gap-2 rounded-xl border border-white/8 bg-white/[0.04] px-4 text-xs text-slate-300 hover:bg-white/[0.07]">
+              <RefreshCw className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`} /> Refresh status
+            </button>
+            <HivePowerControl onRefresh={() => void loadOps(true)} />
+          </div>
         </section>
 
         <div className="mt-4 flex gap-1 overflow-x-auto rounded-2xl border border-white/8 bg-[#071426] p-1.5">
@@ -603,55 +635,39 @@ export function OpsPage() {
             </section>
 
             <section className="mt-5 rounded-3xl border border-white/8 bg-[#0a192d]/70 p-5 sm:p-6">
-              <h3 className="text-base font-semibold text-white">System metrics</h3>
-              <p className="mt-1 text-xs text-slate-400">Repository hygiene, review queue and live runtime counts in one place.</p>
-              <div className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-4">
-                <button type="button" onClick={() => inspect('Repository hygiene', hygiene)} className="rounded-2xl border border-white/8 bg-[#071426] p-4 text-left transition hover:border-cyan-300/20 hover:bg-[#0d2038]">
-                  <GitBranch className="h-4 w-4 text-cyan-300" />
-                  <p className="mt-3 text-xl font-semibold text-white">{metric(hygiene?.scanned_file_count)}</p>
-                  <h3 className="mt-0.5 text-[11px] font-medium uppercase tracking-[0.14em] text-slate-400">Files scanned</h3>
+              <h3 className="text-base font-semibold text-white">Live system snapshot</h3>
+              <p className="mt-1 text-xs text-slate-400">Point-in-time state from the current HIVE runtime. No lifetime counters.</p>
+              <div className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-3">
+                <button type="button" onClick={() => inspect('Repository health', repoHealth)} className="rounded-2xl border border-white/8 bg-[#071426] p-4 text-left transition hover:border-cyan-300/20">
+                  <Activity className="h-4 w-4 text-emerald-300" />
+                  <p className="mt-3 text-xl font-semibold text-white">{repoHealth?.repos?.filter((item) => ['healthy', 'busy'].includes(item.status)).length ?? 0}/{repoHealth?.repos?.length ?? 0}</p>
+                  <h3 className="mt-0.5 text-[11px] font-medium uppercase tracking-[0.14em] text-slate-400">Services healthy now</h3>
                 </button>
-                <button type="button" onClick={() => inspect('Duplicate content groups', hygiene?.duplicate_content ?? [])} className="rounded-2xl border border-white/8 bg-[#071426] p-4 text-left transition hover:border-cyan-300/20 hover:bg-[#0d2038]">
-                  <FileWarning className="h-4 w-4 text-amber-300" />
-                  <p className="mt-3 text-xl font-semibold text-white">{metric(hygiene?.duplicate_content_group_count)}</p>
-                  <h3 className="mt-0.5 text-[11px] font-medium uppercase tracking-[0.14em] text-slate-400">Duplicate groups</h3>
-                </button>
-                <button type="button" onClick={() => inspect('Orphan candidates', hygiene?.orphan_candidates ?? [])} className="rounded-2xl border border-white/8 bg-[#071426] p-4 text-left transition hover:border-cyan-300/20 hover:bg-[#0d2038]">
-                  <XCircle className="h-4 w-4 text-rose-300" />
-                  <p className="mt-3 text-xl font-semibold text-white">{metric(hygiene?.orphan_candidate_count)}</p>
-                  <h3 className="mt-0.5 text-[11px] font-medium uppercase tracking-[0.14em] text-slate-400">Orphan candidates</h3>
-                </button>
-                <Link to="/execution-reviews" className="rounded-2xl border border-white/8 bg-[#071426] p-4 text-left transition hover:border-cyan-300/20 hover:bg-[#0d2038]">
+                <Link to="/execution-reviews" className="rounded-2xl border border-white/8 bg-[#071426] p-4 text-left transition hover:border-cyan-300/20">
                   <ShieldCheck className="h-4 w-4 text-violet-300" />
                   <p className="mt-3 text-xl font-semibold text-white">{openReviewCount}</p>
-                  <h3 className="mt-0.5 text-[11px] font-medium uppercase tracking-[0.14em] text-slate-400">Open reviews</h3>
+                  <h3 className="mt-0.5 text-[11px] font-medium uppercase tracking-[0.14em] text-slate-400">Open reviews now</h3>
                 </Link>
-                {runtimeStats ? (
-                  <>
-                    <button type="button" onClick={() => inspect('Runtime stats', runtimeStats, 'Live runtime values from the HIVE backend.')} className="rounded-2xl border border-white/8 bg-[#071426] p-4 text-left transition hover:border-cyan-300/20 hover:bg-[#0d2038]">
-                      <Database className="h-4 w-4 text-cyan-300" />
-                      <p className="mt-3 text-xl font-semibold text-white">{runtimeStats.repository_manager?.registered_count ?? 0}</p>
-                      <h3 className="mt-0.5 text-[11px] font-medium uppercase tracking-[0.14em] text-slate-400">Repos registered</h3>
-                    </button>
-                    <button type="button" onClick={() => inspect('Model Registry', runtimeStats.model_registry, 'Live model registry state.')} className="rounded-2xl border border-white/8 bg-[#071426] p-4 text-left transition hover:border-cyan-300/20 hover:bg-[#0d2038]">
-                      <Sparkles className="h-4 w-4 text-emerald-300" />
-                      <p className="mt-3 text-xl font-semibold text-white">{runtimeStats.model_registry?.total_models ?? 0}</p>
-                      <h3 className="mt-0.5 text-[11px] font-medium uppercase tracking-[0.14em] text-slate-400">Registered models</h3>
-                    </button>
-                    <button type="button" onClick={() => inspect('Providers', runtimeStats.providers, 'Configured AI providers.')} className="rounded-2xl border border-white/8 bg-[#071426] p-4 text-left transition hover:border-cyan-300/20 hover:bg-[#0d2038]">
-                      <Network className="h-4 w-4 text-violet-300" />
-                      <p className="mt-3 text-xl font-semibold text-white">{runtimeStats.providers?.count ?? 0}</p>
-                      <h3 className="mt-0.5 text-[11px] font-medium uppercase tracking-[0.14em] text-slate-400">Active providers</h3>
-                    </button>
-                    <button type="button" onClick={() => inspect('Default coding model', { model: runtimeStats.model_registry?.default_coding_model }, 'AI Council top-ranked coding model.')} className="rounded-2xl border border-white/8 bg-[#071426] p-4 text-left transition hover:border-cyan-300/20 hover:bg-[#0d2038]">
-                      <Activity className="h-4 w-4 text-amber-300" />
-                      <p className="mt-3 truncate text-sm font-semibold text-white" title={runtimeStats.model_registry?.default_coding_model ?? 'None'}>{runtimeStats.model_registry?.default_coding_model ?? '—'}</p>
-                      <h3 className="mt-0.5 text-[11px] font-medium uppercase tracking-[0.14em] text-slate-400">Default coding model</h3>
-                    </button>
-                  </>
-                ) : !loading ? (
-                  <p className="col-span-2 sm:col-span-4 text-xs text-amber-200/80">Runtime statistics could not be loaded from the backend.</p>
-                ) : null}
+                <button type="button" onClick={() => inspect('Repository runtime', runtimeStats?.repository_manager ?? {})} className="rounded-2xl border border-white/8 bg-[#071426] p-4 text-left transition hover:border-cyan-300/20">
+                  <Database className="h-4 w-4 text-cyan-300" />
+                  <p className="mt-3 text-xl font-semibold text-white">{runtimeStats?.repository_manager?.registered_count ?? 0}</p>
+                  <h3 className="mt-0.5 text-[11px] font-medium uppercase tracking-[0.14em] text-slate-400">Repos available now</h3>
+                </button>
+                <button type="button" onClick={() => inspect('Model Registry', runtimeStats?.model_registry ?? {})} className="rounded-2xl border border-white/8 bg-[#071426] p-4 text-left transition hover:border-cyan-300/20">
+                  <Sparkles className="h-4 w-4 text-emerald-300" />
+                  <p className="mt-3 text-xl font-semibold text-white">{runtimeStats?.model_registry?.total_models ?? 0}</p>
+                  <h3 className="mt-0.5 text-[11px] font-medium uppercase tracking-[0.14em] text-slate-400">Qualified models now</h3>
+                </button>
+                <button type="button" onClick={() => inspect('Providers', runtimeStats?.providers ?? {})} className="rounded-2xl border border-white/8 bg-[#071426] p-4 text-left transition hover:border-cyan-300/20">
+                  <Network className="h-4 w-4 text-violet-300" />
+                  <p className="mt-3 text-xl font-semibold text-white">{runtimeStats?.providers?.count ?? 0}</p>
+                  <h3 className="mt-0.5 text-[11px] font-medium uppercase tracking-[0.14em] text-slate-400">Providers active now</h3>
+                </button>
+                <button type="button" onClick={() => inspect('Default coding model', { model: runtimeStats?.model_registry?.default_coding_model }, 'Current ranked coding default.')} className="rounded-2xl border border-white/8 bg-[#071426] p-4 text-left transition hover:border-cyan-300/20">
+                  <Activity className="h-4 w-4 text-amber-300" />
+                  <p className="mt-3 truncate text-sm font-semibold text-white" title={runtimeStats?.model_registry?.default_coding_model ?? 'None'}>{runtimeStats?.model_registry?.default_coding_model ?? '—'}</p>
+                  <h3 className="mt-0.5 text-[11px] font-medium uppercase tracking-[0.14em] text-slate-400">Coding default now</h3>
+                </button>
               </div>
             </section>
 

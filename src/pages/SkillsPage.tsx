@@ -1,22 +1,19 @@
 import {
-  AlertTriangle,
   BrainCircuit,
   Filter,
   LoaderCircle,
   MessageSquareText,
   Search,
   Sparkles,
-  Trash2,
   WandSparkles,
 } from 'lucide-react'
 import { useCallback, useEffect, useMemo, useState, type FormEvent } from 'react'
 import { useNavigate, useSearchParams } from 'react-router'
-import { ConfirmDialog } from '../components/ConfirmDialog'
 import { EmptyState } from '../components/EmptyState'
 import { StatusBadge } from '../components/StatusBadge'
 import { useInspector } from '../context/InspectorContext'
 import { apiFetch } from '../lib/api'
-import type { SkillCleanupResponse, SkillItem, SkillListResponse } from '../types/api'
+import type { SkillItem, SkillListResponse } from '../types/api'
 
 function itemsFrom(response: SkillListResponse): SkillItem[] {
   return response.items ?? response.skills ?? response.results ?? []
@@ -67,11 +64,7 @@ export function SkillsPage() {
   const [task, setTask] = useState('')
   const [recommending, setRecommending] = useState(false)
   const [showRecommender, setShowRecommender] = useState(false)
-  const [cleanupPreview, setCleanupPreview] = useState<SkillCleanupResponse | null>(null)
-  const [cleanupRunning, setCleanupRunning] = useState(false)
-  const [cleanupNotice, setCleanupNotice] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
-  const [cleanupDialogOpen, setCleanupDialogOpen] = useState(false)
 
   const loadSkills = useCallback(async () => {
     setLoading(true)
@@ -190,52 +183,6 @@ export function SkillsPage() {
     }
   }
 
-  async function previewUploadedFileSkillCleanup() {
-    setCleanupRunning(true)
-    setCleanupNotice(null)
-    setError(null)
-    try {
-      const response = await apiFetch<SkillCleanupResponse>('/v1/skills/cleanup-uploaded-file-skills', {
-        method: 'POST',
-        body: JSON.stringify({ dry_run: true, limit: 1000 }),
-      })
-      if (response.ok === false) throw new Error(response.message || response.error || 'Cleanup preview failed.')
-      setCleanupPreview(response)
-      const count = response.candidate_count ?? 0
-      setCleanupNotice(count > 0 ? `${count} legacy file-created skill record(s) found in D1.` : 'No legacy file-created skill records found.')
-    } catch (caught) {
-      setError(caught instanceof Error ? caught.message : 'Cleanup preview failed.')
-    } finally {
-      setCleanupRunning(false)
-    }
-  }
-
-  async function runUploadedFileSkillCleanup() {
-    if (!cleanupPreview || !cleanupPreview.candidate_count) return
-    setCleanupDialogOpen(false)
-    setCleanupRunning(true)
-    setCleanupNotice(null)
-    setError(null)
-    try {
-      const response = await apiFetch<SkillCleanupResponse>('/v1/skills/cleanup-uploaded-file-skills', {
-        method: 'POST',
-        body: JSON.stringify({
-          dry_run: false,
-          limit: 1000,
-          confirm: 'delete-uploaded-file-skills',
-        }),
-      })
-      if (response.ok === false) throw new Error(response.message || response.error || 'Cleanup failed.')
-      setCleanupPreview(response)
-      setCleanupNotice(response.message || `Deleted ${response.deleted_count ?? 0} legacy file-created skill record(s).`)
-      await loadSkills()
-    } catch (caught) {
-      setError(caught instanceof Error ? caught.message : 'Cleanup failed.')
-    } finally {
-      setCleanupRunning(false)
-    }
-  }
-
   function inspect(skill: SkillItem) {
     const metadata = meta(skill)
     setPayload({
@@ -289,43 +236,6 @@ export function SkillsPage() {
             </form>
           )}
 
-          <div className="mt-5 rounded-2xl border border-amber-300/15 bg-amber-300/[0.035] p-4">
-            <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-              <div>
-                <p className="flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.18em] text-amber-200/80"><AlertTriangle className="h-4 w-4" /> Catalogue cleanup</p>
-                <p className="mt-2 text-sm leading-6 text-slate-300">Find legacy duplicate skills created from ordinary uploaded files. Cleanup deletes D1 catalogue rows only; no R2 bucket object is touched.</p>
-              </div>
-              <div className="flex flex-col gap-2 sm:min-w-[190px]">
-                <button type="button" onClick={previewUploadedFileSkillCleanup} disabled={cleanupRunning} className="flex h-10 items-center justify-center gap-2 rounded-xl border border-amber-300/20 bg-amber-300/10 px-4 text-xs font-medium text-amber-100 disabled:opacity-50">
-                  {cleanupRunning ? <LoaderCircle className="h-4 w-4 animate-spin" /> : <Search className="h-4 w-4" />} Preview cleanup
-                </button>
-                <button type="button" onClick={() => setCleanupDialogOpen(true)} disabled={cleanupRunning || !cleanupPreview?.candidate_count} className="flex h-10 items-center justify-center gap-2 rounded-xl border border-rose-300/20 bg-rose-300/10 px-4 text-xs font-medium text-rose-100 disabled:opacity-45">
-                  <Trash2 className="h-4 w-4" /> Delete previewed rows
-                </button>
-              </div>
-            </div>
-            {cleanupPreview && (
-              <div className="mt-4 rounded-xl border border-white/8 bg-[#071426]/70 p-3 text-xs text-slate-300">
-                <div className="flex flex-wrap gap-2">
-                  <span className="rounded-full border border-white/10 px-2 py-1">Checked {cleanupPreview.checked_count ?? 0}</span>
-                  <span className="rounded-full border border-amber-300/20 bg-amber-300/8 px-2 py-1 text-amber-100">Candidates {cleanupPreview.candidate_count ?? 0}</span>
-                  <span className="rounded-full border border-cyan-300/15 bg-cyan-300/7 px-2 py-1 text-cyan-100">R2 deletes {cleanupPreview.r2_deletes_attempted ?? 0}</span>
-                  {cleanupPreview.deleted_count != null && <span className="rounded-full border border-emerald-300/15 bg-emerald-300/7 px-2 py-1 text-emerald-100">Deleted {cleanupPreview.deleted_count}</span>}
-                </div>
-                {!!cleanupPreview.candidates?.length && (
-                  <div className="mt-3 max-h-44 space-y-2 overflow-y-auto pr-1">
-                    {cleanupPreview.candidates.slice(0, 8).map((candidate) => (
-                      <div key={candidate.id || candidate.title} className="rounded-lg border border-white/6 bg-white/[0.025] px-3 py-2">
-                        <p className="font-medium text-slate-100">{candidate.title || candidate.id}</p>
-                        <p className="mt-1 break-all text-[11px] text-slate-400">{candidate.object_key || 'No object key'} · {(candidate.reasons || []).join(', ')}</p>
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </div>
-            )}
-          </div>
-
           <form onSubmit={searchSkills} className="mt-6 grid gap-2 border-t border-white/8 pt-5 md:grid-cols-[minmax(220px,1fr)_160px_160px_180px_auto]">
             <label className="relative">
               <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
@@ -348,7 +258,6 @@ export function SkillsPage() {
         </section>
 
         {error && <div className="mt-4 rounded-xl border border-rose-400/20 bg-rose-400/8 px-4 py-3 text-sm text-rose-200">{error}</div>}
-        {cleanupNotice && <div className="mt-4 rounded-xl border border-emerald-300/20 bg-emerald-300/8 px-4 py-3 text-sm text-emerald-100">{cleanupNotice}</div>}
 
         <section className="mt-5">
           {loading ? (
@@ -395,18 +304,6 @@ export function SkillsPage() {
           )}
         </section>
       </div>
-      <ConfirmDialog
-        open={cleanupDialogOpen}
-        title="Run catalogue cleanup"
-        summary="This deletes the previewed duplicate skill catalogue entries. It does not delete R2 bucket objects."
-        objectName={`${cleanupPreview?.candidate_count ?? 0} previewed skill row${(cleanupPreview?.candidate_count ?? 0) === 1 ? '' : 's'}`}
-        systems={['D1 skill catalogue rows', 'PostgreSQL skill index records where mirrored', 'R2 objects not touched']}
-        confirmLabel="Run cleanup"
-        tone="destructive"
-        busy={cleanupRunning}
-        onConfirm={() => void runUploadedFileSkillCleanup()}
-        onCancel={() => setCleanupDialogOpen(false)}
-      />
     </div>
   )
 }
