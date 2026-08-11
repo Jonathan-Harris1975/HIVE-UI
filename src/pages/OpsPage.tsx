@@ -12,6 +12,7 @@ import {
   RefreshCw,
   ShieldCheck,
   Sparkles,
+  GitBranch,
 } from 'lucide-react'
 import { useCallback, useEffect, useMemo, useState, type FormEvent } from 'react'
 import { Link } from 'react-router'
@@ -31,7 +32,6 @@ import type {
   HealthResponse,
   RepoHealthItem,
   RepoHealthResponse,
-  RepoHygieneResponse,
   RuntimeStatsResponse,
   WorkflowGraphResponse,
   WorkflowNode,
@@ -293,9 +293,6 @@ function OpsEventCard({ item, onInspect }: { item: OpsEventItem; onInspect: () =
   )
 }
 
-function metric(value: unknown): string {
-  return typeof value === 'number' || typeof value === 'string' ? String(value) : '0'
-}
 
 function recordValue(value: unknown): Record<string, unknown> {
   return value && typeof value === 'object' && !Array.isArray(value) ? value as Record<string, unknown> : {}
@@ -322,7 +319,6 @@ export function OpsPage() {
   const { setPayload, setOpen } = useInspector()
   const [tab, setTab] = useState<OpsTab>('overview')
   const [health, setHealth] = useState<HealthResponse | null>(null)
-  const [hygiene, setHygiene] = useState<RepoHygieneResponse | null>(null)
   const [repoHealth, setRepoHealth] = useState<RepoHealthResponse | null>(null)
   const [opsEvents, setOpsEvents] = useState<OpsEventsResponse | null>(null)
   const [runtimeStats, setRuntimeStats] = useState<RuntimeStatsResponse | null>(null)
@@ -345,9 +341,8 @@ export function OpsPage() {
     setLoading(true)
     setError(null)
     try {
-      const [healthResult, hygieneResult, templateResult, reviewResult, repoHealthResult, opsEventsResult, runtimeStatsResult] = await Promise.all([
+      const [healthResult, templateResult, reviewResult, repoHealthResult, opsEventsResult, runtimeStatsResult] = await Promise.all([
         apiFetch<HealthResponse>('/health'),
-        apiFetch<RepoHygieneResponse>('/v1/system/repo-hygiene?include_hashes=false&max_files=5000'),
         apiFetch<WorkflowTemplatesResponse>('/v1/workflow-graphs/templates'),
         apiFetch<ExecutionReviewsResponse>('/v1/execution-reviews?limit=50'),
         apiFetch<RepoHealthResponse>(`/v1/system/repo-health?force_refresh=${forceRepoHealth}`).catch(
@@ -366,7 +361,6 @@ export function OpsPage() {
         apiFetch<RuntimeStatsResponse>('/v1/system/runtime-stats').catch(() => null),
       ])
       setHealth(healthResult)
-      setHygiene(hygieneResult)
       setRepoHealth(repoHealthResult)
       setOpsEvents(opsEventsResult)
       setRuntimeStats(runtimeStatsResult)

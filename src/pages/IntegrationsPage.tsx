@@ -5,6 +5,14 @@ import { StatusBadge } from '../components/StatusBadge'
 import { apiFetch } from '../lib/api'
 import type { BucketSummary, BucketsResponse, ConnectorReport, ConnectorsResponse } from '../types/api'
 
+function connectorLabel(name: string): string {
+  if (name === 'cloudflare_ai_search') return 'Cloudflare AI Search'
+  if (name === 'cloudflare_r2') return 'Cloudflare R2'
+  if (name === 'openrouter') return 'OpenRouter'
+  if (name === 'github') return 'GitHub'
+  return name.replace(/_/g, ' ')
+}
+
 function connectorStatus(connector: ConnectorReport): string {
   if (!connector.configured) return 'not_configured'
   if (!connector.authenticated) return 'blocked'
@@ -118,7 +126,7 @@ export function IntegrationsPage() {
               {connectors.map((connector) => (
                 <article key={connector.name} className="rounded-2xl border border-white/8 bg-[#0a192d]/70 p-4">
                   <div className="flex items-start justify-between gap-3">
-                    <h4 className="text-sm font-semibold text-white">{connector.name}</h4>
+                    <h4 className="text-sm font-semibold text-white">{connectorLabel(connector.name)}</h4>
                     <StatusBadge status={connectorStatus(connector)} variant="liveness" compact />
                   </div>
                   <div className="mt-2 flex flex-wrap gap-1.5 text-[11px] text-slate-400">
@@ -132,9 +140,9 @@ export function IntegrationsPage() {
                   {connector.capabilities.length > 0 && (
                     <p className="mt-2 text-[11px] text-slate-500">{connector.capabilities.join(' · ')}</p>
                   )}
-                  {connector.error && (
+                  {(connector.error || (typeof connector.diagnostics?.reason === 'string' ? connector.diagnostics.reason : null)) && (
                     <p className="mt-2 flex items-start gap-1.5 text-[11px] text-rose-300">
-                      <AlertCircle className="mt-0.5 h-3 w-3 shrink-0" /> {connector.error}
+                      <AlertCircle className="mt-0.5 h-3 w-3 shrink-0" /> {connector.error || String(connector.diagnostics?.reason)}
                     </p>
                   )}
                   {connector.rate_limit && (
