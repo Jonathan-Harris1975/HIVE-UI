@@ -359,6 +359,15 @@ function SidebarContent({ closeMobile }: { closeMobile?: () => void }) {
       {pathname === '/chat' ? <ConversationSection closeMobile={closeMobile} /> : <div className="flex-1" />}
 
       <div className="mt-4 border-t border-white/8 pt-4">
+        <a
+          href="https://chat.jonathan-harris.online"
+          target="_blank"
+          rel="noreferrer"
+          onClick={closeMobile}
+          className="mb-2 flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-sm text-slate-400 transition hover:bg-cyan-300/[0.06] hover:text-cyan-100"
+        >
+          <MessageSquareText className="h-4 w-4" /> Communications Interface
+        </a>
         <p className="mb-2 px-3 text-[10px] uppercase tracking-[0.14em] text-slate-400" title={HIVE_UI_BUILD}>UI {HIVE_UI_VERSION}</p>
         <button
           type="button"
