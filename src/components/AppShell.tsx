@@ -360,9 +360,7 @@ function SidebarContent({ closeMobile }: { closeMobile?: () => void }) {
 
       <div className="mt-4 border-t border-white/8 pt-4">
         <a
-          href="https://chat.jonathan-harris.online"
-          target="_blank"
-          rel="noreferrer"
+          href="/api/auth/comms-handoff"
           onClick={closeMobile}
           className="mb-2 flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-sm text-slate-400 transition hover:bg-cyan-300/[0.06] hover:text-cyan-100"
         >
