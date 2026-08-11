@@ -12,7 +12,7 @@ import {
 } from '../_lib/security'
 
 interface Env {
-  HIVE_API_BASE_URL: string
+  HIVE_API_BASE_URL?: string
   HIVE_ADMIN_TOKEN: string
   HIVE_UI_ACCESS_KEY?: string
   HIVE_UI_SESSION_TTL_SECONDS?: string
@@ -37,6 +37,7 @@ interface LoginAttempt {
 }
 
 const UI_VERSION = '0.11.0'
+const DEFAULT_HIVE_BACKEND_URL = 'https://liable-loreen-jonathanharris-57884580.koyeb.app'
 const LOGIN_WINDOW_MS = 10 * 60 * 1000
 const LOGIN_MAX_FAILURES = 5
 const loginAttempts = new Map<string, LoginAttempt>()
@@ -434,13 +435,23 @@ export const onRequest: PagesFunction<Env> = async ({ request, env, params }) =>
 
   if (isLocalPowerControl) return handleHivePowerControl(request, env, path, requestId)
 
-  const backendBase = validateBackendBaseUrl(env.HIVE_API_BASE_URL)
+  const incomingUrl = new URL(request.url)
+  const configuredBackend = validateBackendBaseUrl(env.HIVE_API_BASE_URL)
+  const fallbackBackend = validateBackendBaseUrl(DEFAULT_HIVE_BACKEND_URL)
+  const backendBase =
+    configuredBackend && configuredBackend.origin !== incomingUrl.origin
+      ? configuredBackend
+      : fallbackBackend
   const adminToken = env.HIVE_ADMIN_TOKEN?.trim() ?? ''
   if (!backendBase || !adminToken) {
-    return errorResponse('proxy_not_configured', 'The HIVE backend proxy is not configured.', 503, requestId)
+    return errorResponse(
+      'proxy_not_configured',
+      'The HIVE backend proxy is not configured. Set HIVE_API_BASE_URL to the Koyeb backend URL and HIVE_ADMIN_TOKEN to the matching backend token.',
+      503,
+      requestId,
+    )
   }
 
-  const incomingUrl = new URL(request.url)
   const upstreamUrl = new URL(`/${path}`, backendBase.origin)
   upstreamUrl.search = incomingUrl.search
 
