@@ -1,5 +1,6 @@
 import {
   clearSessionCookie,
+  createCommsHandoffToken,
   createSessionToken,
   parseSessionTtl,
   readCookie,
@@ -17,6 +18,10 @@ interface Env {
   HIVE_UI_SESSION_TTL_SECONDS?: string
   KOYEB_TOKEN?: string
   KOYEB_SERVICE_ID_HIVE?: string
+  HIVE_COMMS_HANDOFF_SECRET?: string
+  HIVE_COMMS_ACTOR?: string
+  HIVE_COMMS_ROLE?: string
+  HIVE_COMMS_URL?: string
 }
 
 interface ErrorBody {
@@ -306,6 +311,41 @@ async function handleAuth(request: Request, env: Env, path: string, requestId: s
 }
 
 
+async function handleCommsHandoff(request: Request, env: Env, requestId: string): Promise<Response> {
+  if (request.method !== 'GET') return errorResponse('method_not_allowed', 'Use GET to open the Communications Interface.', 405, requestId, { allow: 'GET' })
+  if (!isSameOriginRequest(request)) return errorResponse('cross_origin_denied', 'Cross-origin handoff requests are not allowed.', 403, requestId)
+
+  const configuredKey = env.HIVE_UI_ACCESS_KEY?.trim() ?? ''
+  const session = configuredKey ? await readSession(request, configuredKey) : null
+  if (!session) {
+    return errorResponse('ui_session_invalid', 'The HIVE UI session is missing or expired.', 401, requestId, {
+      'x-hive-auth-state': 'session-invalid',
+      'set-cookie': clearSessionCookie(),
+    })
+  }
+
+  const secret = env.HIVE_COMMS_HANDOFF_SECRET?.trim() ?? ''
+  if (!secret) return errorResponse('comms_handoff_not_configured', 'Communications Interface handoff is not configured.', 503, requestId)
+
+  const actor = env.HIVE_COMMS_ACTOR?.trim() || 'hive-owner'
+  const rawRole = env.HIVE_COMMS_ROLE?.trim().toLowerCase() || 'admin'
+  const role = (['admin', 'reviewer', 'operator', 'read_only'].includes(rawRole) ? rawRole : 'admin') as 'admin' | 'reviewer' | 'operator' | 'read_only'
+  const token = await createCommsHandoffToken(secret, actor, role)
+  const communicationsUrl = (env.HIVE_COMMS_URL?.trim() || 'https://chat.jonathan-harris.online').replace(/\/+$/, '')
+  const location = `${communicationsUrl}/#handoff=${encodeURIComponent(token)}`
+
+  return new Response(null, {
+    status: 302,
+    headers: {
+      location,
+      'cache-control': 'no-store',
+      'referrer-policy': 'no-referrer',
+      'x-request-id': requestId,
+    },
+  })
+}
+
+
 async function handleHivePowerControl(request: Request, env: Env, path: string, requestId: string): Promise<Response> {
   if (request.method !== 'POST') return errorResponse('method_not_allowed', 'Use POST for HIVE power control.', 405, requestId, { allow: 'POST' })
   const action = path.endsWith('/wake') ? 'resume' : path.endsWith('/sleep') ? 'pause' : ''
@@ -353,6 +393,7 @@ export const onRequest: PagesFunction<Env> = async ({ request, env, params }) =>
   const requestId = getRequestId(request)
   const path = getPath(params)
 
+  if (path === 'auth/comms-handoff') return handleCommsHandoff(request, env, requestId)
   if (path.startsWith('auth/')) return handleAuth(request, env, path, requestId)
 
   if (!['GET', 'HEAD', 'POST', 'PUT', 'PATCH', 'DELETE'].includes(request.method)) {
