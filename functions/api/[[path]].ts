@@ -15,6 +15,8 @@ interface Env {
   HIVE_ADMIN_TOKEN: string
   HIVE_UI_ACCESS_KEY?: string
   HIVE_UI_SESSION_TTL_SECONDS?: string
+  KOYEB_TOKEN?: string
+  KOYEB_SERVICE_ID_HIVE?: string
 }
 
 interface ErrorBody {
@@ -303,6 +305,27 @@ async function handleAuth(request: Request, env: Env, path: string, requestId: s
   return errorResponse('auth_route_not_found', 'Unknown HIVE UI authentication route.', 404, requestId)
 }
 
+
+async function handleHivePowerControl(request: Request, env: Env, path: string, requestId: string): Promise<Response> {
+  if (request.method !== 'POST') return errorResponse('method_not_allowed', 'Use POST for HIVE power control.', 405, requestId, { allow: 'POST' })
+  const action = path.endsWith('/wake') ? 'resume' : path.endsWith('/sleep') ? 'pause' : ''
+  if (!action) return errorResponse('power_action_not_found', 'Unknown HIVE power action.', 404, requestId)
+  const token = env.KOYEB_TOKEN?.trim() ?? ''
+  const serviceId = env.KOYEB_SERVICE_ID_HIVE?.trim() ?? ''
+  if (!token || !serviceId) return errorResponse('koyeb_control_not_configured', 'HIVE power control is not configured.', 503, requestId)
+  try {
+    const response = await fetch(`https://app.koyeb.com/v1/services/${encodeURIComponent(serviceId)}/${action}`, {
+      method: 'POST',
+      headers: { authorization: `Bearer ${token}`, accept: 'application/json' },
+    })
+    if (!response.ok) return errorResponse('koyeb_control_failed', `Koyeb ${action} returned HTTP ${response.status}.`, 502, requestId)
+    return jsonResponse({ ok: true, action, state: action === 'resume' ? 'starting' : 'standby' }, 200, requestId)
+  } catch (error) {
+    console.error('HIVE Koyeb power control failed', { request_id: requestId, action, error: error instanceof Error ? error.message : String(error) })
+    return errorResponse('koyeb_control_unreachable', 'Koyeb power control could not be reached.', 502, requestId)
+  }
+}
+
 function buildUpstreamHeaders(request: Request, adminToken: string, requestId: string): Headers {
   const headers = new Headers()
   for (const [name, value] of request.headers.entries()) {
@@ -335,7 +358,8 @@ export const onRequest: PagesFunction<Env> = async ({ request, env, params }) =>
   if (!['GET', 'HEAD', 'POST', 'PUT', 'PATCH', 'DELETE'].includes(request.method)) {
     return errorResponse('method_not_allowed', 'This HTTP method is not supported by the HIVE proxy.', 405, requestId)
   }
-  if (!isSafeProxyPath(path)) {
+  const isLocalPowerControl = path === 'control/hive/wake' || path === 'control/hive/sleep'
+  if (!isLocalPowerControl && !isSafeProxyPath(path)) {
     return errorResponse('proxy_path_denied', 'This API path is not available through HIVE-UI.', 404, requestId)
   }
   if (!isSameOriginRequest(request)) {
@@ -353,6 +377,9 @@ export const onRequest: PagesFunction<Env> = async ({ request, env, params }) =>
       'set-cookie': clearSessionCookie(),
     })
   }
+
+
+  if (isLocalPowerControl) return handleHivePowerControl(request, env, path, requestId)
 
   const backendBase = validateBackendBaseUrl(env.HIVE_API_BASE_URL)
   const adminToken = env.HIVE_ADMIN_TOKEN?.trim() ?? ''
