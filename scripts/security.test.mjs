@@ -2,6 +2,7 @@ import test from 'node:test'
 import assert from 'node:assert/strict'
 import {
   clearSessionCookie,
+  createCommsHandoffToken,
   createSessionToken,
   parseSessionTtl,
   secureStringEqual,
@@ -39,4 +40,17 @@ test('session cookies use hardened host-only attributes', () => {
     assert.match(cookie, new RegExp(required.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')))
   }
   assert.match(clearSessionCookie(), /Max-Age=0/)
+})
+
+
+test('communications handoff token is short-lived and contains no HIVE access key', async () => {
+  const secret = 'shared-comms-handoff-secret'
+  const token = await createCommsHandoffToken(secret, 'hive-owner', 'admin', 300, 1_700_000_000)
+  assert.match(token, /^[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+$/)
+  assert.equal(token.includes('shared-comms-handoff-secret'), false)
+  const payload = JSON.parse(Buffer.from(token.split('.')[0].replace(/-/g, '+').replace(/_/g, '/'), 'base64').toString('utf8'))
+  assert.equal(payload.aud, 'aims-comms')
+  assert.equal(payload.actor, 'hive-owner')
+  assert.equal(payload.role, 'admin')
+  assert.equal(payload.exp - payload.iat, 300)
 })
