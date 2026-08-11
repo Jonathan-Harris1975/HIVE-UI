@@ -12,7 +12,7 @@ import {
 } from '../_lib/security'
 
 interface Env {
-  HIVE_API_BASE_URL?: string
+  HIVE_API_BASE_URL: string
   HIVE_ADMIN_TOKEN: string
   HIVE_UI_ACCESS_KEY?: string
   HIVE_UI_SESSION_TTL_SECONDS?: string
@@ -36,8 +36,8 @@ interface LoginAttempt {
   resetAt: number
 }
 
-const UI_VERSION = '0.11.0'
-const DEFAULT_HIVE_BACKEND_URL = 'https://liable-loreen-jonathanharris-57884580.koyeb.app'
+const UI_VERSION = '0.11.1'
+const DEFAULT_HIVE_BACKEND_ORIGIN = 'https://liable-loreen-jonathanharris-57884580.koyeb.app'
 const LOGIN_WINDOW_MS = 10 * 60 * 1000
 const LOGIN_MAX_FAILURES = 5
 const loginAttempts = new Map<string, LoginAttempt>()
@@ -435,57 +435,66 @@ export const onRequest: PagesFunction<Env> = async ({ request, env, params }) =>
 
   if (isLocalPowerControl) return handleHivePowerControl(request, env, path, requestId)
 
-  const incomingUrl = new URL(request.url)
   const configuredBackend = validateBackendBaseUrl(env.HIVE_API_BASE_URL)
-  const fallbackBackend = validateBackendBaseUrl(DEFAULT_HIVE_BACKEND_URL)
-  const backendBase =
-    configuredBackend && configuredBackend.origin !== incomingUrl.origin
-      ? configuredBackend
-      : fallbackBackend
+  const fallbackBackend = validateBackendBaseUrl(DEFAULT_HIVE_BACKEND_ORIGIN)
   const adminToken = env.HIVE_ADMIN_TOKEN?.trim() ?? ''
-  if (!backendBase || !adminToken) {
-    return errorResponse(
-      'proxy_not_configured',
-      'The HIVE backend proxy is not configured. Set HIVE_API_BASE_URL to the Koyeb backend URL and HIVE_ADMIN_TOKEN to the matching backend token.',
-      503,
-      requestId,
-    )
+  if (!adminToken) {
+    return errorResponse('proxy_not_configured', 'The HIVE backend admin token is not configured.', 503, requestId)
   }
 
-  const upstreamUrl = new URL(`/${path}`, backendBase.origin)
-  upstreamUrl.search = incomingUrl.search
+  const requestOrigin = new URL(request.url).origin
+  const candidates = [configuredBackend, fallbackBackend]
+    .filter((candidate): candidate is URL => Boolean(candidate))
+    .filter((candidate, index, all) => candidate.origin !== requestOrigin && all.findIndex((item) => item.origin === candidate.origin) === index)
 
-  const init: RequestInit = {
-    method: request.method,
-    headers: buildUpstreamHeaders(request, adminToken, requestId),
-    redirect: 'manual',
-    signal: request.signal,
+  if (!candidates.length) {
+    return errorResponse('proxy_not_configured', 'No valid HIVE backend origin is configured.', 503, requestId)
   }
-  if (!['GET', 'HEAD'].includes(request.method)) init.body = request.body
 
-  try {
-    const upstream = await fetch(upstreamUrl.toString(), init)
-    if (upstream.status >= 300 && upstream.status < 400) {
-      console.error('HIVE upstream returned an unexpected redirect', {
-        request_id: requestId,
-        path,
-        status: upstream.status,
-      })
-      return errorResponse('upstream_redirect_denied', 'The HIVE backend returned an unexpected redirect.', 502, requestId)
+  const incomingUrl = new URL(request.url)
+  const requestBody = ['GET', 'HEAD'].includes(request.method) ? undefined : await request.arrayBuffer()
+  let lastStatus = 0
+
+  for (let index = 0; index < candidates.length; index += 1) {
+    const backendBase = candidates[index]
+    const upstreamUrl = new URL(`/${path}`, backendBase.origin)
+    upstreamUrl.search = incomingUrl.search
+    const init: RequestInit = {
+      method: request.method,
+      headers: buildUpstreamHeaders(request, adminToken, requestId),
+      redirect: 'manual',
+      signal: request.signal,
+      ...(requestBody !== undefined ? { body: requestBody.slice(0) } : {}),
     }
 
-    const responseHeaders = buildResponseHeaders(upstream.headers, requestId)
-    return new Response(upstream.body, {
-      status: upstream.status,
-      statusText: upstream.statusText,
-      headers: responseHeaders,
-    })
-  } catch (error) {
-    console.error('HIVE proxy request failed', {
-      request_id: requestId,
-      path,
-      error: error instanceof Error ? error.message : String(error),
-    })
-    return errorResponse('backend_unreachable', 'The HIVE backend could not be reached.', 502, requestId)
+    try {
+      const upstream = await fetch(upstreamUrl.toString(), init)
+      lastStatus = upstream.status
+      if (upstream.status >= 300 && upstream.status < 400) {
+        console.error('HIVE upstream returned an unexpected redirect', { request_id: requestId, path, status: upstream.status, backend: backendBase.host })
+        return errorResponse('upstream_redirect_denied', 'The HIVE backend returned an unexpected redirect.', 502, requestId)
+      }
+
+      // A blanket 404 from the configured origin is usually a stale/wrong Pages variable.
+      // Retry the repository's known production Koyeb origin before surfacing the failure.
+      if (upstream.status === 404 && index + 1 < candidates.length) {
+        console.warn('HIVE configured backend returned 404; retrying production origin', { request_id: requestId, path, backend: backendBase.host })
+        continue
+      }
+
+      const responseHeaders = buildResponseHeaders(upstream.headers, requestId)
+      responseHeaders.set('x-hive-backend-origin', backendBase.host)
+      return new Response(upstream.body, { status: upstream.status, statusText: upstream.statusText, headers: responseHeaders })
+    } catch (error) {
+      console.error('HIVE proxy request failed', { request_id: requestId, path, backend: backendBase.host, error: error instanceof Error ? error.message : String(error) })
+      if (index + 1 < candidates.length) continue
+    }
   }
+
+  return errorResponse(
+    lastStatus === 404 ? 'backend_route_not_found' : 'backend_unreachable',
+    lastStatus === 404 ? 'The configured and production HIVE backends did not expose this route.' : 'The HIVE backend could not be reached.',
+    lastStatus === 404 ? 502 : 502,
+    requestId,
+  )
 }
