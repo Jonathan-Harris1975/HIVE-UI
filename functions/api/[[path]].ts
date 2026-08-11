@@ -331,8 +331,11 @@ async function handleCommsHandoff(request: Request, env: Env, requestId: string)
   const rawRole = env.HIVE_COMMS_ROLE?.trim().toLowerCase() || 'admin'
   const role = (['admin', 'reviewer', 'operator', 'read_only'].includes(rawRole) ? rawRole : 'admin') as 'admin' | 'reviewer' | 'operator' | 'read_only'
   const token = await createCommsHandoffToken(secret, actor, role)
-  const communicationsUrl = (env.HIVE_COMMS_URL?.trim() || 'https://chat.jonathan-harris.online').replace(/\/+$/, '')
-  const location = `${communicationsUrl}/#handoff=${encodeURIComponent(token)}`
+  const communicationsUrl = new URL(env.HIVE_COMMS_URL?.trim() || 'https://chat.jonathan-harris.online/console/')
+  if (communicationsUrl.pathname === '/' || communicationsUrl.pathname === '') communicationsUrl.pathname = '/console/'
+  else if (!communicationsUrl.pathname.endsWith('/')) communicationsUrl.pathname += '/'
+  communicationsUrl.hash = `handoff=${encodeURIComponent(token)}`
+  const location = communicationsUrl.toString()
 
   return new Response(null, {
     status: 302,
