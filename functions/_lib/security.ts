@@ -119,6 +119,37 @@ export async function verifySessionToken(
   }
 }
 
+export interface CommsHandoffPayload {
+  v: 1
+  iat: number
+  exp: number
+  actor: string
+  role: 'admin' | 'reviewer' | 'operator' | 'read_only'
+  aud: 'aims-comms'
+}
+
+export async function createCommsHandoffToken(
+  secret: string,
+  actor: string,
+  role: CommsHandoffPayload['role'],
+  ttlSeconds = 300,
+  nowSeconds = Math.floor(Date.now() / 1000),
+): Promise<string> {
+  const boundedTtl = Math.min(600, Math.max(60, ttlSeconds))
+  const payload: CommsHandoffPayload = {
+    v: 1,
+    iat: nowSeconds,
+    exp: nowSeconds + boundedTtl,
+    actor: actor.trim().slice(0, 200),
+    role,
+    aud: 'aims-comms',
+  }
+  if (!secret.trim() || !payload.actor) throw new Error('Communications handoff is not configured.')
+  const payloadPart = base64UrlEncode(encoder.encode(JSON.stringify(payload)))
+  const signaturePart = base64UrlEncode(await hmac(secret, payloadPart))
+  return `${payloadPart}.${signaturePart}`
+}
+
 export function readCookie(request: Request, name: string): string {
   const cookieHeader = request.headers.get('cookie') ?? ''
   for (const entry of cookieHeader.split(';')) {
