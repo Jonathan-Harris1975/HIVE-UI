@@ -73,10 +73,10 @@ jobs:
 
       - name: Run Playwright e2e suite
         run: npm run test:e2e
-        # To run this against a real Cloudflare Pages preview deployment
+        # To run this against a real Cloudflare Worker preview deployment
         # instead of a local preview server, set HIVE_UI_E2E_BASE_URL to
         # that deployment's URL (e.g. via a repository variable populated
-        # by the Cloudflare Pages deploy step for this PR).
+        # by the Cloudflare Worker deploy step for this PR).
         env:
           HIVE_UI_E2E_BASE_URL: ${{ vars.HIVE_UI_E2E_BASE_URL || '' }}
 
