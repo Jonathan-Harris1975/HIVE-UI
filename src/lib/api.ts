@@ -25,6 +25,10 @@ export interface UiSessionResponse {
   ok: boolean
   authenticated: boolean
   expires_at?: string
+  idle_expires_at?: string
+  idle_timeout_seconds?: number
+  hive_state?: string
+  hive_release?: string
 }
 
 function requestHeaders(headers?: HeadersInit): Headers {
@@ -89,6 +93,10 @@ export function loginUi(accessKey: string): Promise<UiSessionResponse> {
 
 export function getUiSession(): Promise<UiSessionResponse> {
   return authFetch<UiSessionResponse>('/auth/session')
+}
+
+export function recordUiActivity(): Promise<UiSessionResponse> {
+  return authFetch<UiSessionResponse>('/auth/activity', { method: 'POST' })
 }
 
 export function logoutUi(): Promise<UiSessionResponse> {
