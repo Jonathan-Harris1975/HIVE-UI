@@ -474,6 +474,9 @@ async function handleCommsHandoff(request: Request, env: Env, requestId: string)
   communicationsUrl.search = embedded ? '?embed=1' : ''
   communicationsUrl.hash = `handoff=${encodeURIComponent(token)}`
   const location = communicationsUrl.toString()
+  if (handoffRequestUrl.searchParams.get('format') === 'json') {
+    return jsonResponse({ ok: true, url: location }, 200, requestId, { 'cache-control': 'no-store' })
+  }
 
   return new Response(null, {
     status: 302,
