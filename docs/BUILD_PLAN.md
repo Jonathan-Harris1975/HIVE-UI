@@ -15,7 +15,7 @@
 ## Session 1: frontend foundation — complete
 
 - Vite + React + TypeScript + Tailwind.
-- Cloudflare Pages Function authentication boundary.
+- Cloudflare Worker gateway authentication boundary.
 - Typed API and SSE client.
 - Routes: `/chat`, `/files`, `/skills`, `/ops`.
 - Lighter HIVE navy/cyan/mint visual system.
@@ -67,4 +67,4 @@
 - GitHub Actions CI and built-distribution verification.
 - Deployment and future multi-bucket access documentation.
 
-The remaining operator step is live Cloudflare Pages and Koyeb smoke validation after deployment.
+The remaining operator step is live Cloudflare Worker and Koyeb smoke validation after deployment.

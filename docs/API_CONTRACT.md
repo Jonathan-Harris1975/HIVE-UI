@@ -4,7 +4,7 @@
 
 # HIVE-UI API contract
 
-HIVE-UI calls the backend through same-origin `/api/*` requests. In production, the Cloudflare Pages Function maps approved paths to the Koyeb HIVE service and adds the backend bearer token.
+HIVE-UI calls the backend through same-origin `/api/*` requests. In production, the Cloudflare Worker gateway maps approved paths to the Koyeb HIVE service and adds the backend bearer token.
 
 ## Authentication boundary
 
@@ -47,7 +47,7 @@ POST /api/auth/logout
 Browser
   signed __Host-hive_session cookie
       ↓
-Cloudflare Pages Function
+Cloudflare Worker gateway
   verifies expiry and signature
   restricts the route
   sanitises headers

@@ -8,7 +8,7 @@
 
 ## Security boundary
 
-- HIVE backend bearer token remains inside Cloudflare Pages Functions.
+- HIVE backend bearer token remains inside Cloudflare Worker gateway.
 - UI access key is submitted only to the same-origin login endpoint.
 - Browser storage no longer contains the UI access key.
 - Sessions use a signed `__Host-` cookie with `HttpOnly`, `Secure` and `SameSite=Strict`.

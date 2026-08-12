@@ -15,7 +15,7 @@ For each readable lane, the Files route supports:
 - cursor pagination;
 - object metadata;
 - extracted preview for supported text/document formats;
-- authenticated download through the Cloudflare Pages proxy;
+- authenticated download through the Cloudflare Worker gateway;
 - shared-interface file chat for supported objects.
 
 Every writable lane exposes multipart upload and paste-text controls. Non-writable lanes remain browse/view/download only until credentials allow writes.

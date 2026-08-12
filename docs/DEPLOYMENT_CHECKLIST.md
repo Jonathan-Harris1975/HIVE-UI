@@ -2,7 +2,7 @@
 > **Last reviewed:** 22 June 2026  
 > **Operational authority:** Current repository README, SECURITY policy and operations guide.
 
-# HIVE-UI Cloudflare Pages production checklist
+# HIVE-UI Cloudflare Worker production checklist
 
 ## 1. Project configuration
 
@@ -18,15 +18,21 @@ Node.js: 22
 
 The repository pins Node and npm versions, uses a locked dependency tree and rejects non-public package registry URLs.
 
-## 2. Cloudflare Pages variables and secrets
+## 2. Cloudflare Worker variables and secrets
 
 Add these under **Settings → Variables and Secrets** for the Production environment:
 
 ```text
-HIVE_API_BASE_URL             https://your-current-hive-service.koyeb.app
-HIVE_ADMIN_TOKEN              secret matching the Koyeb ADMIN_BEARER_TOKEN value
-HIVE_UI_ACCESS_KEY            separate high-entropy UI access secret
-HIVE_UI_SESSION_TTL_SECONDS   optional, 43200 by default
+HIVE_API_BASE_URL             variable: live HIVE Koyeb HTTPS origin
+HIVE_UI_SESSION_TTL_SECONDS   variable: 43200
+KOYEB_SERVICE_ID_HIVE         variable: live HIVE Koyeb service ID
+HIVE_COMMS_ACTOR              variable: hive-owner
+HIVE_COMMS_ROLE               variable: admin
+HIVE_COMMS_URL                variable: https://chat.jonathan-harris.online/console/
+HIVE_ADMIN_TOKEN              secret: matches HIVE ADMIN_BEARER_TOKEN
+HIVE_UI_ACCESS_KEY            secret: separate high-entropy UI access key
+KOYEB_TOKEN                   secret: Koyeb service-control token
+HIVE_COMMS_HANDOFF_SECRET     secret: identical to AIMS-UI Worker handoff secret
 ```
 
 Recommended session TTL:
@@ -39,7 +45,7 @@ The supported range is 900 to 86400 seconds. Rotating `HIVE_UI_ACCESS_KEY` inval
 
 Configure Preview values separately only when preview deployments need working backend access. Do not expose production credentials to untrusted branch previews.
 
-Never configure either secret with a `VITE_` prefix.
+Never configure any runtime secret with a `VITE_` prefix.
 
 ## 3. HIVE backend alignment
 
@@ -51,7 +57,7 @@ ADMIN_BEARER_TOKEN={{ secret.Hive_API_KEY }}
 
 `HIVE_ADMIN_TOKEN` in Cloudflare must contain the resolved token value, not Koyeb's `{{ secret... }}` template.
 
-The Cloudflare Function calls Koyeb server-to-server. The browser does not need direct Koyeb access during normal production use.
+The Cloudflare Worker gateway calls Koyeb server-to-server. The browser does not need direct Koyeb access during normal production use.
 
 ## 4. Production gates before deployment
 
@@ -67,8 +73,8 @@ Expected results:
 
 - lockfile registry verification passes;
 - browser source secret scan passes;
-- four signed-session security tests pass;
-- browser and Pages Function TypeScript checks pass;
+- signed-session and communications-handoff security tests pass;
+- browser and Worker gateway TypeScript checks pass;
 - ESLint passes;
 - Vite production build passes;
 - no source maps are published;
@@ -78,7 +84,7 @@ Expected results:
 ## 5. Deployment verification
 
 1. Push to `main` and confirm **HIVE-UI CI** succeeds.
-2. Confirm Cloudflare Pages builds `dist` successfully.
+2. Confirm Cloudflare Worker builds `dist` successfully.
 3. Open the production URL in a private browser tab.
 4. Enter `HIVE_UI_ACCESS_KEY` and confirm the console opens.
 5. In browser storage tools, confirm an `__Host-hive_session` cookie exists and is marked `HttpOnly`, `Secure` and `SameSite=Strict`.
@@ -109,11 +115,11 @@ X-Robots-Tag: noindex, nofollow, noarchive, nosnippet
 API responses also include:
 
 ```text
-X-HIVE-UI-Version: 0.7.0
+X-HIVE-UI-Version: 0.11.1
 X-Request-ID: <request correlation id>
 Cache-Control: no-store, max-age=0
 ```
 
 ## 7. Rollback
 
-Cloudflare Pages retains previous deployments. Roll back to the last known-good deployment if the function or browser build fails post-deployment, then inspect the request ID in the API response and Cloudflare Function logs.
+Cloudflare Worker retains previous deployments. Roll back to the last known-good deployment if the function or browser build fails post-deployment, then inspect the request ID in the API response and Cloudflare Worker logs.
