@@ -1,7 +1,7 @@
 import { defineConfig, devices } from '@playwright/test'
 
 // Runs against `npm run preview` (a real built production bundle) rather
-// than the dev server, and against a Cloudflare Pages preview deployment
+// than the dev server, and against a Cloudflare Worker preview deployment
 // URL in CI (see .github/workflows/ci.yml) so the Pages Functions edge
 // layer (login, session cookie, API proxy) is exercised for real, not
 // mocked — this is the gap the readiness audit flagged: nothing previously

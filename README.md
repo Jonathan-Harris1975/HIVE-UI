@@ -4,9 +4,9 @@
 
 # HIVE-UI
 
-**Current UI marker:** `0.10.11` / `a11y-hardening-pass`.
+**Current UI marker:** `0.12.0` / `worker-gateway`.
 
-HIVE-UI is the private React operator interface for HIVE. It is deployed on Cloudflare Pages and proxies authenticated API traffic to the HIVE backend without exposing the backend bearer token to the browser.
+HIVE-UI is the private React operator interface for HIVE. It is deployed on Cloudflare Worker and proxies authenticated API traffic to the HIVE backend without exposing the backend bearer token to the browser.
 
 ## Production capabilities
 
@@ -27,7 +27,7 @@ HIVE-UI is the private React operator interface for HIVE. It is deployed on Clou
 | `/files` | Uploads and multi-bucket browsing |
 | `/skills` | Skills discovery and recommendation |
 | `/ops` | Health, workflows, execution and review status |
-| `/health` | Public Cloudflare Pages health function |
+| `/health` | Public Cloudflare Worker health function |
 
 ## Local verification
 
@@ -36,7 +36,7 @@ npm ci --no-audit --no-fund
 npm run check
 ```
 
-## Cloudflare Pages deployment
+## Cloudflare Worker deployment
 
 | Setting | Value |
 |---|---|
@@ -45,16 +45,26 @@ npm run check
 | Output directory | `dist` |
 | Production URL | `https://hive.jonathan-harris.online` |
 
-Required encrypted variables:
+Required Worker variables:
 
 - `HIVE_API_BASE_URL`
+- `HIVE_UI_SESSION_TTL_SECONDS`
+- `KOYEB_SERVICE_ID_HIVE`
+- `HIVE_COMMS_ACTOR`
+- `HIVE_COMMS_ROLE`
+- `HIVE_COMMS_URL`
+
+Required encrypted Worker secrets:
+
 - `HIVE_ADMIN_TOKEN`
 - `HIVE_UI_ACCESS_KEY`
+- `KOYEB_TOKEN`
+- `HIVE_COMMS_HANDOFF_SECRET`
 
-Optional: `HIVE_UI_SESSION_TTL_SECONDS`.
+`HIVE_COMMS_HANDOFF_SECRET` must exactly match the AIMS-UI Worker secret of the same name.
 
-The access key belongs in Cloudflare Pages Variables and Secrets, not only in GitHub Secrets. See [`docs/DEPLOYMENT_CHECKLIST.md`](docs/DEPLOYMENT_CHECKLIST.md) and [`SECURITY.md`](SECURITY.md).
+The access key belongs in Cloudflare Worker Variables and Secrets, not only in GitHub Secrets. See [`docs/DEPLOYMENT_CHECKLIST.md`](docs/DEPLOYMENT_CHECKLIST.md) and [`SECURITY.md`](SECURITY.md).
 
 ## Operational alerts
 
-The Ops route now displays recent redacted provider and runtime events supplied by HIVE, including GitHub CI, Koyeb deployment and Cloudflare Pages failures. See [`docs/OPERATIONAL_ALERTS.md`](docs/OPERATIONAL_ALERTS.md).
+The Ops route now displays recent redacted provider and runtime events supplied by HIVE, including GitHub CI, Koyeb deployment and Cloudflare Worker failures. See [`docs/OPERATIONAL_ALERTS.md`](docs/OPERATIONAL_ALERTS.md).

@@ -1,0 +1,28 @@
+name = "hive-ui"
+main = "workers/gateway/index.ts"
+compatibility_date = "2026-08-12"
+preview_urls = false
+
+[[routes]]
+pattern = "hive.jonathan-harris.online"
+custom_domain = true
+
+[vars]
+HIVE_API_BASE_URL = "https://liable-loreen-jonathanharris-57884580.koyeb.app"
+HIVE_UI_SESSION_TTL_SECONDS = "43200"
+HIVE_COMMS_ACTOR = "hive-owner"
+HIVE_COMMS_ROLE = "admin"
+HIVE_COMMS_URL = "https://chat.jonathan-harris.online/console/"
+# Set KOYEB_SERVICE_ID_HIVE in Cloudflare Worker variables for the live HIVE service.
+KOYEB_SERVICE_ID_HIVE = ""
+
+[assets]
+directory = "./dist"
+binding = "ASSETS"
+run_worker_first = ["/api/*", "/health"]
+
+# Configure these as encrypted Cloudflare Worker secrets, never in this file:
+# HIVE_ADMIN_TOKEN
+# HIVE_UI_ACCESS_KEY
+# KOYEB_TOKEN
+# HIVE_COMMS_HANDOFF_SECRET

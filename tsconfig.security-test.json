@@ -11,9 +11,9 @@
     "skipLibCheck": true,
     "outDir": ".security-test",
     "noEmit": false,
-    "rootDir": "functions/_lib"
+    "rootDir": "workers/gateway"
   },
   "include": [
-    "functions/_lib/security.ts"
+    "workers/gateway/security.ts"
   ]
 }
