@@ -49,6 +49,7 @@ Required Worker variables:
 
 - `HIVE_API_BASE_URL`
 - `HIVE_UI_SESSION_TTL_SECONDS`
+- `HIVE_UI_IDLE_TIMEOUT_SECONDS`
 - `KOYEB_SERVICE_ID_HIVE`
 - `HIVE_COMMS_ACTOR`
 - `HIVE_COMMS_ROLE`
@@ -62,6 +63,8 @@ Required encrypted Worker secrets:
 - `HIVE_COMMS_HANDOFF_SECRET`
 
 `HIVE_COMMS_HANDOFF_SECRET` must exactly match the AIMS-UI Worker secret of the same name.
+
+Interactive HIVE uptime is session-driven: a successful login resumes HIVE when needed, genuine user activity refreshes the 30-minute idle window, and manual or idle logout pauses HIVE when that UI session was the actor that woke it. HIVE already running for MAST governance is not claimed by the UI session and is left for MAST to return to standby.
 
 The access key belongs in Cloudflare Worker Variables and Secrets, not only in GitHub Secrets. See [`docs/DEPLOYMENT_CHECKLIST.md`](docs/DEPLOYMENT_CHECKLIST.md) and [`SECURITY.md`](SECURITY.md).
 
