@@ -469,7 +469,9 @@ async function handleCommsHandoff(request: Request, env: Env, requestId: string)
   }
   if (communicationsUrl.pathname === '/' || communicationsUrl.pathname === '') communicationsUrl.pathname = '/console/'
   else if (!communicationsUrl.pathname.endsWith('/')) communicationsUrl.pathname += '/'
-  communicationsUrl.search = ''
+  const handoffRequestUrl = new URL(request.url)
+  const embedded = handoffRequestUrl.searchParams.get('embed') === '1'
+  communicationsUrl.search = embedded ? '?embed=1' : ''
   communicationsUrl.hash = `handoff=${encodeURIComponent(token)}`
   const location = communicationsUrl.toString()
 
