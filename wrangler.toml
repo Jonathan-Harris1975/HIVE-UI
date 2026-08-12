@@ -15,6 +15,20 @@ HIVE_COMMS_ROLE = "admin"
 HIVE_COMMS_URL = "https://chat.jonathan-harris.online/console/"
 # Set KOYEB_SERVICE_ID_HIVE in Cloudflare Worker variables for the live HIVE service.
 KOYEB_SERVICE_ID_HIVE = ""
+[observability]
+enabled = false
+head_sampling_rate = 1
+
+[observability.logs]
+enabled = true
+head_sampling_rate = 1
+persist = true
+invocation_logs = true
+
+[observability.traces]
+enabled = true
+persist = true
+head_sampling_rate = 1
 
 [assets]
 directory = "./dist"
