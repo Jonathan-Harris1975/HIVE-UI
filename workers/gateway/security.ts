@@ -1,13 +1,18 @@
 export const SESSION_COOKIE_NAME = '__Host-hive_session'
 export const DEFAULT_SESSION_TTL_SECONDS = 43_200
+export const DEFAULT_IDLE_TIMEOUT_SECONDS = 1_800
 export const MIN_SESSION_TTL_SECONDS = 900
 export const MAX_SESSION_TTL_SECONDS = 86_400
+export const MIN_IDLE_TIMEOUT_SECONDS = 300
+export const MAX_IDLE_TIMEOUT_SECONDS = 7_200
 
 export interface SessionPayload {
   v: 1
   iat: number
   exp: number
   sid: string
+  idle_exp: number
+  hive_owner: boolean
 }
 
 const encoder = new TextEncoder()
@@ -62,6 +67,13 @@ export async function secureStringEqual(left: string, right: string): Promise<bo
   return constantTimeEqual(leftDigest, rightDigest)
 }
 
+export function parseIdleTimeout(raw: string | undefined): number {
+  if (!raw) return DEFAULT_IDLE_TIMEOUT_SECONDS
+  const parsed = Number.parseInt(raw, 10)
+  if (!Number.isFinite(parsed)) return DEFAULT_IDLE_TIMEOUT_SECONDS
+  return Math.min(MAX_IDLE_TIMEOUT_SECONDS, Math.max(MIN_IDLE_TIMEOUT_SECONDS, parsed))
+}
+
 export function parseSessionTtl(raw: string | undefined): number {
   if (!raw) return DEFAULT_SESSION_TTL_SECONDS
   const parsed = Number.parseInt(raw, 10)
@@ -72,6 +84,8 @@ export function parseSessionTtl(raw: string | undefined): number {
 export async function createSessionToken(
   secret: string,
   ttlSeconds: number,
+  idleTimeoutSeconds = DEFAULT_IDLE_TIMEOUT_SECONDS,
+  hiveOwner = false,
   nowSeconds = Math.floor(Date.now() / 1000),
 ): Promise<{ token: string; payload: SessionPayload }> {
   const nonce = crypto.getRandomValues(new Uint8Array(18))
@@ -80,6 +94,8 @@ export async function createSessionToken(
     iat: nowSeconds,
     exp: nowSeconds + ttlSeconds,
     sid: base64UrlEncode(nonce),
+    idle_exp: Math.min(nowSeconds + ttlSeconds, nowSeconds + idleTimeoutSeconds),
+    hive_owner: hiveOwner,
   }
   const payloadPart = base64UrlEncode(encoder.encode(JSON.stringify(payload)))
   const signaturePart = base64UrlEncode(await hmac(secret, payloadPart))
@@ -90,6 +106,7 @@ export async function verifySessionToken(
   token: string,
   secret: string,
   nowSeconds = Math.floor(Date.now() / 1000),
+  allowIdleExpired = false,
 ): Promise<SessionPayload | null> {
   if (!token || token.length > 2048) return null
   const parts = token.split('.')
@@ -107,16 +124,40 @@ export async function verifySessionToken(
 
   try {
     const parsed = JSON.parse(decoder.decode(payloadBytes)) as Partial<SessionPayload>
-    if (parsed.v !== 1 || typeof parsed.iat !== 'number' || typeof parsed.exp !== 'number' || typeof parsed.sid !== 'string') {
+    if (
+      parsed.v !== 1
+      || typeof parsed.iat !== 'number'
+      || typeof parsed.exp !== 'number'
+      || typeof parsed.idle_exp !== 'number'
+      || typeof parsed.sid !== 'string'
+      || typeof parsed.hive_owner !== 'boolean'
+    ) {
       return null
     }
-    if (!Number.isFinite(parsed.iat) || !Number.isFinite(parsed.exp)) return null
+    if (!Number.isFinite(parsed.iat) || !Number.isFinite(parsed.exp) || !Number.isFinite(parsed.idle_exp)) return null
     if (parsed.iat > nowSeconds + 60 || parsed.exp <= nowSeconds || parsed.exp - parsed.iat > MAX_SESSION_TTL_SECONDS) return null
+    if (!allowIdleExpired && parsed.idle_exp <= nowSeconds) return null
+    if (parsed.idle_exp > parsed.exp || parsed.idle_exp < parsed.iat) return null
     if (!/^[A-Za-z0-9_-]{16,64}$/.test(parsed.sid)) return null
     return parsed as SessionPayload
   } catch {
     return null
   }
+}
+
+export async function refreshSessionToken(
+  secret: string,
+  session: SessionPayload,
+  idleTimeoutSeconds: number,
+  nowSeconds = Math.floor(Date.now() / 1000),
+): Promise<{ token: string; payload: SessionPayload }> {
+  const payload: SessionPayload = {
+    ...session,
+    idle_exp: Math.min(session.exp, nowSeconds + idleTimeoutSeconds),
+  }
+  const payloadPart = base64UrlEncode(encoder.encode(JSON.stringify(payload)))
+  const signaturePart = base64UrlEncode(await hmac(secret, payloadPart))
+  return { token: `${payloadPart}.${signaturePart}`, payload }
 }
 
 export interface CommsHandoffPayload {
