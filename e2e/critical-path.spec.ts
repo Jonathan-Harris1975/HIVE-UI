@@ -8,7 +8,7 @@ import { expect, test } from '@playwright/test'
 // local `npm run preview` build of the frontend only, with `/api/*` calls
 // mocked via page.route — there is no live HIVE backend in that mode, so
 // this proves the frontend's request/response handling and DOM behaviour,
-// not the real Cloudflare Pages Function -> Koyeb backend hop.
+// not the real Cloudflare Worker gateway -> Koyeb backend hop.
 //
 // For the full, audit-required proof (edge function + session cookie +
 // real backend proxy), set HIVE_UI_E2E_BASE_URL to a real Cloudflare Pages
