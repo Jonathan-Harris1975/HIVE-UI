@@ -27,7 +27,7 @@ Secure
 SameSite=Strict
 ```
 
-The session is HMAC-signed using the configured UI access secret. The raw access key is not stored in browser storage and is not forwarded to HIVE.
+The session is HMAC-signed using the configured UI access secret. The raw access key is not stored in browser storage and is not forwarded to HIVE. Login also resumes the Koyeb HIVE service when it is in standby. The signed session records whether this UI session owns that wake-up so MAST-owned governance uptime is not accidentally paused on logout.
 
 ### Session restore
 
@@ -35,11 +35,21 @@ The session is HMAC-signed using the configured UI access secret. The raw access
 GET /api/auth/session
 ```
 
+### Activity heartbeat
+
+```text
+POST /api/auth/activity
+```
+
+Only genuine browser interaction calls this route. Background API polling does not refresh the idle window. The production default is 1800 seconds (30 minutes).
+
 ### Logout
 
 ```text
 POST /api/auth/logout
 ```
+
+Logout clears the signed cookie and pauses HIVE when the current UI session owns the interactive wake-up. An idle-expired signed session is still accepted for this release step, but not for normal API access.
 
 ### Proxy authentication flow
 
@@ -56,7 +66,7 @@ Cloudflare Worker gateway
 HIVE backend on Koyeb
 ```
 
-The Function forwards only:
+The Worker gateway forwards only:
 
 ```text
 /health
@@ -67,7 +77,7 @@ The Function forwards only:
 
 Unknown, traversal-like and absolute URL paths are rejected at the edge.
 
-When the UI session is invalid, the Function returns:
+When the UI session is invalid, the Worker returns:
 
 ```text
 HTTP 401

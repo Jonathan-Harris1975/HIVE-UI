@@ -25,6 +25,7 @@ Add these under **Settings → Variables and Secrets** for the Production enviro
 ```text
 HIVE_API_BASE_URL             variable: live HIVE Koyeb HTTPS origin
 HIVE_UI_SESSION_TTL_SECONDS   variable: 43200
+HIVE_UI_IDLE_TIMEOUT_SECONDS  variable: 1800
 KOYEB_SERVICE_ID_HIVE         variable: live HIVE Koyeb service ID
 HIVE_COMMS_ACTOR              variable: hive-owner
 HIVE_COMMS_ROLE               variable: admin
@@ -35,13 +36,14 @@ KOYEB_TOKEN                   secret: Koyeb service-control token
 HIVE_COMMS_HANDOFF_SECRET     secret: identical to AIMS-UI Worker handoff secret
 ```
 
-Recommended session TTL:
+Recommended absolute session TTL and inactivity timeout:
 
 ```text
-43200
+HIVE_UI_SESSION_TTL_SECONDS=43200
+HIVE_UI_IDLE_TIMEOUT_SECONDS=1800
 ```
 
-The supported range is 900 to 86400 seconds. Rotating `HIVE_UI_ACCESS_KEY` invalidates all active UI sessions.
+The absolute session TTL supports 900 to 86400 seconds. Idle timeout supports 300 to 7200 seconds. Rotating `HIVE_UI_ACCESS_KEY` invalidates all active UI sessions.
 
 Configure Preview values separately only when preview deployments need working backend access. Do not expose production credentials to untrusted branch previews.
 
@@ -93,10 +95,13 @@ Expected results:
 8. Open `/chat`, send a short Auto route message and confirm streaming persists.
 9. Open `/files`, upload a small text file and use the shared file-chat flow.
 10. Open `/skills` and `/ops` and confirm authenticated requests succeed.
-11. Sign out and confirm the session cookie is cleared.
-12. Confirm `/api/v1/...` requests without the cookie return `401` with `x-hive-auth-state: session-invalid`.
-13. Confirm unknown proxy paths return `404` and do not reach Koyeb.
-14. Check one mobile-width and one desktop-width layout.
+11. Sign out and confirm the session cookie is cleared and HIVE returns to standby when the UI session woke it.
+12. Log in again and confirm HIVE is automatically resumed without a manual Wake control.
+13. Confirm genuine clicks/typing/scrolling keep the session active while background polling alone does not.
+14. Confirm 30 minutes of no user interaction signs the UI out and returns UI-owned HIVE uptime to standby.
+15. Confirm `/api/v1/...` requests without the cookie return `401` with `x-hive-auth-state: session-invalid`.
+16. Confirm unknown proxy paths return `404` and do not reach Koyeb.
+17. Check one mobile-width and one desktop-width layout.
 
 ## 6. Response security checks
 
