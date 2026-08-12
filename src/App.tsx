@@ -41,6 +41,9 @@ const OptimisationPage = lazy(() =>
 const MonthlyReviewPage = lazy(() =>
   import('./pages/MonthlyReviewPage').then((module) => ({ default: module.MonthlyReviewPage })),
 )
+const CommunicationsPage = lazy(() =>
+  import('./pages/CommunicationsPage').then((module) => ({ default: module.CommunicationsPage })),
+)
 
 function LoadingScreen({ compact = false }: { compact?: boolean }) {
   return (
@@ -77,6 +80,7 @@ export default function App() {
               <Route path="monthly-review" element={<MonthlyReviewPage />} />
               <Route path="models" element={<ModelRegistryPage />} />
               <Route path="ops" element={<OpsPage />} />
+              <Route path="communications" element={<CommunicationsPage />} />
               <Route path="*" element={<Navigate to="/chat" replace />} />
             </Route>
           </Routes>
