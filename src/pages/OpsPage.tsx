@@ -8,7 +8,6 @@ import {
   Network,
   ServerCog,
   PlayCircle,
-  Power,
   RefreshCw,
   ShieldCheck,
   Sparkles,
@@ -191,37 +190,6 @@ function ServiceWakeControl({ repo, onWoken }: { repo: 'AIMS' | 'RAMS'; onWoken:
           : ticket.status === 'failed'
             ? (ticket.error || 'Wake-up failed.')
             : `${wakePhaseLabel(ticket.phase)}…`}
-    </div>
-  )
-}
-
-function HivePowerControl({ onRefresh }: { onRefresh: () => void }) {
-  const [busy, setBusy] = useState<'wake' | 'sleep' | null>(null)
-  const [message, setMessage] = useState<string | null>(null)
-
-  const act = useCallback(async (action: 'wake' | 'sleep') => {
-    setBusy(action)
-    setMessage(null)
-    try {
-      await apiFetch<{ ok: boolean }>(`/control/hive/${action}`, { method: 'POST' })
-      setMessage(action === 'wake' ? 'HIVE resume requested.' : 'HIVE sleep requested.')
-      if (action === 'wake') window.setTimeout(onRefresh, 5000)
-    } catch (caught) {
-      setMessage(caught instanceof Error ? caught.message : `HIVE ${action} request failed.`)
-    } finally {
-      setBusy(null)
-    }
-  }, [onRefresh])
-
-  return (
-    <div className="flex flex-wrap items-center gap-2">
-      <button type="button" onClick={() => void act('wake')} disabled={busy !== null} className="inline-flex h-9 items-center gap-2 rounded-xl border border-emerald-300/15 bg-emerald-300/7 px-3 text-xs text-emerald-100 disabled:opacity-50">
-        <RefreshCw className={`h-3.5 w-3.5 ${busy === 'wake' ? 'animate-spin' : ''}`} /> Wake HIVE
-      </button>
-      <button type="button" onClick={() => void act('sleep')} disabled={busy !== null} className="inline-flex h-9 items-center gap-2 rounded-xl border border-violet-300/15 bg-violet-300/7 px-3 text-xs text-violet-100 disabled:opacity-50">
-        <Power className="h-3.5 w-3.5" /> Sleep HIVE
-      </button>
-      {message && <span className="text-[11px] text-slate-400">{message}</span>}
     </div>
   )
 }
@@ -552,7 +520,6 @@ export function OpsPage() {
             <button type="button" onClick={() => void loadOps(true)} className="flex h-10 items-center justify-center gap-2 rounded-xl border border-white/8 bg-white/[0.04] px-4 text-xs text-slate-300 hover:bg-white/[0.07]">
               <RefreshCw className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`} /> Refresh status
             </button>
-            <HivePowerControl onRefresh={() => void loadOps(true)} />
           </div>
         </section>
 
