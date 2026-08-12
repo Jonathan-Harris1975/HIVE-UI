@@ -23,7 +23,7 @@ for (const forbidden of [
   if (browserSource.includes(forbidden)) throw new Error(`Browser source contains forbidden legacy secret pattern: ${forbidden}`)
 }
 
-const functionSource = await readFile('functions/api/[[path]].ts', 'utf8')
+const functionSource = await readFile('workers/gateway/index.ts', 'utf8')
 for (const required of [
   '__Host-hive_session',
   'HttpOnly',
@@ -32,8 +32,8 @@ for (const required of [
   'proxy_path_denied',
   'x-hive-auth-state',
 ]) {
-  const combined = functionSource + await readFile('functions/_lib/security.ts', 'utf8')
-  if (!combined.includes(required)) throw new Error(`Pages Function security control is missing: ${required}`)
+  const combined = functionSource + await readFile('workers/gateway/security.ts', 'utf8')
+  if (!combined.includes(required)) throw new Error(`Worker gateway security control is missing: ${required}`)
 }
 
 console.log('HIVE-UI source verification passed.')
