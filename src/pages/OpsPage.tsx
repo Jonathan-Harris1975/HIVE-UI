@@ -127,10 +127,9 @@ function wakePhaseLabel(phase: string): string {
   }
 }
 
-/** Lets an operator manually trigger the same transparent wake-up flow HIVE runs
- * automatically when a user action needs a Standby service: request a Koyeb resume,
- * then poll a ticket for startup progress. */
-function ServiceWakeControl({ repo, onWoken }: { repo: 'AIMS' | 'RAMS'; onWoken: () => void }) {
+/** RAMS remains manually recoverable from Operations. HIVE and AIMS lifecycle
+ * is session-owned and therefore has no manual wake/sleep control in the UI. */
+function ServiceWakeControl({ repo, onWoken }: { repo: 'RAMS'; onWoken: () => void }) {
   const [ticket, setTicket] = useState<WakeTicket | null>(null)
   const [starting, setStarting] = useState(false)
 
@@ -234,8 +233,8 @@ function RepoHealthCard({ item, onInspect, onRefresh }: { item: RepoHealthItem; 
           ? <span>Worker heartbeat</span>
           : operationalStatus && <span>{operationalStatus.replace(/_/g, ' ')}</span>}
       </div>
-      {(item.repo === 'AIMS' || item.repo === 'RAMS') && !['healthy', 'busy'].includes(item.status) && (
-        <ServiceWakeControl repo={item.repo} onWoken={onRefresh} />
+      {item.repo === 'RAMS' && !['healthy', 'busy'].includes(item.status) && (
+        <ServiceWakeControl repo="RAMS" onWoken={onRefresh} />
       )}
     </div>
   )
