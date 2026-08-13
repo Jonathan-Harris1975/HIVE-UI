@@ -19,11 +19,12 @@ test('access-key comparison accepts exact values and rejects different values', 
 
 test('signed sessions verify, expire and reject tampering', async () => {
   const secret = 'test-only-secret-with-enough-entropy'
-  const { token, payload } = await createSessionToken(secret, 3600, 1800, true, 1_700_000_000)
+  const { token, payload } = await createSessionToken(secret, 3600, 1800, true, true, 1_700_000_000)
 
   const verified = await verifySessionToken(token, secret, 1_700_000_100)
   assert.equal(verified?.sid, payload.sid)
   assert.equal(verified?.hive_owner, true)
+  assert.equal(verified?.aims_owner, true)
   assert.equal(await verifySessionToken(token, secret, 1_700_001_801), null)
   assert.equal((await verifySessionToken(token, secret, 1_700_001_801, true))?.sid, payload.sid)
   assert.equal(await verifySessionToken(token, secret, 1_700_003_601, true), null)
