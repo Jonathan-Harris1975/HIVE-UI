@@ -24,6 +24,7 @@ interface Env {
   HIVE_UI_IDLE_TIMEOUT_SECONDS?: string
   KOYEB_TOKEN?: string
   KOYEB_SERVICE_ID_HIVE?: string
+  KOYEB_SERVICE_ID_AIMS?: string
   HIVE_COMMS_HANDOFF_SECRET?: string
   HIVE_COMMS_ACTOR?: string
   HIVE_COMMS_ROLE?: string
@@ -230,16 +231,19 @@ async function readSessionForLogout(request: Request, secret: string): Promise<S
   return verifySessionToken(token, secret, Math.floor(Date.now() / 1000), true)
 }
 
-type HiveKoyebState = 'healthy' | 'starting' | 'standby' | 'down' | 'unknown'
+type KoyebServiceState = 'healthy' | 'starting' | 'standby' | 'down' | 'unknown'
+type LifecycleService = 'HIVE' | 'AIMS'
 
-function koyebConfig(env: Env): { token: string; serviceId: string } | null {
+function koyebConfig(env: Env, service: LifecycleService): { token: string; serviceId: string } | null {
   const token = env.KOYEB_TOKEN?.trim() ?? ''
-  const serviceId = env.KOYEB_SERVICE_ID_HIVE?.trim() ?? ''
+  const serviceId = service === 'HIVE'
+    ? env.KOYEB_SERVICE_ID_HIVE?.trim() ?? ''
+    : env.KOYEB_SERVICE_ID_AIMS?.trim() ?? ''
   return token && serviceId ? { token, serviceId } : null
 }
 
-async function getHiveKoyebState(env: Env): Promise<HiveKoyebState> {
-  const config = koyebConfig(env)
+async function getKoyebState(env: Env, service: LifecycleService): Promise<KoyebServiceState> {
+  const config = koyebConfig(env, service)
   if (!config) return 'unknown'
   try {
     const response = await fetch(`https://app.koyeb.com/v1/services/${encodeURIComponent(config.serviceId)}`, {
@@ -247,8 +251,8 @@ async function getHiveKoyebState(env: Env): Promise<HiveKoyebState> {
     })
     if (!response.ok) return 'unknown'
     const payload = await response.json().catch(() => ({})) as Record<string, unknown>
-    const service = payload.service && typeof payload.service === 'object' ? payload.service as Record<string, unknown> : payload
-    const raw = String(service.status ?? service.state ?? '').trim().toLowerCase()
+    const servicePayload = payload.service && typeof payload.service === 'object' ? payload.service as Record<string, unknown> : payload
+    const raw = String(servicePayload.status ?? servicePayload.state ?? '').trim().toLowerCase()
     if (['healthy', 'running', 'active'].includes(raw)) return 'healthy'
     if (['resuming', 'starting', 'provisioning'].includes(raw)) return 'starting'
     if (['paused', 'pausing', 'stopped'].includes(raw)) return 'standby'
@@ -259,10 +263,10 @@ async function getHiveKoyebState(env: Env): Promise<HiveKoyebState> {
   }
 }
 
-async function requestHivePower(env: Env, action: 'resume' | 'pause', requestId: string): Promise<boolean> {
-  const config = koyebConfig(env)
+async function requestKoyebPower(env: Env, service: LifecycleService, action: 'resume' | 'pause', requestId: string): Promise<boolean> {
+  const config = koyebConfig(env, service)
   if (!config) {
-    console.error('HIVE lifecycle control is not configured', { request_id: requestId, action })
+    console.error(`${service} lifecycle control is not configured`, { request_id: requestId, action })
     return false
   }
   try {
@@ -271,30 +275,41 @@ async function requestHivePower(env: Env, action: 'resume' | 'pause', requestId:
       headers: { authorization: `Bearer ${config.token}`, accept: 'application/json' },
     })
     if (!response.ok) {
-      console.error('HIVE Koyeb lifecycle request failed', { request_id: requestId, action, status: response.status })
+      console.error(`${service} Koyeb lifecycle request failed`, { request_id: requestId, action, status: response.status })
       return false
     }
     return true
   } catch (error) {
-    console.error('HIVE Koyeb lifecycle request failed', { request_id: requestId, action, error: error instanceof Error ? error.message : String(error) })
+    console.error(`${service} Koyeb lifecycle request failed`, { request_id: requestId, action, error: error instanceof Error ? error.message : String(error) })
     return false
   }
 }
 
-async function ensureHiveAwake(env: Env, requestId: string): Promise<{ ok: boolean; owner: boolean; state: HiveKoyebState }> {
-  const before = await getHiveKoyebState(env)
+async function ensureServiceAwake(env: Env, service: LifecycleService, requestId: string): Promise<{ ok: boolean; owner: boolean; state: KoyebServiceState }> {
+  const before = await getKoyebState(env, service)
   if (before === 'healthy' || before === 'starting') return { ok: true, owner: false, state: before }
-  const resumed = await requestHivePower(env, 'resume', requestId)
+  const resumed = await requestKoyebPower(env, service, 'resume', requestId)
   if (resumed) return { ok: true, owner: true, state: 'starting' }
-  const after = await getHiveKoyebState(env)
+  const after = await getKoyebState(env, service)
   if (after === 'healthy' || after === 'starting') return { ok: true, owner: false, state: after }
   return { ok: false, owner: false, state: after === 'unknown' ? before : after }
 }
 
-async function releaseHiveIfOwned(env: Env, session: SessionPayload | null, requestId: string): Promise<'paused' | 'not-owned' | 'failed'> {
-  if (!session?.hive_owner) return 'not-owned'
-  if (await requestHivePower(env, 'pause', requestId)) return 'paused'
-  return await getHiveKoyebState(env) === 'standby' ? 'paused' : 'failed'
+async function releaseServiceIfOwned(
+  env: Env,
+  service: LifecycleService,
+  owned: boolean,
+  requestId: string,
+): Promise<'paused' | 'not-owned' | 'failed'> {
+  if (!owned) return 'not-owned'
+  if (await requestKoyebPower(env, service, 'pause', requestId)) return 'paused'
+  return await getKoyebState(env, service) === 'standby' ? 'paused' : 'failed'
+}
+
+async function releaseSessionServices(env: Env, session: SessionPayload | null, requestId: string): Promise<{ aims: string; hive: string }> {
+  const aims = await releaseServiceIfOwned(env, 'AIMS', Boolean(session?.aims_owner), requestId)
+  const hive = await releaseServiceIfOwned(env, 'HIVE', Boolean(session?.hive_owner), requestId)
+  return { aims, hive }
 }
 
 async function handleAuth(request: Request, env: Env, path: string, requestId: string): Promise<Response> {
@@ -333,13 +348,24 @@ async function handleAuth(request: Request, env: Env, path: string, requestId: s
     }
 
     loginAttempts.delete(limit.key)
-    const lifecycle = await ensureHiveAwake(env, requestId)
-    if (!lifecycle.ok) {
+    const hiveLifecycle = await ensureServiceAwake(env, 'HIVE', requestId)
+    if (!hiveLifecycle.ok) {
       return errorResponse('hive_wake_failed', 'HIVE could not be resumed. Try again shortly.', 503, requestId)
+    }
+    const aimsLifecycle = await ensureServiceAwake(env, 'AIMS', requestId)
+    if (!aimsLifecycle.ok) {
+      if (hiveLifecycle.owner) await releaseServiceIfOwned(env, 'HIVE', true, requestId)
+      return errorResponse('aims_wake_failed', 'AIMS could not be resumed. Try again shortly.', 503, requestId)
     }
     const ttlSeconds = parseSessionTtl(env.HIVE_UI_SESSION_TTL_SECONDS)
     const idleTimeoutSeconds = parseIdleTimeout(env.HIVE_UI_IDLE_TIMEOUT_SECONDS)
-    const { token, payload } = await createSessionToken(configuredKey, ttlSeconds, idleTimeoutSeconds, lifecycle.owner)
+    const { token, payload } = await createSessionToken(
+      configuredKey,
+      ttlSeconds,
+      idleTimeoutSeconds,
+      hiveLifecycle.owner,
+      aimsLifecycle.owner,
+    )
     return jsonResponse(
       {
         ok: true,
@@ -347,7 +373,8 @@ async function handleAuth(request: Request, env: Env, path: string, requestId: s
         expires_at: new Date(payload.exp * 1000).toISOString(),
         idle_expires_at: new Date(payload.idle_exp * 1000).toISOString(),
         idle_timeout_seconds: idleTimeoutSeconds,
-        hive_state: lifecycle.state,
+        hive_state: hiveLifecycle.state,
+        aims_state: aimsLifecycle.state,
       },
       200,
       requestId,
@@ -365,7 +392,7 @@ async function handleAuth(request: Request, env: Env, path: string, requestId: s
     const session = await readSession(request, configuredKey)
     if (!session) {
       const signedExpiredSession = await readSessionForLogout(request, configuredKey)
-      if (signedExpiredSession) await releaseHiveIfOwned(env, signedExpiredSession, requestId)
+      if (signedExpiredSession) await releaseSessionServices(env, signedExpiredSession, requestId)
       return errorResponse('ui_session_invalid', 'The HIVE UI session is missing or expired.', 401, requestId, {
         'x-hive-auth-state': 'session-invalid',
         'set-cookie': clearSessionCookie(),
@@ -425,9 +452,9 @@ async function handleAuth(request: Request, env: Env, path: string, requestId: s
       return errorResponse('cross_origin_denied', 'Cross-origin logout requests are not allowed.', 403, requestId)
     }
     const session = await readSessionForLogout(request, configuredKey)
-    const hiveRelease = await releaseHiveIfOwned(env, session, requestId)
+    const releases = await releaseSessionServices(env, session, requestId)
     return jsonResponse(
-      { ok: true, authenticated: false, hive_release: hiveRelease },
+      { ok: true, authenticated: false, hive_release: releases.hive, aims_release: releases.aims },
       200,
       requestId,
       { 'set-cookie': clearSessionCookie(), 'x-hive-auth-state': 'signed-out' },
@@ -536,7 +563,7 @@ async function handleApi(request: Request, env: Env, path: string): Promise<Resp
   const session = await readSession(request, configuredKey)
   if (!session) {
     const signedExpiredSession = await readSessionForLogout(request, configuredKey)
-    if (signedExpiredSession) await releaseHiveIfOwned(env, signedExpiredSession, requestId)
+    if (signedExpiredSession) await releaseSessionServices(env, signedExpiredSession, requestId)
     return errorResponse('ui_session_invalid', 'The HIVE UI session is missing or expired.', 401, requestId, {
       'x-hive-auth-state': 'session-invalid',
       'set-cookie': clearSessionCookie(),

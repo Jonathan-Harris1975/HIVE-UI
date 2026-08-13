@@ -13,6 +13,7 @@ export interface SessionPayload {
   sid: string
   idle_exp: number
   hive_owner: boolean
+  aims_owner: boolean
 }
 
 const encoder = new TextEncoder()
@@ -86,6 +87,7 @@ export async function createSessionToken(
   ttlSeconds: number,
   idleTimeoutSeconds = DEFAULT_IDLE_TIMEOUT_SECONDS,
   hiveOwner = false,
+  aimsOwner = false,
   nowSeconds = Math.floor(Date.now() / 1000),
 ): Promise<{ token: string; payload: SessionPayload }> {
   const nonce = crypto.getRandomValues(new Uint8Array(18))
@@ -96,6 +98,7 @@ export async function createSessionToken(
     sid: base64UrlEncode(nonce),
     idle_exp: Math.min(nowSeconds + ttlSeconds, nowSeconds + idleTimeoutSeconds),
     hive_owner: hiveOwner,
+    aims_owner: aimsOwner,
   }
   const payloadPart = base64UrlEncode(encoder.encode(JSON.stringify(payload)))
   const signaturePart = base64UrlEncode(await hmac(secret, payloadPart))
@@ -131,6 +134,7 @@ export async function verifySessionToken(
       || typeof parsed.idle_exp !== 'number'
       || typeof parsed.sid !== 'string'
       || typeof parsed.hive_owner !== 'boolean'
+      || typeof parsed.aims_owner !== 'boolean'
     ) {
       return null
     }
