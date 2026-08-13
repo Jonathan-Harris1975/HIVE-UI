@@ -49,7 +49,7 @@ Only genuine browser interaction calls this route. Background API polling does n
 POST /api/auth/logout
 ```
 
-Logout clears the signed cookie and pauses HIVE when the current UI session owns the interactive wake-up. An idle-expired signed session is still accepted for this release step, but not for normal API access.
+Logout clears the signed cookie and pauses HIVE and/or AIMS when the current UI session owns the corresponding interactive wake-up. An idle-expired signed session is still accepted for this release step, but not for normal API access.
 
 ### Proxy authentication flow
 

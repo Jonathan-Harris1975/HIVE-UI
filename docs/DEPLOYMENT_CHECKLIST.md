@@ -27,6 +27,7 @@ HIVE_API_BASE_URL             variable: live HIVE Koyeb HTTPS origin
 HIVE_UI_SESSION_TTL_SECONDS   variable: 43200
 HIVE_UI_IDLE_TIMEOUT_SECONDS  variable: 1800
 KOYEB_SERVICE_ID_HIVE         variable: live HIVE Koyeb service ID
+KOYEB_SERVICE_ID_AIMS         variable: live AIMS Koyeb service ID
 HIVE_COMMS_ACTOR              variable: hive-owner
 HIVE_COMMS_ROLE               variable: admin
 HIVE_COMMS_URL                variable: https://chat.jonathan-harris.online/console/
@@ -96,7 +97,8 @@ Expected results:
 9. Open `/files`, upload a small text file and use the shared file-chat flow.
 10. Open `/skills` and `/ops` and confirm authenticated requests succeed.
 11. Sign out and confirm the session cookie is cleared and HIVE returns to standby when the UI session woke it.
-12. Log in again and confirm HIVE is automatically resumed without a manual Wake control.
+12. Log in again and confirm HIVE and AIMS are automatically resumed without manual Wake/Sleep controls.
+13. Log out and confirm each service is paused only if the UI session woke it; services already active for MAST must remain untouched.
 13. Confirm genuine clicks/typing/scrolling keep the session active while background polling alone does not.
 14. Confirm 30 minutes of no user interaction signs the UI out and returns UI-owned HIVE uptime to standby.
 15. Confirm `/api/v1/...` requests without the cookie return `401` with `x-hive-auth-state: session-invalid`.
