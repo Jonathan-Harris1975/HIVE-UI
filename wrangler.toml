@@ -34,7 +34,7 @@ head_sampling_rate = 1
 directory = "./dist"
 binding = "ASSETS"
 not_found_handling = "single-page-application"
-run_worker_first = ["/api/*", "/health"]
+run_worker_first = true
 
 # Configure these as encrypted Cloudflare Worker secrets, never in this file:
 # HIVE_ADMIN_TOKEN
