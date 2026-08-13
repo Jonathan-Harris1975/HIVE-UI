@@ -617,17 +617,45 @@ function handleHealth(request: Request, env: Env): Response {
   }), { status: 200, headers: healthHeaders() })
 }
 
+function secureAssetResponse(response: Response): Response {
+  const headers = new Headers(response.headers)
+  headers.set('cache-control', response.headers.get('cache-control') || 'no-store, max-age=0')
+  headers.set('cross-origin-opener-policy', 'same-origin')
+  headers.set('cross-origin-resource-policy', 'same-origin')
+  headers.set('permissions-policy', 'camera=(), microphone=(), geolocation=(), payment=(), usb=(), browsing-topics=()')
+  headers.set('referrer-policy', 'no-referrer')
+  headers.set('strict-transport-security', 'max-age=31536000; includeSubDomains')
+  headers.set('x-content-type-options', 'nosniff')
+  headers.set('x-frame-options', 'DENY')
+  headers.set('x-robots-tag', 'noindex, nofollow, noarchive, nosnippet')
+
+  const contentType = headers.get('content-type') || ''
+  if (contentType.includes('text/html')) {
+    headers.set(
+      'content-security-policy',
+      "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; connect-src 'self'; font-src 'self' data:; frame-src https://chat.jonathan-harris.online; child-src https://chat.jonathan-harris.online; object-src 'none'; base-uri 'self'; frame-ancestors 'none'; form-action 'self'; manifest-src 'self'; worker-src 'self' blob:; upgrade-insecure-requests",
+    )
+  }
+
+  return new Response(response.body, {
+    status: response.status,
+    statusText: response.statusText,
+    headers,
+  })
+}
+
 async function serveAssets(request: Request, env: Env): Promise<Response> {
-  const response = await env.ASSETS.fetch(request)
-  if (response.status !== 404 || request.method !== 'GET') return response
-
-  const url = new URL(request.url)
-  const lastSegment = url.pathname.split('/').pop() ?? ''
-  if (lastSegment.includes('.')) return response
-
-  url.pathname = '/index.html'
-  url.search = ''
-  return env.ASSETS.fetch(new Request(url.toString(), request))
+  let response = await env.ASSETS.fetch(request)
+  if (response.status === 404 && request.method === 'GET') {
+    const url = new URL(request.url)
+    const lastSegment = url.pathname.split('/').pop() ?? ''
+    if (!lastSegment.includes('.')) {
+      url.pathname = '/index.html'
+      url.search = ''
+      response = await env.ASSETS.fetch(new Request(url.toString(), request))
+    }
+  }
+  return secureAssetResponse(response)
 }
 
 export default {
