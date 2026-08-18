@@ -46,10 +46,20 @@ export function CommunicationsPage() {
   useEffect(() => {
     function onMessage(event: MessageEvent) {
       if (event.origin !== AIMS_ORIGIN) return
-      if (event.data?.type !== 'aims-comms-ready') return
-      setReady(true)
-      setError(null)
-      if (timeoutRef.current) window.clearTimeout(timeoutRef.current)
+      if (event.data?.type === 'aims-comms-ready') {
+        setReady(true)
+        setError(null)
+        if (timeoutRef.current) window.clearTimeout(timeoutRef.current)
+        return
+      }
+      if (event.data?.type === 'aims-comms-error') {
+        const detail = typeof event.data?.detail === 'string' && event.data.detail.trim()
+          ? event.data.detail.trim()
+          : 'AIMS Comms Hub rejected the secure handoff.'
+        setReady(false)
+        setError(detail)
+        if (timeoutRef.current) window.clearTimeout(timeoutRef.current)
+      }
     }
     window.addEventListener('message', onMessage)
     return () => window.removeEventListener('message', onMessage)
