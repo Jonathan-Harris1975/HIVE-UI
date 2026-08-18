@@ -585,11 +585,36 @@ export interface RepositoryMemorySearchResponse {
   error?: string
 }
 
+export interface AiSearchInstanceDiagnostics {
+  id: string
+  name?: string
+  paused?: boolean
+  modified_at?: string | null
+  stats_ok?: boolean
+  completed?: number | null
+  error?: number
+  queued?: number | null
+  running?: number | null
+  outdated?: number | null
+  stats_degraded?: boolean
+  stats_error?: string | null
+  [key: string]: unknown
+}
+
 export interface AiSearchDiagnosticsResponse {
   ok?: boolean
   configured?: boolean
   status?: string
   index?: string
+  instance_count?: number
+  active_instance_count?: number
+  paused_instance_count?: number
+  indexing_error_count?: number
+  degraded_stats_count?: number
+  stats_failure_count?: number
+  primary_present?: boolean
+  instances?: AiSearchInstanceDiagnostics[]
+  reason?: string | null
   error?: string
   [key: string]: unknown
 }
