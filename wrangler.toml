@@ -36,9 +36,18 @@ binding = "ASSETS"
 not_found_handling = "single-page-application"
 run_worker_first = true
 
+[[durable_objects.bindings]]
+name = "LOGIN_RATE_LIMITER"
+class_name = "LoginRateLimiter"
+
+[[migrations]]
+tag = "login-rate-limiter-v1"
+new_sqlite_classes = ["LoginRateLimiter"]
+
 # Configure these as encrypted Cloudflare Worker secrets, never in this file:
 # HIVE_ADMIN_TOKEN
 # HIVE_UI_ACCESS_KEY
+# HIVE_UI_SESSION_SECRET
 # KOYEB_TOKEN
 # KOYEB_SERVICE_ID_HIVE (normal variable in Cloudflare dashboard)
 # KOYEB_SERVICE_ID_AIMS (normal variable in Cloudflare dashboard)

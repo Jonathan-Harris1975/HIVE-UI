@@ -40,10 +40,13 @@ npm run check
 
 Production deploys the validated `dist` assets through the Worker on `https://hive.jonathan-harris.online`. Required Worker variables and secrets are documented in `.env.example`, `wrangler.toml`, `docs/DEPLOYMENT_CHECKLIST.md` and `SECURITY.md`.
 
-Important secrets include `HIVE_ADMIN_TOKEN`, `HIVE_UI_ACCESS_KEY`, `KOYEB_TOKEN` and `HIVE_COMMS_HANDOFF_SECRET`. They belong in Cloudflare secrets, never in browser-visible configuration.
+Important secrets include `HIVE_ADMIN_TOKEN`, `HIVE_UI_ACCESS_KEY`, `HIVE_UI_SESSION_SECRET`, `KOYEB_TOKEN` and `HIVE_COMMS_HANDOFF_SECRET`. They belong in Cloudflare secrets, never in browser-visible configuration.
 
 Interactive HIVE/AIMS lifecycle control is session-driven: a login can resume required services, user activity refreshes the idle window, and logout/idle handling pauses only services claimed by that UI session. Services already active for MAST governance remain under MAST ownership.
 
 ## Operational alerts
 
 The Ops view displays redacted provider/runtime events supplied by HIVE, including supported GitHub, Koyeb and Cloudflare failures. See `docs/OPERATIONAL_ALERTS.md` and `docs/OPERATIONS.md`.
+
+
+Security configuration: set `HIVE_UI_SESSION_SECRET` as a distinct encrypted Worker secret. It must not reuse `HIVE_UI_ACCESS_KEY`. Login throttling uses the `LOGIN_RATE_LIMITER` Durable Object binding declared in `wrangler.toml`.
