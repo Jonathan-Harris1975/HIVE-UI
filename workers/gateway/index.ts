@@ -20,6 +20,8 @@ interface Env {
   HIVE_API_BASE_URL: string
   HIVE_ADMIN_TOKEN: string
   HIVE_UI_ACCESS_KEY?: string
+  HIVE_UI_SESSION_SECRET?: string
+  LOGIN_RATE_LIMITER: DurableObjectNamespace
   HIVE_UI_SESSION_TTL_SECONDS?: string
   HIVE_UI_IDLE_TIMEOUT_SECONDS?: string
   KOYEB_TOKEN?: string
@@ -46,7 +48,6 @@ interface LoginAttempt {
 const UI_VERSION = '0.11.1'
 const LOGIN_WINDOW_MS = 10 * 60 * 1000
 const LOGIN_MAX_FAILURES = 5
-const loginAttempts = new Map<string, LoginAttempt>()
 
 const REQUEST_HEADER_DENYLIST = new Set([
   'accept-encoding',
@@ -174,35 +175,26 @@ function getClientKey(request: Request): string {
   return `unknown:${userAgent}`
 }
 
-function pruneLoginAttempts(now: number): void {
-  if (loginAttempts.size < 128) return
-  for (const [key, value] of loginAttempts.entries()) {
-    if (value.resetAt <= now) loginAttempts.delete(key)
-  }
-  while (loginAttempts.size >= 1024) {
-    const oldest = loginAttempts.keys().next().value as string | undefined
-    if (!oldest) break
-    loginAttempts.delete(oldest)
-  }
-}
-
-function loginRateLimit(request: Request, now: number): { blocked: boolean; retryAfter: number; key: string } {
-  pruneLoginAttempts(now)
+async function loginLimiterRequest(env: Env, request: Request, method: 'GET' | 'POST' | 'DELETE'): Promise<{ blocked: boolean; retryAfter: number }> {
+  if (!env.LOGIN_RATE_LIMITER) throw new Error('LOGIN_RATE_LIMITER Durable Object binding is not configured.')
   const key = getClientKey(request)
-  const current = loginAttempts.get(key)
-  if (!current || current.resetAt <= now) return { blocked: false, retryAfter: 0, key }
-  if (current.failures < LOGIN_MAX_FAILURES) return { blocked: false, retryAfter: 0, key }
-  return { blocked: true, retryAfter: Math.max(1, Math.ceil((current.resetAt - now) / 1000)), key }
+  const id = env.LOGIN_RATE_LIMITER.idFromName(key)
+  const stub = env.LOGIN_RATE_LIMITER.get(id)
+  const response = await stub.fetch('https://login-rate-limiter/attempt', { method })
+  if (!response.ok) throw new Error('Login rate limiter is unavailable.')
+  return await response.json() as { blocked: boolean; retryAfter: number }
 }
 
-function recordLoginFailure(key: string, now: number): void {
-  const current = loginAttempts.get(key)
-  if (!current || current.resetAt <= now) {
-    loginAttempts.set(key, { failures: 1, resetAt: now + LOGIN_WINDOW_MS })
-    return
-  }
-  current.failures += 1
-  loginAttempts.set(key, current)
+async function loginRateLimit(env: Env, request: Request): Promise<{ blocked: boolean; retryAfter: number }> {
+  return loginLimiterRequest(env, request, 'GET')
+}
+
+async function recordLoginFailure(env: Env, request: Request): Promise<{ blocked: boolean; retryAfter: number }> {
+  return loginLimiterRequest(env, request, 'POST')
+}
+
+async function clearLoginFailures(env: Env, request: Request): Promise<void> {
+  await loginLimiterRequest(env, request, 'DELETE')
 }
 
 async function readLoginKey(request: Request): Promise<string | null> {
@@ -314,11 +306,15 @@ async function releaseSessionServices(env: Env, session: SessionPayload | null, 
 
 async function handleAuth(request: Request, env: Env, path: string, requestId: string): Promise<Response> {
   const configuredKey = env.HIVE_UI_ACCESS_KEY?.trim() ?? ''
-  if (!configuredKey) {
-    return errorResponse('ui_access_not_configured', 'HIVE UI access is not configured.', 503, requestId)
+  const sessionSecret = env.HIVE_UI_SESSION_SECRET?.trim() ?? ''
+  if (!sessionSecret) {
+    return errorResponse('ui_session_secret_not_configured', 'HIVE UI session signing is not configured.', 503, requestId)
   }
 
   if (path === 'auth/login') {
+    if (!configuredKey) {
+      return errorResponse('ui_access_not_configured', 'HIVE UI access is not configured.', 503, requestId)
+    }
     if (request.method !== 'POST') {
       return errorResponse('method_not_allowed', 'Use POST for UI login.', 405, requestId, { allow: 'POST' })
     }
@@ -326,8 +322,12 @@ async function handleAuth(request: Request, env: Env, path: string, requestId: s
       return errorResponse('cross_origin_denied', 'Cross-origin login requests are not allowed.', 403, requestId)
     }
 
-    const now = Date.now()
-    const limit = loginRateLimit(request, now)
+    let limit
+    try {
+      limit = await loginRateLimit(env, request)
+    } catch {
+      return errorResponse('login_rate_limiter_unavailable', 'Login protection is temporarily unavailable.', 503, requestId)
+    }
     if (limit.blocked) {
       return errorResponse(
         'login_rate_limited',
@@ -341,13 +341,24 @@ async function handleAuth(request: Request, env: Env, path: string, requestId: s
     const suppliedKey = await readLoginKey(request)
     const valid = suppliedKey !== null && await secureStringEqual(suppliedKey, configuredKey)
     if (!valid) {
-      recordLoginFailure(limit.key, now)
+      let failure = { blocked: false, retryAfter: 0 }
+      try { failure = await recordLoginFailure(env, request) } catch {
+        return errorResponse('login_rate_limiter_unavailable', 'Login protection is temporarily unavailable.', 503, requestId)
+      }
+      if (failure.blocked) {
+        return errorResponse('login_rate_limited', 'Too many failed access attempts. Try again later.', 429, requestId, {
+          'retry-after': String(failure.retryAfter),
+          'x-hive-auth-state': 'login-failed',
+        })
+      }
       return errorResponse('invalid_ui_access', 'Invalid HIVE UI access key.', 401, requestId, {
         'x-hive-auth-state': 'login-failed',
       })
     }
 
-    loginAttempts.delete(limit.key)
+    try { await clearLoginFailures(env, request) } catch {
+      return errorResponse('login_rate_limiter_unavailable', 'Login protection is temporarily unavailable.', 503, requestId)
+    }
     const hiveLifecycle = await ensureServiceAwake(env, 'HIVE', requestId)
     if (!hiveLifecycle.ok) {
       return errorResponse('hive_wake_failed', 'HIVE could not be resumed. Try again shortly.', 503, requestId)
@@ -360,7 +371,7 @@ async function handleAuth(request: Request, env: Env, path: string, requestId: s
     const ttlSeconds = parseSessionTtl(env.HIVE_UI_SESSION_TTL_SECONDS)
     const idleTimeoutSeconds = parseIdleTimeout(env.HIVE_UI_IDLE_TIMEOUT_SECONDS)
     const { token, payload } = await createSessionToken(
-      configuredKey,
+      sessionSecret,
       ttlSeconds,
       idleTimeoutSeconds,
       hiveLifecycle.owner,
@@ -389,9 +400,9 @@ async function handleAuth(request: Request, env: Env, path: string, requestId: s
     if (request.method !== 'GET') {
       return errorResponse('method_not_allowed', 'Use GET to inspect the UI session.', 405, requestId, { allow: 'GET' })
     }
-    const session = await readSession(request, configuredKey)
+    const session = await readSession(request, sessionSecret)
     if (!session) {
-      const signedExpiredSession = await readSessionForLogout(request, configuredKey)
+      const signedExpiredSession = await readSessionForLogout(request, sessionSecret)
       if (signedExpiredSession) await releaseSessionServices(env, signedExpiredSession, requestId)
       return errorResponse('ui_session_invalid', 'The HIVE UI session is missing or expired.', 401, requestId, {
         'x-hive-auth-state': 'session-invalid',
@@ -420,7 +431,7 @@ async function handleAuth(request: Request, env: Env, path: string, requestId: s
     if (!isSameOriginRequest(request)) {
       return errorResponse('cross_origin_denied', 'Cross-origin activity requests are not allowed.', 403, requestId)
     }
-    const session = await readSession(request, configuredKey)
+    const session = await readSession(request, sessionSecret)
     if (!session) {
       return errorResponse('ui_session_invalid', 'The HIVE UI session is missing or expired.', 401, requestId, {
         'x-hive-auth-state': 'session-invalid',
@@ -428,7 +439,7 @@ async function handleAuth(request: Request, env: Env, path: string, requestId: s
       })
     }
     const idleTimeoutSeconds = parseIdleTimeout(env.HIVE_UI_IDLE_TIMEOUT_SECONDS)
-    const refreshed = await refreshSessionToken(configuredKey, session, idleTimeoutSeconds)
+    const refreshed = await refreshSessionToken(sessionSecret, session, idleTimeoutSeconds)
     const maxAge = Math.max(1, refreshed.payload.exp - Math.floor(Date.now() / 1000))
     return jsonResponse(
       {
@@ -451,7 +462,7 @@ async function handleAuth(request: Request, env: Env, path: string, requestId: s
     if (!isSameOriginRequest(request)) {
       return errorResponse('cross_origin_denied', 'Cross-origin logout requests are not allowed.', 403, requestId)
     }
-    const session = await readSessionForLogout(request, configuredKey)
+    const session = await readSessionForLogout(request, sessionSecret)
     const releases = await releaseSessionServices(env, session, requestId)
     return jsonResponse(
       { ok: true, authenticated: false, hive_release: releases.hive, aims_release: releases.aims },
@@ -469,8 +480,9 @@ async function handleCommsHandoff(request: Request, env: Env, requestId: string)
   if (request.method !== 'GET') return errorResponse('method_not_allowed', 'Use GET to open the Communications Interface.', 405, requestId, { allow: 'GET' })
   if (!isSameOriginRequest(request)) return errorResponse('cross_origin_denied', 'Cross-origin handoff requests are not allowed.', 403, requestId)
 
-  const configuredKey = env.HIVE_UI_ACCESS_KEY?.trim() ?? ''
-  const session = configuredKey ? await readSession(request, configuredKey) : null
+  const sessionSecret = env.HIVE_UI_SESSION_SECRET?.trim() ?? ''
+  if (!sessionSecret) return errorResponse('ui_session_secret_not_configured', 'HIVE UI session signing is not configured.', 503, requestId)
+  const session = await readSession(request, sessionSecret)
   if (!session) {
     return errorResponse('ui_session_invalid', 'The HIVE UI session is missing or expired.', 401, requestId, {
       'x-hive-auth-state': 'session-invalid',
@@ -482,8 +494,11 @@ async function handleCommsHandoff(request: Request, env: Env, requestId: string)
   if (!secret) return errorResponse('comms_handoff_not_configured', 'Communications Interface handoff is not configured.', 503, requestId)
 
   const actor = env.HIVE_COMMS_ACTOR?.trim() || 'hive-owner'
-  const rawRole = env.HIVE_COMMS_ROLE?.trim().toLowerCase() || 'admin'
-  const role = (['admin', 'reviewer', 'operator', 'read_only'].includes(rawRole) ? rawRole : 'admin') as 'admin' | 'reviewer' | 'operator' | 'read_only'
+  const rawRole = env.HIVE_COMMS_ROLE?.trim().toLowerCase() || 'read_only'
+  if (!['admin', 'reviewer', 'operator', 'read_only'].includes(rawRole)) {
+    return errorResponse('comms_role_invalid', 'HIVE communications role configuration is invalid.', 503, requestId)
+  }
+  const role = rawRole as 'admin' | 'reviewer' | 'operator' | 'read_only'
   const token = await createCommsHandoffToken(secret, actor, role)
   let communicationsUrl: URL
   try {
@@ -556,13 +571,13 @@ async function handleApi(request: Request, env: Env, path: string): Promise<Resp
     return errorResponse('cross_origin_denied', 'Cross-origin API requests are not allowed.', 403, requestId)
   }
 
-  const configuredKey = env.HIVE_UI_ACCESS_KEY?.trim() ?? ''
-  if (!configuredKey) {
-    return errorResponse('ui_access_not_configured', 'HIVE UI access is not configured.', 503, requestId)
+  const sessionSecret = env.HIVE_UI_SESSION_SECRET?.trim() ?? ''
+  if (!sessionSecret) {
+    return errorResponse('ui_session_secret_not_configured', 'HIVE UI session signing is not configured.', 503, requestId)
   }
-  const session = await readSession(request, configuredKey)
+  const session = await readSession(request, sessionSecret)
   if (!session) {
-    const signedExpiredSession = await readSessionForLogout(request, configuredKey)
+    const signedExpiredSession = await readSessionForLogout(request, sessionSecret)
     if (signedExpiredSession) await releaseSessionServices(env, signedExpiredSession, requestId)
     return errorResponse('ui_session_invalid', 'The HIVE UI session is missing or expired.', 401, requestId, {
       'x-hive-auth-state': 'session-invalid',
@@ -683,6 +698,36 @@ async function serveAssets(request: Request, env: Env): Promise<Response> {
     }
   }
   return secureAssetResponse(response)
+}
+
+export class LoginRateLimiter {
+  constructor(private readonly state: DurableObjectState) {}
+
+  async fetch(request: Request): Promise<Response> {
+    if (new URL(request.url).pathname !== '/attempt') return new Response('Not found', { status: 404 })
+    const now = Date.now()
+    let attempt = await this.state.storage.get<LoginAttempt>('attempt')
+    if (attempt && attempt.resetAt <= now) {
+      await this.state.storage.delete('attempt')
+      attempt = undefined
+    }
+
+    if (request.method === 'DELETE') {
+      await this.state.storage.delete('attempt')
+      return Response.json({ blocked: false, retryAfter: 0 })
+    }
+    if (request.method === 'POST') {
+      const next: LoginAttempt = attempt
+        ? { failures: attempt.failures + 1, resetAt: attempt.resetAt }
+        : { failures: 1, resetAt: now + LOGIN_WINDOW_MS }
+      await this.state.storage.put('attempt', next)
+      const blocked = next.failures >= LOGIN_MAX_FAILURES
+      return Response.json({ blocked, retryAfter: blocked ? Math.max(1, Math.ceil((next.resetAt - now) / 1000)) : 0 })
+    }
+    if (request.method !== 'GET') return new Response('Method not allowed', { status: 405 })
+    const blocked = Boolean(attempt && attempt.failures >= LOGIN_MAX_FAILURES)
+    return Response.json({ blocked, retryAfter: blocked && attempt ? Math.max(1, Math.ceil((attempt.resetAt - now) / 1000)) : 0 })
+  }
 }
 
 export default {
