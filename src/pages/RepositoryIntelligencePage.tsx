@@ -412,7 +412,7 @@ export function RepositoryIntelligencePage() {
                       <span className="text-xs font-medium text-slate-100">{dim.dimension.replace(/_/g, ' ')}</span>
                       <span className="flex items-center gap-1.5">
                         {dim.confidence === 'heuristic' && (
-                          <span title="Heuristic placeholder, not measured signal" className="text-[10px] text-amber-300">heuristic</span>
+                          <span title="Heuristic proxy, not measured signal" className="text-[10px] text-amber-300">heuristic</span>
                         )}
                         <span className={`text-xs font-semibold ${scoreTone(scorePct(dim.score))}`}>{scorePct(dim.score)}%</span>
                       </span>
