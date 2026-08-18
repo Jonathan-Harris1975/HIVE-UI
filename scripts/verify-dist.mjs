@@ -30,7 +30,7 @@ if (assets.some((name) => extname(name) === '.map')) throw new Error('Production
 
 for (const name of assets.filter((item) => item.endsWith('.js'))) {
   const source = await readFile(resolve('dist/assets', name), 'utf8')
-  for (const forbidden of ['HIVE_ADMIN_TOKEN', 'HIVE_UI_ACCESS_KEY']) {
+  for (const forbidden of ['HIVE_ADMIN_TOKEN', 'HIVE_UI_ACCESS_KEY', 'HIVE_UI_SESSION_SECRET']) {
     if (source.includes(forbidden)) throw new Error(`Browser bundle contains forbidden server secret name: ${forbidden}`)
   }
 }

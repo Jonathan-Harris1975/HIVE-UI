@@ -31,6 +31,9 @@ for (const required of [
   'secureStringEqual',
   'proxy_path_denied',
   'x-hive-auth-state',
+  'HIVE_UI_SESSION_SECRET',
+  'LOGIN_RATE_LIMITER',
+  "|| 'read_only'",
 ]) {
   const combined = functionSource + await readFile('workers/gateway/security.ts', 'utf8')
   if (!combined.includes(required)) throw new Error(`Worker gateway security control is missing: ${required}`)
