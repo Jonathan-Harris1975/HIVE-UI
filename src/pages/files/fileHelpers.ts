@@ -8,15 +8,8 @@ import type {
 } from "../../types/api";
 
 // ---------------------------------------------------------------------------
-// Pure helper functions extracted from src/pages/FilesPage.tsx (previously
-// 2,190 lines in one file). These have no dependency on component state or
-// React hooks, so they are safe to unit test directly and safe to reuse from
-// any future split-out feature component (upload panel, browser, lane
-// picker) without re-deriving the same logic.
-//
-// This is a source-preserving extraction: every function body below is
-// unchanged from FilesPage.tsx. FilesPage.tsx now imports these instead of
-// defining them inline.
+// Pure file-management helpers shared by FilesPage and unit tests.
+// Keep these functions independent of React state and hooks.
 // ---------------------------------------------------------------------------
 
 export type UploadMode = "file" | "text";
