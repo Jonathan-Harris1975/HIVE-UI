@@ -323,7 +323,29 @@ export function RepositoryMemoryPage() {
             <span className="rounded-full border border-cyan-300/15 bg-cyan-300/7 px-2.5 py-1 text-cyan-100">{scalarCount}/{REPOSITORY_MEMORY_SCALAR_FIELDS.length} scalar fields set</span>
             <span className="rounded-full border border-emerald-300/15 bg-emerald-300/7 px-2.5 py-1 text-emerald-100">{historyCount} history entries</span>
             {diagnostics && (
-              <StatusBadge status={diagnostics.configured ? diagnostics.status || 'ok' : 'not_configured'} compact />
+              <>
+                <StatusBadge status={diagnostics.configured ? diagnostics.status || 'ok' : 'not_configured'} compact />
+                {typeof diagnostics.instance_count === 'number' && (
+                  <span className="rounded-full border border-cyan-300/15 bg-cyan-300/7 px-2.5 py-1 text-cyan-100">
+                    AI Search: {diagnostics.active_instance_count ?? diagnostics.instance_count}/{diagnostics.instance_count} active
+                  </span>
+                )}
+                {(diagnostics.paused_instance_count ?? 0) > 0 && (
+                  <span className="rounded-full border border-amber-300/20 bg-amber-300/8 px-2.5 py-1 text-amber-100">
+                    {diagnostics.paused_instance_count} paused
+                  </span>
+                )}
+                {(diagnostics.indexing_error_count ?? 0) > 0 && (
+                  <span className="rounded-full border border-rose-300/20 bg-rose-300/8 px-2.5 py-1 text-rose-200">
+                    {diagnostics.indexing_error_count} indexing error{diagnostics.indexing_error_count === 1 ? '' : 's'}
+                  </span>
+                )}
+                {(diagnostics.stats_failure_count ?? 0) > 0 && (
+                  <span className="rounded-full border border-amber-300/20 bg-amber-300/8 px-2.5 py-1 text-amber-100">
+                    {diagnostics.stats_failure_count} stats unverified
+                  </span>
+                )}
+              </>
             )}
           </div>
 

@@ -123,38 +123,77 @@ export function IntegrationsPage() {
             )
           ) : (
             <div className="mt-3 grid gap-3 sm:grid-cols-2">
-              {connectors.map((connector) => (
-                <article key={connector.name} className="rounded-2xl border border-white/8 bg-[#0a192d]/70 p-4">
-                  <div className="flex items-start justify-between gap-3">
-                    <h4 className="text-sm font-semibold text-white">{connectorLabel(connector.name)}</h4>
-                    <StatusBadge status={connectorStatus(connector)} variant="liveness" compact />
-                  </div>
-                  <div className="mt-2 flex flex-wrap gap-1.5 text-[11px] text-slate-400">
-                    <span className="rounded-full border border-white/10 px-2 py-0.5">
-                      {connector.configured ? 'Configured' : 'Not configured'}
-                    </span>
-                    <span className="rounded-full border border-white/10 px-2 py-0.5">
-                      {connector.authenticated ? 'Authenticated' : 'Not authenticated'}
-                    </span>
-                  </div>
-                  {connector.capabilities.length > 0 && (
-                    <p className="mt-2 text-[11px] text-slate-500">{connector.capabilities.join(' · ')}</p>
-                  )}
-                  {(connector.error || (typeof connector.diagnostics?.reason === 'string' ? connector.diagnostics.reason : null)) && (
-                    <p className="mt-2 flex items-start gap-1.5 text-[11px] text-rose-300">
-                      <AlertCircle className="mt-0.5 h-3 w-3 shrink-0" /> {connector.error || String(connector.diagnostics?.reason)}
-                    </p>
-                  )}
-                  {connector.rate_limit && (
-                    <details className="mt-2 text-[11px] text-slate-500">
-                      <summary className="cursor-pointer text-slate-400">Rate limit</summary>
-                      <pre className="mt-1 overflow-x-auto rounded-lg bg-[#061126] p-2 font-mono text-[10px]">
-                        {JSON.stringify(connector.rate_limit, null, 2)}
-                      </pre>
-                    </details>
-                  )}
-                </article>
-              ))}
+              {connectors.map((connector) => {
+                const aiSearchDiagnostics = connector.name === 'cloudflare_ai_search' ? connector.diagnostics : null
+                const aiSearchTotal = typeof aiSearchDiagnostics?.instance_count === 'number' ? aiSearchDiagnostics.instance_count : null
+                const aiSearchActive = typeof aiSearchDiagnostics?.active_instance_count === 'number' ? aiSearchDiagnostics.active_instance_count : null
+                const aiSearchPaused = typeof aiSearchDiagnostics?.paused_instance_count === 'number' ? aiSearchDiagnostics.paused_instance_count : 0
+                const aiSearchErrors = typeof aiSearchDiagnostics?.indexing_error_count === 'number' ? aiSearchDiagnostics.indexing_error_count : 0
+                const aiSearchStatsFailures = typeof aiSearchDiagnostics?.stats_failure_count === 'number' ? aiSearchDiagnostics.stats_failure_count : 0
+                const aiSearchInstances = Array.isArray(aiSearchDiagnostics?.instances) ? aiSearchDiagnostics.instances : []
+                const pausedNames = aiSearchInstances
+                  .filter((item) => item && typeof item === 'object' && 'paused' in item && item.paused === true)
+                  .map((item) => String('name' in item && item.name ? item.name : 'id' in item ? item.id : 'unknown'))
+                const errorNames = aiSearchInstances
+                  .filter((item) => item && typeof item === 'object' && 'error' in item && typeof item.error === 'number' && item.error > 0)
+                  .map((item) => `${String('name' in item && item.name ? item.name : 'id' in item ? item.id : 'unknown')} (${String(item.error)})`)
+
+                return (
+                  <article key={connector.name} className="rounded-2xl border border-white/8 bg-[#0a192d]/70 p-4">
+                    <div className="flex items-start justify-between gap-3">
+                      <h4 className="text-sm font-semibold text-white">{connectorLabel(connector.name)}</h4>
+                      <StatusBadge status={connectorStatus(connector)} variant="liveness" compact />
+                    </div>
+                    <div className="mt-2 flex flex-wrap gap-1.5 text-[11px] text-slate-400">
+                      <span className="rounded-full border border-white/10 px-2 py-0.5">
+                        {connector.configured ? 'Configured' : 'Not configured'}
+                      </span>
+                      <span className="rounded-full border border-white/10 px-2 py-0.5">
+                        {connector.authenticated ? 'Authenticated' : 'Not authenticated'}
+                      </span>
+                      {aiSearchTotal !== null && (
+                        <span className="rounded-full border border-cyan-300/15 bg-cyan-300/7 px-2 py-0.5 text-cyan-100">
+                          {aiSearchActive ?? aiSearchTotal}/{aiSearchTotal} AI Search indexes active
+                        </span>
+                      )}
+                    </div>
+                    {connector.capabilities.length > 0 && (
+                      <p className="mt-2 text-[11px] text-slate-500">{connector.capabilities.join(' · ')}</p>
+                    )}
+                    {aiSearchPaused > 0 && (
+                      <p className="mt-2 flex items-start gap-1.5 text-[11px] text-amber-200">
+                        <AlertCircle className="mt-0.5 h-3 w-3 shrink-0" />
+                        {aiSearchPaused} AI Search index{aiSearchPaused === 1 ? ' is' : 'es are'} paused{pausedNames.length ? `: ${pausedNames.join(', ')}` : '.'}
+                      </p>
+                    )}
+                    {aiSearchErrors > 0 && (
+                      <p className="mt-2 flex items-start gap-1.5 text-[11px] text-rose-300">
+                        <AlertCircle className="mt-0.5 h-3 w-3 shrink-0" />
+                        {aiSearchErrors} AI Search indexing error{aiSearchErrors === 1 ? '' : 's'}{errorNames.length ? `: ${errorNames.join(', ')}` : '.'}
+                      </p>
+                    )}
+                    {aiSearchStatsFailures > 0 && (
+                      <p className="mt-2 flex items-start gap-1.5 text-[11px] text-amber-200">
+                        <AlertCircle className="mt-0.5 h-3 w-3 shrink-0" />
+                        Indexing statistics could not be verified for {aiSearchStatsFailures} AI Search index{aiSearchStatsFailures === 1 ? '' : 'es'}.
+                      </p>
+                    )}
+                    {(connector.error || (typeof connector.diagnostics?.reason === 'string' ? connector.diagnostics.reason : null)) && (
+                      <p className="mt-2 flex items-start gap-1.5 text-[11px] text-rose-300">
+                        <AlertCircle className="mt-0.5 h-3 w-3 shrink-0" /> {connector.error || String(connector.diagnostics?.reason)}
+                      </p>
+                    )}
+                    {connector.rate_limit && (
+                      <details className="mt-2 text-[11px] text-slate-500">
+                        <summary className="cursor-pointer text-slate-400">Rate limit</summary>
+                        <pre className="mt-1 overflow-x-auto rounded-lg bg-[#061126] p-2 font-mono text-[10px]">
+                          {JSON.stringify(connector.rate_limit, null, 2)}
+                        </pre>
+                      </details>
+                    )}
+                  </article>
+                )
+              })}
             </div>
           )}
         </section>
