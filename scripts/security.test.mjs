@@ -6,8 +6,11 @@ import {
   createSessionToken,
   parseIdleTimeout,
   parseSessionTtl,
+  resolveCommsHandoffSecret,
+  resolveSessionSigningSecret,
   secureStringEqual,
   sessionCookie,
+  verifyCommsHandoffToken,
   verifySessionToken,
 } from '../.security-test/security.js'
 
@@ -15,6 +18,26 @@ test('access-key comparison accepts exact values and rejects different values', 
   assert.equal(await secureStringEqual('correct horse battery staple', 'correct horse battery staple'), true)
   assert.equal(await secureStringEqual('correct horse battery staple', 'correct horse battery stapler'), false)
   assert.equal(await secureStringEqual('', 'x'), false)
+})
+
+test('session signing keeps legacy deployments working without reusing the access key directly', async () => {
+  const accessKey = 'legacy-ui-access-key-with-enough-entropy'
+  const derived = await resolveSessionSigningSecret(undefined, accessKey)
+  assert.ok(derived)
+  assert.notEqual(derived, accessKey)
+  assert.equal(derived, await resolveSessionSigningSecret('', accessKey))
+  assert.notEqual(derived, await resolveSessionSigningSecret(undefined, `${accessKey}-rotated`))
+  assert.equal(await resolveSessionSigningSecret('dedicated-session-secret', accessKey), 'dedicated-session-secret')
+})
+
+test('communications handoff keeps legacy deployments working with a distinct derived subkey', async () => {
+  const accessKey = 'legacy-ui-access-key-with-enough-entropy'
+  const sessionSecret = await resolveSessionSigningSecret(undefined, accessKey)
+  const commsSecret = await resolveCommsHandoffSecret(undefined, accessKey)
+  assert.ok(commsSecret)
+  assert.notEqual(commsSecret, accessKey)
+  assert.notEqual(commsSecret, sessionSecret)
+  assert.equal(await resolveCommsHandoffSecret('dedicated-comms-secret', accessKey), 'dedicated-comms-secret')
 })
 
 test('signed sessions verify, expire and reject tampering', async () => {
@@ -55,7 +78,7 @@ test('session cookies use hardened host-only attributes', () => {
 })
 
 
-test('communications handoff token is short-lived and contains no HIVE access key', async () => {
+test('communications handoff token is short-lived, verifiable and contains no HIVE access key', async () => {
   const secret = 'shared-comms-handoff-secret'
   const token = await createCommsHandoffToken(secret, 'hive-owner', 'admin', 300, 1_700_000_000)
   assert.match(token, /^[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+$/)
@@ -65,4 +88,7 @@ test('communications handoff token is short-lived and contains no HIVE access ke
   assert.equal(payload.actor, 'hive-owner')
   assert.equal(payload.role, 'admin')
   assert.equal(payload.exp - payload.iat, 300)
+  assert.equal((await verifyCommsHandoffToken(token, secret, 1_700_000_100))?.actor, 'hive-owner')
+  assert.equal(await verifyCommsHandoffToken(token, secret, 1_700_000_301), null)
+  assert.equal(await verifyCommsHandoffToken(`${token}x`, secret, 1_700_000_100), null)
 })
