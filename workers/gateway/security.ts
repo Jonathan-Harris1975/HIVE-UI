@@ -68,6 +68,31 @@ export async function secureStringEqual(left: string, right: string): Promise<bo
   return constantTimeEqual(leftDigest, rightDigest)
 }
 
+export async function resolveSessionSigningSecret(configuredSecret: string | undefined, accessKey: string | undefined): Promise<string> {
+  const explicit = configuredSecret?.trim() ?? ''
+  if (explicit) return explicit
+
+  const legacyAccessKey = accessKey?.trim() ?? ''
+  if (!legacyAccessKey) return ''
+
+  // Backwards-compatible key separation for deployments that pre-date the
+  // dedicated session secret. The access key itself is never used directly as
+  // an HMAC signing key, and setting HIVE_UI_SESSION_SECRET still takes priority.
+  return base64UrlEncode(await hmac(legacyAccessKey, 'hive-ui/session-signing/v1'))
+}
+
+export async function resolveCommsHandoffSecret(configuredSecret: string | undefined, accessKey: string | undefined): Promise<string> {
+  const explicit = configuredSecret?.trim() ?? ''
+  if (explicit) return explicit
+
+  const legacyAccessKey = accessKey?.trim() ?? ''
+  if (!legacyAccessKey) return ''
+
+  // A separate derived subkey preserves existing deployments without making
+  // the UI access credential itself a communications signing key.
+  return base64UrlEncode(await hmac(legacyAccessKey, 'hive-ui/comms-handoff/v1'))
+}
+
 export function parseIdleTimeout(raw: string | undefined): number {
   if (!raw) return DEFAULT_IDLE_TIMEOUT_SECONDS
   const parsed = Number.parseInt(raw, 10)
@@ -193,6 +218,43 @@ export async function createCommsHandoffToken(
   const payloadPart = base64UrlEncode(encoder.encode(JSON.stringify(payload)))
   const signaturePart = base64UrlEncode(await hmac(secret, payloadPart))
   return `${payloadPart}.${signaturePart}`
+}
+
+export async function verifyCommsHandoffToken(
+  token: string,
+  secret: string,
+  nowSeconds = Math.floor(Date.now() / 1000),
+): Promise<CommsHandoffPayload | null> {
+  if (!token || token.length > 4096 || !secret.trim()) return null
+  const parts = token.split('.')
+  if (parts.length !== 2) return null
+  const [payloadPart, signaturePart] = parts
+  const suppliedSignature = base64UrlDecode(signaturePart)
+  if (!suppliedSignature) return null
+  const expectedSignature = await hmac(secret, payloadPart)
+  if (!constantTimeEqual(suppliedSignature, expectedSignature)) return null
+  const payloadBytes = base64UrlDecode(payloadPart)
+  if (!payloadBytes) return null
+
+  try {
+    const parsed = JSON.parse(decoder.decode(payloadBytes)) as Partial<CommsHandoffPayload>
+    const role = parsed.role
+    if (
+      parsed.v !== 1
+      || parsed.aud !== 'aims-comms'
+      || typeof parsed.iat !== 'number'
+      || typeof parsed.exp !== 'number'
+      || typeof parsed.actor !== 'string'
+      || !['admin', 'reviewer', 'operator', 'read_only'].includes(String(role))
+    ) return null
+    if (!Number.isFinite(parsed.iat) || !Number.isFinite(parsed.exp)) return null
+    if (parsed.iat > nowSeconds + 60 || parsed.exp <= nowSeconds || parsed.exp - parsed.iat > 600) return null
+    const actor = parsed.actor.trim().slice(0, 200)
+    if (!actor) return null
+    return { v: 1, iat: parsed.iat, exp: parsed.exp, actor, role: role as CommsHandoffPayload['role'], aud: 'aims-comms' }
+  } catch {
+    return null
+  }
 }
 
 export function readCookie(request: Request, name: string): string {
