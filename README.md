@@ -27,7 +27,7 @@ HIVE-UI is the private React operator interface for HIVE. It runs behind a Cloud
 
 ## AIMS Communications hand-off
 
-The Communications page requests `/api/auth/comms-handoff`, validates the returned destination is `https://chat.jonathan-harris.online/console/`, and embeds the operator console only after the signed hand-off succeeds. `HIVE_COMMS_HANDOFF_SECRET` must match the AIMS-UI gateway secret.
+The Communications page requests `/api/auth/comms-handoff`, validates the returned destination is `https://chat.jonathan-harris.online/console/`, and embeds the operator console only after the signed hand-off succeeds. A dedicated `HIVE_COMMS_HANDOFF_SECRET` is supported for independent rotation; when it is absent, HIVE-UI derives a domain-separated hand-off key from the existing `HIVE_UI_ACCESS_KEY` and validates tokens through `/api/auth/comms-identity`.
 
 ## Local verification
 
@@ -40,7 +40,7 @@ npm run check
 
 Production deploys the validated `dist` assets through the Worker on `https://hive.jonathan-harris.online`. Required Worker variables and secrets are documented in `.env.example`, `wrangler.toml`, `docs/DEPLOYMENT_CHECKLIST.md` and `SECURITY.md`.
 
-Important secrets include `HIVE_ADMIN_TOKEN`, `HIVE_UI_ACCESS_KEY`, `HIVE_UI_SESSION_SECRET`, `KOYEB_TOKEN` and `HIVE_COMMS_HANDOFF_SECRET`. They belong in Cloudflare secrets, never in browser-visible configuration.
+Required secrets include `HIVE_ADMIN_TOKEN`, `HIVE_UI_ACCESS_KEY` and `KOYEB_TOKEN`. Dedicated `HIVE_UI_SESSION_SECRET` and `HIVE_COMMS_HANDOFF_SECRET` values are recommended for independent rotation but are not required for deployments that pre-date them; secure domain-separated subkeys are derived from `HIVE_UI_ACCESS_KEY` when they are absent. Secrets belong in Cloudflare secrets, never in browser-visible configuration.
 
 Interactive HIVE/AIMS lifecycle control is session-driven: a login can resume required services, user activity refreshes the idle window, and logout/idle handling pauses only services claimed by that UI session. Services already active for MAST governance remain under MAST ownership.
 
@@ -49,4 +49,4 @@ Interactive HIVE/AIMS lifecycle control is session-driven: a login can resume re
 The Ops view displays redacted provider/runtime events supplied by HIVE, including supported GitHub, Koyeb and Cloudflare failures. See `docs/OPERATIONAL_ALERTS.md` and `docs/OPERATIONS.md`.
 
 
-Security configuration: set `HIVE_UI_SESSION_SECRET` as a distinct encrypted Worker secret. It must not reuse `HIVE_UI_ACCESS_KEY`. Login throttling uses the `LOGIN_RATE_LIMITER` Durable Object binding declared in `wrangler.toml`.
+Security configuration: a distinct encrypted `HIVE_UI_SESSION_SECRET` remains recommended for independent session-key rotation. Existing deployments without it derive a separate signing subkey from `HIVE_UI_ACCESS_KEY`; the access key itself is never used directly for session HMAC signing. Login throttling uses the `LOGIN_RATE_LIMITER` Durable Object binding declared in `wrangler.toml`.
