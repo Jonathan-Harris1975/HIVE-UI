@@ -331,10 +331,10 @@ export function RepositoriesPage() {
                       </button>
                       <StatusBadge status={availability.status} label={availability.label} compact />
                     </div>
-                    <p className={`mt-2 text-[11px] leading-5 ${repo.rehydrated ? 'text-cyan-200/80' : 'text-slate-500'}`}>
+                    <p className={`mt-2 text-xs leading-5 ${repo.rehydrated ? 'text-cyan-200/80' : 'text-slate-500'}`}>
                       {availability.detail}
                     </p>
-                    <div className="mt-3 flex flex-wrap items-center gap-2 text-[11px] text-slate-400">
+                    <div className="mt-3 flex flex-wrap items-center gap-2 text-xs text-slate-400">
                       <span className="rounded-full border border-white/10 px-2 py-0.5">{repo.file_count} files</span>
                       <span className="rounded-full border border-white/10 px-2 py-0.5">{formatBytes(repo.total_bytes)}</span>
                       <span className="rounded-full border border-white/10 px-2 py-0.5">v{repo.indexed_version}</span>
@@ -411,7 +411,7 @@ export function RepositoriesPage() {
               <div className="mt-3 space-y-4">
                 <article className="rounded-2xl border border-white/8 bg-[#0a192d]/70 p-4">
                   <h4 className="text-sm font-semibold text-white">{manifest.repository_id}</h4>
-                  <p className="mt-1 truncate font-mono text-[11px] text-slate-500">{manifest.fingerprint}</p>
+                  <p className="mt-1 truncate font-mono text-xs text-slate-500">{manifest.fingerprint}</p>
                   <div className="mt-3 grid grid-cols-2 gap-2 text-xs text-slate-400 sm:grid-cols-4">
                     <div className="rounded-lg border border-white/8 px-2.5 py-2 text-center">
                       <p className="text-sm font-semibold text-white">{manifest.file_count}</p>
@@ -462,7 +462,7 @@ export function RepositoriesPage() {
                       {manifest.dependencies.map((dep) => (
                         <div key={dep.manifest_path} className="rounded-lg border border-white/6 bg-white/[0.025] px-3 py-2">
                           <p className="text-xs font-medium text-slate-100">{dep.manifest_path}</p>
-                          <p className="mt-1 text-[11px] text-slate-500">
+                          <p className="mt-1 text-xs text-slate-500">
                             {dep.ecosystem} · {dep.declared.length} declared {dep.declared.length === 1 ? 'dependency' : 'dependencies'}
                           </p>
                         </div>
@@ -478,7 +478,7 @@ export function RepositoriesPage() {
                       type="button"
                       onClick={() => void runDiff(manifest.repository_id)}
                       disabled={diffLoading}
-                      className="flex h-7 items-center gap-1.5 rounded-lg border border-white/8 bg-white/[0.04] px-2.5 text-[11px] text-slate-300 hover:bg-white/[0.07] disabled:opacity-50"
+                      className="flex h-7 items-center gap-1.5 rounded-lg border border-white/8 bg-white/[0.04] px-2.5 text-xs text-slate-300 hover:bg-white/[0.07] disabled:opacity-50"
                     >
                       {diffLoading ? <LoaderCircle className="h-3 w-3 animate-spin" /> : <ArrowRightLeft className="h-3 w-3" />} Preview
                     </button>

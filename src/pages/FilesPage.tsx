@@ -975,7 +975,7 @@ export function FilesPage() {
                             <p className="truncate text-xs font-semibold text-slate-200">
                               {laneLabel(lane)}
                             </p>
-                            <p className="mt-1 line-clamp-2 text-[11px] leading-4 text-slate-400">
+                            <p className="mt-1 line-clamp-2 text-xs leading-4 text-slate-400">
                               {lane.description ||
                                 "Configured ecosystem storage lane"}
                             </p>
@@ -986,7 +986,7 @@ export function FilesPage() {
                             compact
                           />
                         </div>
-                        <p className="mt-2 truncate text-[11px] text-slate-500">
+                        <p className="mt-2 truncate text-xs text-slate-500">
                           {lane.bucket || "No bucket configured"}
                         </p>
                       </button>
@@ -995,7 +995,7 @@ export function FilesPage() {
                           href={lane.public_base_url}
                           target="_blank"
                           rel="noreferrer"
-                          className="mt-3 inline-flex items-center gap-1.5 text-[11px] text-cyan-300/70 hover:text-cyan-200"
+                          className="mt-3 inline-flex items-center gap-1.5 text-xs text-cyan-300/70 hover:text-cyan-200"
                         >
                           Public base <ExternalLink className="h-3 w-3" />
                         </a>
@@ -1089,7 +1089,7 @@ export function FilesPage() {
               </span>
             ))}
             {activeSearch && (
-              <span className="ml-auto rounded-full border border-cyan-300/15 bg-cyan-300/6 px-2.5 py-1 text-[11px] text-cyan-200">
+              <span className="ml-auto rounded-full border border-cyan-300/15 bg-cyan-300/6 px-2.5 py-1 text-xs text-cyan-200">
                 Search: {activeSearch}
               </span>
             )}
@@ -1159,7 +1159,7 @@ export function FilesPage() {
                 </button>
               </div>
               {!selectedChatSupported && selectedCurrentFile && (
-                <p className="mt-2 text-[11px] text-emerald-100/65">
+                <p className="mt-2 text-xs text-emerald-100/65">
                   The first selected file may be download-only; HIVE will still
                   pass the R2 reference.
                 </p>
@@ -1486,14 +1486,14 @@ export function FilesPage() {
                     <p className="mt-1 truncate text-xs text-slate-400">
                       {folderPrefix}
                     </p>
-                    <p className="mt-2 text-[11px] leading-5 text-slate-500">
+                    <p className="mt-2 text-xs leading-5 text-slate-500">
                       Select files from this folder without drilling into every nested prefix.
                     </p>
                     <div className="mt-4 grid grid-cols-2 gap-2 border-t border-white/6 pt-3">
                       <button
                         type="button"
                         onClick={() => changePrefix(folderPrefix)}
-                        className="flex h-9 items-center justify-center gap-1.5 rounded-xl border border-white/8 bg-white/[0.025] text-[11px] font-medium text-cyan-200/75 transition hover:bg-white/[0.05] hover:text-cyan-100"
+                        className="flex h-9 items-center justify-center gap-1.5 rounded-xl border border-white/8 bg-white/[0.025] text-xs font-medium text-cyan-200/75 transition hover:bg-white/[0.05] hover:text-cyan-100"
                       >
                         Open <ChevronRight className="h-3.5 w-3.5" />
                       </button>
@@ -1501,7 +1501,7 @@ export function FilesPage() {
                         type="button"
                         onClick={() => void selectPrefixObjects(folderPrefix)}
                         disabled={prefixBusy || selectedSources.length >= MAX_SELECTED_OBJECTS}
-                        className="flex h-9 items-center justify-center gap-1.5 rounded-xl border border-cyan-300/15 bg-cyan-300/6 text-[11px] font-medium text-cyan-100 transition hover:bg-cyan-300/10 disabled:cursor-not-allowed disabled:opacity-40"
+                        className="flex h-9 items-center justify-center gap-1.5 rounded-xl border border-cyan-300/15 bg-cyan-300/6 text-xs font-medium text-cyan-100 transition hover:bg-cyan-300/10 disabled:cursor-not-allowed disabled:opacity-40"
                       >
                         {prefixBusy ? <LoaderCircle className="h-3.5 w-3.5 animate-spin" /> : <CheckSquare className="h-3.5 w-3.5" />}
                         Select files
@@ -1530,7 +1530,7 @@ export function FilesPage() {
                         type="button"
                         onClick={() => toggleObjectSelection(file)}
                         aria-pressed={selected}
-                        className={`inline-flex h-8 items-center gap-1.5 rounded-lg border px-2.5 text-[11px] font-medium transition ${selected ? "border-cyan-300/30 bg-cyan-300/10 text-cyan-100" : "border-white/8 bg-white/[0.025] text-slate-400 hover:text-slate-200"}`}
+                        className={`inline-flex h-8 items-center gap-1.5 rounded-lg border px-2.5 text-xs font-medium transition ${selected ? "border-cyan-300/30 bg-cyan-300/10 text-cyan-100" : "border-white/8 bg-white/[0.025] text-slate-400 hover:text-slate-200"}`}
                       >
                         {selected ? (
                           <CheckSquare className="h-3.5 w-3.5" />
@@ -1561,7 +1561,7 @@ export function FilesPage() {
                       <p className="mt-1 line-clamp-2 min-h-10 break-all text-xs leading-5 text-slate-400">
                         {key}
                       </p>
-                      <div className="mt-4 flex items-center justify-between border-t border-white/6 pt-3 text-[11px] text-slate-400">
+                      <div className="mt-4 flex items-center justify-between border-t border-white/6 pt-3 text-xs text-slate-400">
                         <span>
                           {formatBytes(
                             Number(file.size_bytes ?? file.size ?? 0),
@@ -1750,7 +1750,7 @@ export function FilesPage() {
                           compact
                         />
                       </div>
-                      <p className="mt-2 truncate text-[11px] text-slate-400">
+                      <p className="mt-2 truncate text-xs text-slate-400">
                         {skillField(skill, "repo", "Shared")} ·{" "}
                         {skillField(
                           skill,
@@ -1922,7 +1922,7 @@ export function FilesPage() {
                   placeholder="uploaded-file, audits, brand-assets"
                   className="mt-2 h-11 w-full rounded-xl border border-white/8 bg-[#061126] px-3 text-sm text-slate-100 outline-none placeholder:text-slate-400 focus:border-violet-300/40"
                 />
-                <span className="mt-2 block text-[11px] leading-5 text-slate-400">
+                <span className="mt-2 block text-xs leading-5 text-slate-400">
                   Comma-separated. These are used for search and routing, so
                   plain names beat cryptic goblin-code.
                 </span>

@@ -211,7 +211,7 @@ export function ExecutionSimulationPage() {
               </button>
             </div>
 
-            <div className="mt-3 flex flex-wrap items-center gap-2 text-[11px]">
+            <div className="mt-3 flex flex-wrap items-center gap-2 text-xs">
               <StatusBadge status={simulation.execution_state ?? 'unknown'} compact />
               {simulation.policy && (
                 <span className="rounded-full border border-white/10 px-2 py-0.5 text-slate-400">{simulation.policy.label}</span>
@@ -229,7 +229,7 @@ export function ExecutionSimulationPage() {
                 ) : (
                   <div className="mt-2 flex flex-wrap gap-1.5">
                     {simulation.required_services!.map((service) => (
-                      <span key={service} className="rounded-full border border-white/10 px-2 py-0.5 text-[11px] text-slate-300">{service}</span>
+                      <span key={service} className="rounded-full border border-white/10 px-2 py-0.5 text-xs text-slate-300">{service}</span>
                     ))}
                   </div>
                 )}
@@ -237,14 +237,14 @@ export function ExecutionSimulationPage() {
 
               <article className="rounded-2xl border border-white/8 bg-white/[0.02] p-3">
                 <h4 className="flex items-center gap-1.5 text-xs font-semibold text-slate-300"><Boxes className="h-3.5 w-3.5" /> Affected surfaces</h4>
-                <p className="mt-2 text-[11px] text-slate-400">Repos: {(simulation.affected_repos ?? []).join(', ') || 'none'}</p>
-                <p className="mt-1 text-[11px] text-slate-400">Buckets: {(simulation.affected_buckets ?? []).join(', ') || 'none'}</p>
+                <p className="mt-2 text-xs text-slate-400">Repos: {(simulation.affected_repos ?? []).join(', ') || 'none'}</p>
+                <p className="mt-1 text-xs text-slate-400">Buckets: {(simulation.affected_buckets ?? []).join(', ') || 'none'}</p>
               </article>
 
               {simulation.estimated_cost && (
                 <article className="rounded-2xl border border-white/8 bg-white/[0.02] p-3">
                   <h4 className="flex items-center gap-1.5 text-xs font-semibold text-slate-300"><Database className="h-3.5 w-3.5" /> Estimated cost</h4>
-                  <pre className="mt-2 overflow-x-auto rounded-lg bg-[#061126] p-2 font-mono text-[11px] text-slate-400">
+                  <pre className="mt-2 overflow-x-auto rounded-lg bg-[#061126] p-2 font-mono text-xs text-slate-400">
                     {JSON.stringify(simulation.estimated_cost, null, 2)}
                   </pre>
                 </article>
@@ -253,7 +253,7 @@ export function ExecutionSimulationPage() {
               {simulation.risk_summary && (
                 <article className="rounded-2xl border border-white/8 bg-white/[0.02] p-3">
                   <h4 className="flex items-center gap-1.5 text-xs font-semibold text-slate-300"><ShieldCheck className="h-3.5 w-3.5" /> Risk summary</h4>
-                  <pre className="mt-2 overflow-x-auto rounded-lg bg-[#061126] p-2 font-mono text-[11px] text-slate-400">
+                  <pre className="mt-2 overflow-x-auto rounded-lg bg-[#061126] p-2 font-mono text-xs text-slate-400">
                     {JSON.stringify(simulation.risk_summary, null, 2)}
                   </pre>
                 </article>
@@ -309,7 +309,7 @@ export function ExecutionSimulationPage() {
                   }`}
                 >
                   <p className="truncate text-xs font-medium text-slate-100">{item.task}</p>
-                  <div className="mt-1.5 flex flex-wrap items-center gap-1.5 text-[11px] text-slate-500">
+                  <div className="mt-1.5 flex flex-wrap items-center gap-1.5 text-xs text-slate-500">
                     <StatusBadge status={item.status} compact />
                     {item.repo && <span>{item.repo}</span>}
                     {item.created_at && <span>{formatDate(item.created_at)}</span>}
@@ -319,7 +319,7 @@ export function ExecutionSimulationPage() {
             </div>
           )}
           {selectedPreview && (
-            <pre className="mt-3 max-h-96 overflow-auto rounded-xl border border-white/8 bg-[#061126] p-3 font-mono text-[11px] leading-5 text-slate-300">
+            <pre className="mt-3 max-h-96 overflow-auto rounded-xl border border-white/8 bg-[#061126] p-3 font-mono text-xs leading-5 text-slate-300">
               {JSON.stringify(selectedPreview, null, 2)}
             </pre>
           )}
@@ -334,8 +334,8 @@ export function ExecutionSimulationPage() {
               {Object.entries(profiles).map(([key, profile]) => (
                 <article key={key} className="rounded-xl border border-white/8 bg-white/[0.02] p-3">
                   <p className="text-xs font-semibold text-slate-100">{profile.label}</p>
-                  <p className="mt-1 text-[11px] leading-4 text-slate-500">{profile.description}</p>
-                  <div className="mt-2 flex flex-wrap gap-1 text-[10px] text-slate-500">
+                  <p className="mt-1 text-xs leading-4 text-slate-500">{profile.description}</p>
+                  <div className="mt-2 flex flex-wrap gap-1 text-xs text-slate-500">
                     {profile.allows_repo_mutation && <span className="rounded-full border border-white/10 px-1.5 py-0.5">repo mutation</span>}
                     {profile.allows_r2_write && <span className="rounded-full border border-white/10 px-1.5 py-0.5">R2 write</span>}
                     {profile.requires_human_approval && <span className="rounded-full border border-amber-300/20 px-1.5 py-0.5 text-amber-200">approval required</span>}

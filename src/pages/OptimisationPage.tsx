@@ -124,19 +124,19 @@ export function OptimisationPage() {
           <div className="mt-6 grid grid-cols-2 gap-3 sm:grid-cols-4">
             <div className="rounded-2xl border border-white/8 bg-[#0a192d]/70 p-3 text-center">
               <p className="text-lg font-semibold text-white">{stats.decision_count}</p>
-              <p className="text-[11px] text-slate-400">Decisions</p>
+              <p className="text-xs text-slate-400">Decisions</p>
             </div>
             <div className="rounded-2xl border border-white/8 bg-[#0a192d]/70 p-3 text-center">
               <p className="text-lg font-semibold text-amber-300">{pct(stats.rollback_rate)}</p>
-              <p className="text-[11px] text-slate-400">Rollback rate</p>
+              <p className="text-xs text-slate-400">Rollback rate</p>
             </div>
             <div className="rounded-2xl border border-white/8 bg-[#0a192d]/70 p-3 text-center">
               <p className="text-lg font-semibold text-white">{stats.experiment_count}</p>
-              <p className="text-[11px] text-slate-400">Experiments</p>
+              <p className="text-xs text-slate-400">Experiments</p>
             </div>
             <div className="rounded-2xl border border-white/8 bg-[#0a192d]/70 p-3 text-center">
               <p className="text-lg font-semibold text-emerald-300">{pct(stats.experiment_success_rate)}</p>
-              <p className="text-[11px] text-slate-400">Experiment success</p>
+              <p className="text-xs text-slate-400">Experiment success</p>
             </div>
           </div>
         )}
@@ -158,7 +158,7 @@ export function OptimisationPage() {
                   <div className="flex items-start justify-between gap-3">
                     <div className="min-w-0">
                       <p className="truncate text-sm font-medium text-slate-100">{decision.description}</p>
-                      <p className="mt-0.5 text-[11px] text-slate-500">{decision.decision_type} · confidence {pct(decision.confidence)} · {formatDate(decision.created_at)}</p>
+                      <p className="mt-0.5 text-xs text-slate-500">{decision.decision_type} · confidence {pct(decision.confidence)} · {formatDate(decision.created_at)}</p>
                     </div>
                     <div className="flex items-center gap-2">
                       <StatusBadge status={decision.status} compact />
@@ -167,7 +167,7 @@ export function OptimisationPage() {
                           type="button"
                           onClick={() => void rollback(decision.decision_id)}
                           disabled={rollingBack === decision.decision_id}
-                          className="flex h-7 items-center gap-1 rounded-lg border border-amber-300/20 bg-amber-300/8 px-2 text-[11px] text-amber-200 disabled:opacity-50"
+                          className="flex h-7 items-center gap-1 rounded-lg border border-amber-300/20 bg-amber-300/8 px-2 text-xs text-amber-200 disabled:opacity-50"
                         >
                           {rollingBack === decision.decision_id ? <LoaderCircle className="h-3 w-3 animate-spin" /> : <RotateCcw className="h-3 w-3" />} Rollback
                         </button>
@@ -198,9 +198,9 @@ export function OptimisationPage() {
                     <p className="text-sm font-medium text-slate-100">{experiment.name}</p>
                     {experiment.success ? <CheckCircle2 className="h-4 w-4 shrink-0 text-emerald-300" /> : <XCircle className="h-4 w-4 shrink-0 text-rose-300" />}
                   </div>
-                  {experiment.hypothesis && <p className="mt-1.5 text-[11px] text-slate-500"><span className="text-slate-400">Hypothesis:</span> {experiment.hypothesis}</p>}
-                  {experiment.outcome && <p className="mt-1 text-[11px] text-slate-500"><span className="text-slate-400">Outcome:</span> {experiment.outcome}</p>}
-                  <p className="mt-1.5 text-[11px] text-slate-600">{formatDate(experiment.created_at)}</p>
+                  {experiment.hypothesis && <p className="mt-1.5 text-xs text-slate-500"><span className="text-slate-400">Hypothesis:</span> {experiment.hypothesis}</p>}
+                  {experiment.outcome && <p className="mt-1 text-xs text-slate-500"><span className="text-slate-400">Outcome:</span> {experiment.outcome}</p>}
+                  <p className="mt-1.5 text-xs text-slate-600">{formatDate(experiment.created_at)}</p>
                 </article>
               ))}
             </div>
@@ -234,7 +234,7 @@ export function OptimisationPage() {
                   <p className="text-xs font-semibold text-amber-200">{audit.undocumented_field_count} settings field{audit.undocumented_field_count === 1 ? '' : 's'} missing from .env.example</p>
                   <div className="mt-2 flex flex-wrap gap-1.5">
                     {audit.undocumented_fields.map((field) => (
-                      <span key={field.field} title={field.expected_env_names.join(', ')} className="rounded-full border border-amber-300/20 px-2 py-0.5 text-[11px] text-amber-100">
+                      <span key={field.field} title={field.expected_env_names.join(', ')} className="rounded-full border border-amber-300/20 px-2 py-0.5 text-xs text-amber-100">
                         {field.field}
                       </span>
                     ))}
@@ -247,7 +247,7 @@ export function OptimisationPage() {
                   <p className="text-xs font-semibold text-slate-300">{audit.extra_in_env_example.length} name{audit.extra_in_env_example.length === 1 ? '' : 's'} in .env.example with no matching setting</p>
                   <div className="mt-2 flex flex-wrap gap-1.5">
                     {audit.extra_in_env_example.map((name) => (
-                      <span key={name} className="rounded-full border border-white/10 px-2 py-0.5 text-[11px] text-slate-400">{name}</span>
+                      <span key={name} className="rounded-full border border-white/10 px-2 py-0.5 text-xs text-slate-400">{name}</span>
                     ))}
                   </div>
                 </div>

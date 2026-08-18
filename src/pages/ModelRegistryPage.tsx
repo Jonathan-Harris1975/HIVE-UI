@@ -319,7 +319,7 @@ export function ModelRegistryPage() {
                 Only models clearing the quality floor are shown or eligible for automatic routing. The monthly AI
                 Council refreshes benchmark evidence and persists qualified rankings in D1.
               </p>
-              <p className="mt-2 text-[11px] text-slate-500">
+              <p className="mt-2 text-xs text-slate-500">
                 Quality floor {(qualityFloor * 100).toFixed(0)}%{hiddenLowScoreCount > 0 ? ` · ${hiddenLowScoreCount} lower-ranked model${hiddenLowScoreCount === 1 ? '' : 's'} hidden` : ''}
               </p>
             </div>
@@ -393,7 +393,7 @@ export function ModelRegistryPage() {
                   >
                     <button type="button" onClick={() => inspectModel(model)} className="min-w-0 flex-1 text-left">
                       <div className="flex items-center gap-2">
-                        <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full border border-white/10 bg-white/[0.04] text-[11px] font-semibold text-slate-300">
+                        <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full border border-white/10 bg-white/[0.04] text-xs font-semibold text-slate-300">
                           {index + 1}
                         </span>
                         <span className="truncate text-sm font-medium text-slate-100">{model.model_id}</span>
@@ -405,18 +405,18 @@ export function ModelRegistryPage() {
                       </p>
                       <div className="mt-1.5 flex flex-wrap items-center gap-1.5">
                         <span
-                          className={`inline-flex h-5 items-center rounded-md border px-1.5 text-[10px] font-medium ${CONFIDENCE_TONE[model.confidence]}`}
+                          className={`inline-flex h-5 items-center rounded-md border px-1.5 text-xs font-medium ${CONFIDENCE_TONE[model.confidence]}`}
                         >
                           {CONFIDENCE_LABELS[model.confidence] ?? model.confidence}
                         </span>
                         {model.benchmark_score != null && (
-                          <span className="text-[11px] text-slate-500">Benchmark {model.benchmark_score.toFixed(1)}</span>
+                          <span className="text-xs text-slate-500">Benchmark {model.benchmark_score.toFixed(1)}</span>
                         )}
                         {formatLatency(model.latency_ms) && (
-                          <span className="text-[11px] text-slate-500">{formatLatency(model.latency_ms)}</span>
+                          <span className="text-xs text-slate-500">{formatLatency(model.latency_ms)}</span>
                         )}
                         {formatCost(model.cost_per_1k_tokens) && (
-                          <span className="text-[11px] text-slate-500">{formatCost(model.cost_per_1k_tokens)}</span>
+                          <span className="text-xs text-slate-500">{formatCost(model.cost_per_1k_tokens)}</span>
                         )}
                       </div>
                       {model.notes && <p className="mt-1 truncate text-xs text-slate-500">{model.notes}</p>}
@@ -502,7 +502,7 @@ export function ModelRegistryPage() {
                     >
                       <span className={`h-1.5 w-1.5 rounded-full ${health == null ? 'bg-slate-500' : health.ok ? 'bg-emerald-300' : 'bg-rose-400'}`} />
                       {name}
-                      {health?.latency_ms != null && <span className="text-[10px] text-slate-500">{Math.round(health.latency_ms)}ms</span>}
+                      {health?.latency_ms != null && <span className="text-xs text-slate-500">{Math.round(health.latency_ms)}ms</span>}
                     </button>
                   )
                 })}
@@ -526,14 +526,14 @@ export function ModelRegistryPage() {
                         >
                           <span className="min-w-0">
                             <span className="block truncate text-xs font-medium text-slate-100">{model.model_id}</span>
-                            <span className="mt-0.5 flex flex-wrap gap-2 text-[11px] text-slate-500">
+                            <span className="mt-0.5 flex flex-wrap gap-2 text-xs text-slate-500">
                               {model.context_length != null && <span>{model.context_length.toLocaleString()} ctx</span>}
                               {model.pricing_completion != null && <span>{formatCost(model.pricing_completion)}</span>}
                               {model.supports_tools && <span>tools</span>}
                               {model.supports_structured_output && <span>structured output</span>}
                             </span>
                           </span>
-                          <span className="shrink-0 text-[11px] font-medium text-cyan-300">Use in registration form</span>
+                          <span className="shrink-0 text-xs font-medium text-cyan-300">Use in registration form</span>
                         </button>
                       </li>
                     ))}

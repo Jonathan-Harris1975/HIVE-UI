@@ -450,7 +450,7 @@ export function RepositoryMemoryPage() {
                         <button type="button" onClick={() => inspectField(field)} className="text-left">
                           <h4 className="text-sm font-semibold text-white">{fieldLabel(field)}</h4>
                         </button>
-                        <span className="rounded-full border border-white/10 px-2 py-0.5 text-[11px] text-slate-400">{items.length}</span>
+                        <span className="rounded-full border border-white/10 px-2 py-0.5 text-xs text-slate-400">{items.length}</span>
                       </div>
 
                       {items.length === 0 ? (
@@ -462,9 +462,9 @@ export function RepositoryMemoryPage() {
                             return (
                               <div key={index} className="rounded-lg border border-white/6 bg-white/[0.025] px-3 py-2">
                                 <p className="text-xs font-medium text-slate-100">{title}</p>
-                                {detail && <p className="mt-1 line-clamp-2 text-[11px] text-slate-400">{detail}</p>}
+                                {detail && <p className="mt-1 line-clamp-2 text-xs text-slate-400">{detail}</p>}
                                 {when && (
-                                  <p className="mt-1 flex items-center gap-1 text-[10px] text-slate-500"><Clock className="h-3 w-3" /> {formatDate(when)}</p>
+                                  <p className="mt-1 flex items-center gap-1 text-xs text-slate-500"><Clock className="h-3 w-3" /> {formatDate(when)}</p>
                                 )}
                               </div>
                             )
@@ -474,7 +474,7 @@ export function RepositoryMemoryPage() {
 
                       {appendField === field ? (
                         <div className="mt-3 rounded-xl border border-cyan-300/15 bg-cyan-300/[0.035] p-3">
-                          <label className="text-[11px] font-medium text-slate-300">New entry (JSON object)</label>
+                          <label className="text-xs font-medium text-slate-300">New entry (JSON object)</label>
                           <textarea
                             value={appendDraft}
                             onChange={(event) => setAppendDraft(event.target.value)}

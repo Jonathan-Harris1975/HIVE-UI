@@ -362,7 +362,7 @@ export function RepositoryIntelligencePage() {
                         <div className="border-t border-white/6 px-3 py-2.5 text-xs leading-5 text-slate-400">
                           <p>{check.summary}</p>
                           {Object.keys(check.details).length > 0 && (
-                            <pre className="mt-2 overflow-x-auto rounded-lg bg-[#061126] p-2 font-mono text-[11px] text-slate-400">
+                            <pre className="mt-2 overflow-x-auto rounded-lg bg-[#061126] p-2 font-mono text-xs text-slate-400">
                               {JSON.stringify(check.details, null, 2)}
                             </pre>
                           )}
@@ -400,7 +400,7 @@ export function RepositoryIntelligencePage() {
                 <span className={`text-2xl font-semibold ${scoreTone(councilOverallPct ?? 0)}`}>{councilOverallPct}%</span>
                 <span className="text-xs text-slate-400">overall, {formatDate(councilReport.occurred_at)}</span>
                 {councilReport.has_unmeasured_signal && (
-                  <span className="rounded-full border border-amber-300/20 bg-amber-300/8 px-2.5 py-1 text-[11px] text-amber-200">
+                  <span className="rounded-full border border-amber-300/20 bg-amber-300/8 px-2.5 py-1 text-xs text-amber-200">
                     Includes heuristic (unmeasured) dimensions
                   </span>
                 )}
@@ -412,12 +412,12 @@ export function RepositoryIntelligencePage() {
                       <span className="text-xs font-medium text-slate-100">{dim.dimension.replace(/_/g, ' ')}</span>
                       <span className="flex items-center gap-1.5">
                         {dim.confidence === 'heuristic' && (
-                          <span title="Heuristic proxy, not measured signal" className="text-[10px] text-amber-300">heuristic</span>
+                          <span title="Heuristic proxy, not measured signal" className="text-xs text-amber-300">heuristic</span>
                         )}
                         <span className={`text-xs font-semibold ${scoreTone(scorePct(dim.score))}`}>{scorePct(dim.score)}%</span>
                       </span>
                     </div>
-                    <p className="mt-1 text-[11px] leading-4 text-slate-500">{dim.rationale}</p>
+                    <p className="mt-1 text-xs leading-4 text-slate-500">{dim.rationale}</p>
                   </div>
                 ))}
               </div>
@@ -541,7 +541,7 @@ export function RepositoryIntelligencePage() {
 
             <form onSubmit={submitPreferredModel} className="rounded-2xl border border-white/8 bg-white/[0.02] p-4">
               <h4 className="flex items-center gap-1.5 text-xs font-semibold text-slate-200"><Star className="h-3.5 w-3.5" /> Record preferred model</h4>
-              <p className="mt-1 text-[11px] leading-4 text-slate-500">
+              <p className="mt-1 text-xs leading-4 text-slate-500">
                 Captures this repository's observed model preference as a learned pattern. Doesn't change the global
                 Model Registry ranking — see the Model Registry page for that.
               </p>

@@ -226,7 +226,7 @@ export function CouncilPage() {
                 {metricKeys.length > 0 && (
                   <div className="mt-2 grid grid-cols-2 gap-2 sm:grid-cols-3">
                     {metricKeys.map((key) => (
-                      <label key={key} className="text-[11px] text-slate-400">
+                      <label key={key} className="text-xs text-slate-400">
                         {METRIC_LABELS[key] ?? key}
                         <input
                           type="number"
@@ -270,7 +270,7 @@ export function CouncilPage() {
                 .map((result, index) => (
                   <div key={result.model_id} className="flex items-center justify-between rounded-xl border border-white/8 bg-white/[0.025] px-3 py-2.5">
                     <div className="flex items-center gap-2">
-                      <span className="flex h-6 w-6 items-center justify-center rounded-full border border-white/10 text-[11px] text-slate-400">{index + 1}</span>
+                      <span className="flex h-6 w-6 items-center justify-center rounded-full border border-white/10 text-xs text-slate-400">{index + 1}</span>
                       <span className="text-sm text-slate-100">{result.model_id}</span>
                     </div>
                     <div className="flex items-center gap-3 text-xs text-slate-400">

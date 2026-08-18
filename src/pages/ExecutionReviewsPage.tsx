@@ -324,7 +324,7 @@ export function ExecutionReviewsPage() {
                       <p className="min-w-0 truncate text-sm font-medium text-slate-100">{item.task}</p>
                       <StatusBadge status={item.status} compact />
                     </div>
-                    <div className="mt-2 flex flex-wrap items-center gap-2 text-[11px] text-slate-400">
+                    <div className="mt-2 flex flex-wrap items-center gap-2 text-xs text-slate-400">
                       {item.repo && <span className="rounded-full border border-white/10 px-2 py-0.5">{item.repo}</span>}
                       {item.skill_name && <span className="rounded-full border border-white/10 px-2 py-0.5">{item.skill_name}</span>}
                       {item.risk_level && <span className={`rounded-full border border-white/10 px-2 py-0.5 ${riskTone(item.risk_level)}`}>{item.risk_level} risk</span>}
@@ -352,8 +352,8 @@ export function ExecutionReviewsPage() {
                     <h4 className="text-sm font-semibold text-white">{String(detail.task ?? selectedId)}</h4>
                     <StatusBadge status={String(detail.status ?? 'unknown')} compact />
                   </div>
-                  <p className="mt-1 font-mono text-[11px] text-slate-500">{selectedId}</p>
-                  <div className="mt-3 flex flex-wrap gap-1.5 text-[11px] text-slate-400">
+                  <p className="mt-1 font-mono text-xs text-slate-500">{selectedId}</p>
+                  <div className="mt-3 flex flex-wrap gap-1.5 text-xs text-slate-400">
                     <span className="rounded-full border border-white/10 px-2 py-0.5">
                       {detail.can_execute_now ? 'Can execute now' : 'Cannot execute yet'}
                     </span>
@@ -421,14 +421,14 @@ export function ExecutionReviewsPage() {
                     <h4 className="text-xs font-semibold uppercase tracking-[0.14em] text-slate-400">
                       {auditTrail ? 'Audit trail' : 'Evidence pack'}
                     </h4>
-                    <pre className="mt-2 max-h-96 overflow-auto rounded-lg bg-[#061126] p-3 font-mono text-[11px] leading-5 text-slate-300">
+                    <pre className="mt-2 max-h-96 overflow-auto rounded-lg bg-[#061126] p-3 font-mono text-xs leading-5 text-slate-300">
                       {JSON.stringify(auditTrail ?? evidencePack, null, 2)}
                     </pre>
                   </article>
                 )}
 
                 {typeof detail.updated_at === 'string' && (
-                  <p className="text-[11px] text-slate-500">Last updated {formatDate(detail.updated_at)}</p>
+                  <p className="text-xs text-slate-500">Last updated {formatDate(detail.updated_at)}</p>
                 )}
               </div>
             ) : null}

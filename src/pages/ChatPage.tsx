@@ -479,7 +479,7 @@ export function ChatPage() {
                     onClick={() => void submitMessage(starter.prompt)}
                     className={`rounded-2xl border border-l-2 border-white/8 ${starter.border} bg-white/[0.025] p-4 text-left text-xs leading-5 text-slate-400 transition hover:border-cyan-300/20 hover:bg-cyan-300/[0.04] hover:text-slate-200`}
                   >
-                    <span className="mb-2 flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-300"><Sparkles className="h-3.5 w-3.5 text-cyan-300/70" /> {starter.category}</span>
+                    <span className="mb-2 flex items-center gap-1.5 text-xs font-semibold uppercase tracking-[0.16em] text-slate-300"><Sparkles className="h-3.5 w-3.5 text-cyan-300/70" /> {starter.category}</span>
                     {starter.prompt}
                   </button>
                 ))}
@@ -525,7 +525,7 @@ export function ChatPage() {
                       ? fileSourceLabel(attachedSources[0])
                       : `${attachedSources.length} files selected`}
                   </span>
-                  <span className="rounded-full bg-black/15 px-1.5 py-0.5 text-[9px] uppercase tracking-wide text-emerald-100/65">
+                  <span className="rounded-full bg-black/15 px-1.5 py-0.5 text-xs uppercase tracking-wide text-emerald-100/65">
                     {attachedSources.length === 1
                       ? attachedSources[0].lane.replace(/_/g, ' ')
                       : `${new Set(attachedSources.map((source) => source.lane)).size} lanes`}
@@ -608,7 +608,7 @@ export function ChatPage() {
               )}
             </div>
           </div>
-          <p className="mt-2 text-center text-[11px] text-slate-400">
+          <p className="mt-2 text-center text-xs text-slate-400">
             Enter sends · Shift + Enter adds a line
             {conversationUsage.tokens > 0 && <> · {conversationUsage.tokens.toLocaleString()} tokens · {formatCost(conversationUsage.cost)}</>}
           </p>

@@ -145,13 +145,13 @@ export function MonthlyReviewPage() {
                     <span className="text-sm font-semibold text-white">{targetPeriod}</span>
                     {busy ? <LoaderCircle className="h-4 w-4 animate-spin text-cyan-300" /> : <ShieldCheck className="h-4 w-4 text-emerald-300" />}
                   </div>
-                  <p className="mt-2 text-[11px] text-slate-400">Generated {formatDate(item.metadata?.generated_at || item.updated_at)}</p>
-                  <div className="mt-3 flex items-center justify-between text-[11px] text-slate-400">
+                  <p className="mt-2 text-xs text-slate-400">Generated {formatDate(item.metadata?.generated_at || item.updated_at)}</p>
+                  <div className="mt-3 flex items-center justify-between text-xs text-slate-400">
                     <span className="flex items-center gap-1"><DollarSign className="h-3.5 w-3.5" /> {costLabel(item.metadata?.cost_usd_total)}</span>
                     <span>{sectionsLabel(item)}</span>
                   </div>
                   {typeof item.metadata?.open_execution_reviews === 'number' && (
-                    <p className="mt-2 text-[11px] text-violet-200">{item.metadata.open_execution_reviews} open execution review(s)</p>
+                    <p className="mt-2 text-xs text-violet-200">{item.metadata.open_execution_reviews} open execution review(s)</p>
                   )}
                 </button>
               )

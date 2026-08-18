@@ -65,7 +65,7 @@ function Flag({ label, status, detail, icon: Icon }: FlagProps) {
         </div>
         <div className="min-w-0 flex-1">
           <h3 className="truncate text-xs font-semibold text-white">{label}</h3>
-          <p className="mt-0.5 truncate text-[11px] text-slate-400" title={detail}>{detail}</p>
+          <p className="mt-0.5 truncate text-xs text-slate-400" title={detail}>{detail}</p>
         </div>
         <StatusBadge status={status} variant="readiness" compact />
       </div>
@@ -169,7 +169,7 @@ function ServiceWakeControl({ repo, onWoken }: { repo: 'RAMS'; onWoken: () => vo
         type="button"
         onClick={(event) => { event.stopPropagation(); void start() }}
         disabled={starting}
-        className="mt-2 inline-flex items-center gap-1.5 rounded-lg border border-violet-300/20 bg-violet-300/8 px-2.5 py-1 text-[11px] text-violet-200 transition hover:bg-violet-300/12 disabled:opacity-50"
+        className="mt-2 inline-flex items-center gap-1.5 rounded-lg border border-violet-300/20 bg-violet-300/8 px-2.5 py-1 text-xs text-violet-200 transition hover:bg-violet-300/12 disabled:opacity-50"
       >
         <RefreshCw className={`h-3 w-3 ${starting ? 'animate-spin' : ''}`} /> {starting ? 'Requesting…' : 'Wake up'}
       </button>
@@ -181,7 +181,7 @@ function ServiceWakeControl({ repo, onWoken }: { repo: 'RAMS'; onWoken: () => vo
     : 'text-violet-200 border-violet-300/15 bg-violet-300/5'
 
   return (
-    <div className={`mt-2 rounded-lg border px-2.5 py-1.5 text-[11px] ${tone}`}>
+    <div className={`mt-2 rounded-lg border px-2.5 py-1.5 text-xs ${tone}`}>
       {ticket.status === 'ready'
         ? `Ready in ${ticket.result?.elapsed_seconds ?? 0}s`
         : ticket.status === 'timeout'
@@ -215,9 +215,9 @@ function RepoHealthCard({ item, onInspect, onRefresh }: { item: RepoHealthItem; 
         <div className="min-w-0 flex-1">
           <div className="flex items-center gap-1.5">
             <h4 className="truncate text-xs font-semibold text-white">{item.label || item.repo}</h4>
-            <span className="truncate text-[11px] uppercase tracking-[0.12em] text-slate-400">{category}</span>
+            <span className="truncate text-xs uppercase tracking-[0.12em] text-slate-400">{category}</span>
           </div>
-          <p className="mt-0.5 truncate text-[11px] text-slate-400" title={item.detail || item.description}>{item.detail || item.description || 'No health detail returned.'}</p>
+          <p className="mt-0.5 truncate text-xs text-slate-400" title={item.detail || item.description}>{item.detail || item.description || 'No health detail returned.'}</p>
         </div>
         <div className="flex items-center">
           <StatusBadge
@@ -227,7 +227,7 @@ function RepoHealthCard({ item, onInspect, onRefresh }: { item: RepoHealthItem; 
           />
         </div>
       </div>
-      <div className="mt-2 flex items-center gap-2 text-[11px] text-slate-400">
+      <div className="mt-2 flex items-center gap-2 text-xs text-slate-400">
         <span>{typeof latency === 'number' ? `${latency} ms` : 'No latency'}</span>
         {item.category === 'background_worker'
           ? <span>Worker heartbeat</span>
@@ -252,8 +252,8 @@ function OpsEventCard({ item, onInspect }: { item: OpsEventItem; onInspect: () =
             <h4 className="truncate text-xs font-semibold text-white">{item.title || item.event_type || 'Operational event'}</h4>
             <StatusBadge status={severity} compact />
           </div>
-          <p className="mt-1 line-clamp-2 text-[11px] leading-5 text-slate-400">{item.summary || 'No event summary returned.'}</p>
-          <p className="mt-2 text-[11px] uppercase tracking-[0.12em] text-slate-400">{item.service || 'unknown service'} · {formatDate(item.occurred_at || item.received_at)}</p>
+          <p className="mt-1 line-clamp-2 text-xs leading-5 text-slate-400">{item.summary || 'No event summary returned.'}</p>
+          <p className="mt-2 text-xs uppercase tracking-[0.12em] text-slate-400">{item.service || 'unknown service'} · {formatDate(item.occurred_at || item.received_at)}</p>
         </div>
       </div>
     </button>
@@ -540,9 +540,9 @@ export function OpsPage() {
               <div className="flex items-center justify-between gap-3">
                 <div>
                   <h3 className="text-sm font-semibold text-white">Repository and service health</h3>
-                  <p className="mt-0.5 text-[11px] text-slate-400">Online is process liveness; Ready is configuration readiness; Degraded means the repo responds with partial capability.</p>
+                  <p className="mt-0.5 text-xs text-slate-400">Online is process liveness; Ready is configuration readiness; Degraded means the repo responds with partial capability.</p>
                 </div>
-                <div className="flex items-center gap-1.5"><StatusBadge status={repoHealth?.overall_status || 'not_configured'} variant="operational" compact />{repoHealth?.error && <button type="button" onClick={() => void loadOps(true)} className="inline-flex h-8 items-center gap-1.5 rounded-lg border border-amber-300/15 bg-amber-300/7 px-2.5 text-[11px] text-amber-100"><RefreshCw className="h-3.5 w-3.5" /> Retry</button>}</div>
+                <div className="flex items-center gap-1.5"><StatusBadge status={repoHealth?.overall_status || 'not_configured'} variant="operational" compact />{repoHealth?.error && <button type="button" onClick={() => void loadOps(true)} className="inline-flex h-8 items-center gap-1.5 rounded-lg border border-amber-300/15 bg-amber-300/7 px-2.5 text-xs text-amber-100"><RefreshCw className="h-3.5 w-3.5" /> Retry</button>}</div>
               </div>
               {repoHealth?.repos?.length ? (
                 <div className="mt-3 grid grid-cols-2 gap-2">
@@ -601,32 +601,32 @@ export function OpsPage() {
                 <button type="button" onClick={() => inspect('Repository health', repoHealth)} className="rounded-2xl border border-white/8 bg-[#071426] p-4 text-left transition hover:border-cyan-300/20">
                   <Activity className="h-4 w-4 text-emerald-300" />
                   <p className="mt-3 text-xl font-semibold text-white">{repoHealth?.repos?.filter((item) => ['healthy', 'busy'].includes(item.status)).length ?? 0}/{repoHealth?.repos?.length ?? 0}</p>
-                  <h3 className="mt-0.5 text-[11px] font-medium uppercase tracking-[0.14em] text-slate-400">Services healthy now</h3>
+                  <h3 className="mt-0.5 text-xs font-medium uppercase tracking-[0.14em] text-slate-400">Services healthy now</h3>
                 </button>
                 <Link to="/execution-reviews" className="rounded-2xl border border-white/8 bg-[#071426] p-4 text-left transition hover:border-cyan-300/20">
                   <ShieldCheck className="h-4 w-4 text-violet-300" />
                   <p className="mt-3 text-xl font-semibold text-white">{openReviewCount}</p>
-                  <h3 className="mt-0.5 text-[11px] font-medium uppercase tracking-[0.14em] text-slate-400">Open reviews now</h3>
+                  <h3 className="mt-0.5 text-xs font-medium uppercase tracking-[0.14em] text-slate-400">Open reviews now</h3>
                 </Link>
                 <button type="button" onClick={() => inspect('Repository runtime', runtimeStats?.repository_manager ?? {})} className="rounded-2xl border border-white/8 bg-[#071426] p-4 text-left transition hover:border-cyan-300/20">
                   <Database className="h-4 w-4 text-cyan-300" />
                   <p className="mt-3 text-xl font-semibold text-white">{runtimeStats?.repository_manager?.registered_count ?? 0}</p>
-                  <h3 className="mt-0.5 text-[11px] font-medium uppercase tracking-[0.14em] text-slate-400">Repos available now</h3>
+                  <h3 className="mt-0.5 text-xs font-medium uppercase tracking-[0.14em] text-slate-400">Repos available now</h3>
                 </button>
                 <button type="button" onClick={() => inspect('Model Registry', runtimeStats?.model_registry ?? {})} className="rounded-2xl border border-white/8 bg-[#071426] p-4 text-left transition hover:border-cyan-300/20">
                   <Sparkles className="h-4 w-4 text-emerald-300" />
                   <p className="mt-3 text-xl font-semibold text-white">{runtimeStats?.model_registry?.total_models ?? 0}</p>
-                  <h3 className="mt-0.5 text-[11px] font-medium uppercase tracking-[0.14em] text-slate-400">Qualified models now</h3>
+                  <h3 className="mt-0.5 text-xs font-medium uppercase tracking-[0.14em] text-slate-400">Qualified models now</h3>
                 </button>
                 <button type="button" onClick={() => inspect('Providers', runtimeStats?.providers ?? {})} className="rounded-2xl border border-white/8 bg-[#071426] p-4 text-left transition hover:border-cyan-300/20">
                   <Network className="h-4 w-4 text-violet-300" />
                   <p className="mt-3 text-xl font-semibold text-white">{runtimeStats?.providers?.count ?? 0}</p>
-                  <h3 className="mt-0.5 text-[11px] font-medium uppercase tracking-[0.14em] text-slate-400">Providers active now</h3>
+                  <h3 className="mt-0.5 text-xs font-medium uppercase tracking-[0.14em] text-slate-400">Providers active now</h3>
                 </button>
                 <button type="button" onClick={() => inspect('Default coding model', { model: runtimeStats?.model_registry?.default_coding_model }, 'Current ranked coding default.')} className="rounded-2xl border border-white/8 bg-[#071426] p-4 text-left transition hover:border-cyan-300/20">
                   <Activity className="h-4 w-4 text-amber-300" />
                   <p className="mt-3 truncate text-sm font-semibold text-white" title={runtimeStats?.model_registry?.default_coding_model ?? 'None'}>{runtimeStats?.model_registry?.default_coding_model ?? '—'}</p>
-                  <h3 className="mt-0.5 text-[11px] font-medium uppercase tracking-[0.14em] text-slate-400">Coding default now</h3>
+                  <h3 className="mt-0.5 text-xs font-medium uppercase tracking-[0.14em] text-slate-400">Coding default now</h3>
                 </button>
               </div>
             </section>
@@ -690,7 +690,7 @@ export function OpsPage() {
                   {buildingPreview ? <LoaderCircle className="h-4 w-4 animate-spin" /> : <PlayCircle className="h-4 w-4" />} Preview statuses
                 </button>
               </div>
-              <p className="mt-4 text-[11px] leading-5 text-slate-400">This screen builds plans and quick status previews. To save a plan as a review-gated record or manage saved previews, open <Link to="/execution-reviews" className="text-cyan-300 hover:underline">Execution Reviews</Link> or <Link to="/execution-simulation" className="text-cyan-300 hover:underline">Execution Simulation</Link>.</p>
+              <p className="mt-4 text-xs leading-5 text-slate-400">This screen builds plans and quick status previews. To save a plan as a review-gated record or manage saved previews, open <Link to="/execution-reviews" className="text-cyan-300 hover:underline">Execution Reviews</Link> or <Link to="/execution-simulation" className="text-cyan-300 hover:underline">Execution Simulation</Link>.</p>
             </form>
 
             <div className="space-y-5">

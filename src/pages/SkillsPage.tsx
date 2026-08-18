@@ -283,14 +283,14 @@ export function SkillsPage() {
                       <div className="flex items-center justify-between gap-3">
                         <div className="flex h-9 w-9 items-center justify-center rounded-xl border border-cyan-300/15 bg-cyan-300/7 text-cyan-200"><BrainCircuit className="h-4.5 w-4.5" /></div>
                         <div className="flex flex-wrap justify-end gap-1.5">
-                          {score != null && Number.isFinite(score) && <span className="rounded-full border border-cyan-300/15 bg-cyan-300/7 px-2 py-1 text-[11px] text-cyan-200">{score.toFixed(2)}</span>}
+                          {score != null && Number.isFinite(score) && <span className="rounded-full border border-cyan-300/15 bg-cyan-300/7 px-2 py-1 text-xs text-cyan-200">{score.toFixed(2)}</span>}
                           <StatusBadge status={riskLevel} compact />
                           <StatusBadge status={status} compact />
                         </div>
                       </div>
                       <h3 className="mt-4 text-sm font-semibold text-white">{title}</h3>
                       <p className="mt-2 line-clamp-3 min-h-[60px] text-xs leading-5 text-slate-400">{skillDescription(skill)}</p>
-                      <div className="mt-4 flex flex-wrap gap-1.5 border-t border-white/6 pt-3 text-[11px] text-slate-400">
+                      <div className="mt-4 flex flex-wrap gap-1.5 border-t border-white/6 pt-3 text-xs text-slate-400">
                         <span>{field(skill, 'repo', 'Shared')}</span><span>·</span><span>{field(skill, 'hive_lane', field(skill, 'lane', 'General'))}</span>
                       </div>
                     </button>
