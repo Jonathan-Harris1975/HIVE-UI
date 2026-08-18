@@ -83,7 +83,7 @@ function display(status: string, variant?: StatusBadgeProps['variant']): string 
 export function StatusBadge({ status, label, compact = false, variant }: StatusBadgeProps) {
   const value = status?.trim() || 'unknown'
   return (
-    <span className={`inline-flex items-center gap-1.5 font-medium ${compact ? 'text-[11px]' : 'text-xs'} ${textTone(value)}`}>
+    <span className={`inline-flex items-center gap-1.5 font-medium ${compact ? 'text-xs' : 'text-xs'} ${textTone(value)}`}>
       <span className={`h-2 w-2 shrink-0 rounded-full ${dotTone(value, variant)} shadow-[0_0_8px_currentColor]`} aria-hidden="true" />
       <span>{label || display(value, variant)}</span>
     </span>

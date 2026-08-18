@@ -42,13 +42,13 @@ export function ChatMessage({ message, onInspect }: ChatMessageProps) {
                 <div className={`${message.content ? 'mt-4 border-t border-white/6 pt-3' : ''} flex items-center gap-2 text-slate-400`} role="status" aria-live="polite">
                   <LoaderCircle className="h-4 w-4 animate-spin" />
                   <span>{streamingStatus}</span>
-                  <span className="text-[11px] text-slate-500">{[message.streaming_model, `~${streamingCount.toLocaleString()} chars`].filter(Boolean).join(' · ')}</span>
+                  <span className="text-xs text-slate-500">{[message.streaming_model, `~${streamingCount.toLocaleString()} chars`].filter(Boolean).join(' · ')}</span>
                 </div>
               )}
               {message.warning && <p className="mt-3 rounded-lg border border-amber-300/20 bg-amber-300/8 px-3 py-2 text-xs text-amber-100" role="status">{message.warning}</p>}
               {message.error && <p className="mt-3 rounded-lg border border-rose-400/20 bg-rose-400/8 px-3 py-2 text-xs text-rose-200" role="alert">{message.error}</p>}
               {!message.pending && (message.model || (message.usage?.cost ?? message.cost_usd) != null) && (
-                <div className="mt-4 flex flex-wrap items-center gap-2 border-t border-white/6 pt-3 text-[11px] uppercase tracking-[0.12em] text-slate-400">
+                <div className="mt-4 flex flex-wrap items-center gap-2 border-t border-white/6 pt-3 text-xs uppercase tracking-[0.12em] text-slate-400">
                   {message.model && <span>{message.model}</span>}
                   {(message.usage?.total_tokens ?? message.token_total) != null && <span>· {message.usage?.total_tokens ?? message.token_total} tokens</span>}
                   {(message.usage?.cost ?? message.cost_usd) != null && <span>· {formatCost(message.usage?.cost ?? message.cost_usd)}</span>}
@@ -56,7 +56,7 @@ export function ChatMessage({ message, onInspect }: ChatMessageProps) {
               )}
               {message.sourceCitation?.object_key && (
                 <div className="mt-3 flex items-center justify-between gap-2 rounded-lg border border-emerald-300/15 bg-emerald-300/5 px-3 py-2 text-xs text-emerald-200/80">
-                  <span className="flex min-w-0 items-center gap-2"><FileText className="h-3.5 w-3.5 shrink-0" /><span className="truncate">{message.sourceCitation.label || message.sourceCitation.object_key}</span>{message.sourceCitation.lane && <span className="shrink-0 rounded-full bg-black/15 px-1.5 py-0.5 text-[11px] uppercase tracking-wide text-emerald-100/70">{message.sourceCitation.lane.replace(/_/g, ' ')}</span>}</span>
+                  <span className="flex min-w-0 items-center gap-2"><FileText className="h-3.5 w-3.5 shrink-0" /><span className="truncate">{message.sourceCitation.label || message.sourceCitation.object_key}</span>{message.sourceCitation.lane && <span className="shrink-0 rounded-full bg-black/15 px-1.5 py-0.5 text-xs uppercase tracking-wide text-emerald-100/70">{message.sourceCitation.lane.replace(/_/g, ' ')}</span>}</span>
                   {message.sourceCitation.public_url && (
                     <a href={message.sourceCitation.public_url} target="_blank" rel="noreferrer" className="shrink-0 rounded-md p-1 text-emerald-200/70 hover:bg-white/8 hover:text-emerald-100" aria-label="Open cited source">
                       <ExternalLink className="h-3.5 w-3.5" />
@@ -69,10 +69,10 @@ export function ChatMessage({ message, onInspect }: ChatMessageProps) {
         </div>
 
         <div className={`mt-1.5 flex items-center gap-1 transition sm:opacity-0 sm:group-hover:opacity-100 sm:group-focus-within:opacity-100 ${assistant ? 'justify-start' : 'justify-end'}`}>
-          <button type="button" onClick={() => void copyMessage()} disabled={!message.content} className="inline-flex h-8 items-center gap-1.5 rounded-lg px-2 text-[11px] text-slate-400 hover:bg-white/5 hover:text-slate-300 disabled:opacity-30" aria-label="Copy message">
+          <button type="button" onClick={() => void copyMessage()} disabled={!message.content} className="inline-flex h-8 items-center gap-1.5 rounded-lg px-2 text-xs text-slate-400 hover:bg-white/5 hover:text-slate-300 disabled:opacity-30" aria-label="Copy message">
             {copied ? <Check className="h-3.5 w-3.5" /> : <Copy className="h-3.5 w-3.5" />} {copied ? 'Copied' : 'Copy'}
           </button>
-          <button type="button" onClick={() => onInspect(message)} className="inline-flex h-8 items-center gap-1.5 rounded-lg px-2 text-[11px] text-slate-400 hover:bg-white/5 hover:text-cyan-200" aria-label="Inspect message details">
+          <button type="button" onClick={() => onInspect(message)} className="inline-flex h-8 items-center gap-1.5 rounded-lg px-2 text-xs text-slate-400 hover:bg-white/5 hover:text-cyan-200" aria-label="Inspect message details">
             <Info className="h-3.5 w-3.5" /> Inspect
           </button>
         </div>

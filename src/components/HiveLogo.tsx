@@ -18,7 +18,7 @@ export function HiveLogo({ size = 'md', showWordmark = true }: HiveLogoProps) {
       {showWordmark && (
         <div className="leading-none">
           <div className="text-lg font-semibold tracking-[0.28em] text-white">HIVE</div>
-          <div className="mt-1 text-[10px] uppercase tracking-[0.22em] text-slate-400">Operations console</div>
+          <div className="mt-1 text-xs uppercase tracking-[0.22em] text-slate-400">Operations console</div>
         </div>
       )}
     </div>

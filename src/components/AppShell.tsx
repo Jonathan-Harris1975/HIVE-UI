@@ -219,13 +219,13 @@ function ConversationSection({ closeMobile }: { closeMobile?: () => void }) {
                 onClick={() => void selectConversation(conversation.id)}
                 className="w-full px-3 py-2.5 pr-16 text-left"
               >
-                <div className={`truncate text-xs font-medium ${active ? 'text-cyan-100' : 'text-slate-300'}`}>{title}</div>
-                <div className="mt-1 flex gap-2 text-[11px] text-slate-400">
+                <div className={`truncate text-sm font-semibold ${active ? 'text-cyan-50' : 'text-slate-200'}`}>{title}</div>
+                <div className="mt-1 flex gap-2 text-xs text-slate-300">
                   <span>{conversation.message_count ?? 0} messages</span>
                   <span>·</span>
                   <span>{formatDate(conversation.updated_at)}</span>
                 </div>
-                <div className="mt-1 text-[11px] text-slate-500">
+                <div className="mt-1 text-xs text-slate-400">
                   {(conversation.total_tokens ?? conversation.token_total) != null ? Number(conversation.total_tokens ?? conversation.token_total).toLocaleString() : '—'} tokens · {conversation.total_cost_usd != null || conversation.cost_usd != null ? formatCost(conversation.total_cost_usd ?? conversation.cost_usd) : '—'}
                 </div>
               </button>
@@ -301,7 +301,7 @@ function SidebarContent({ closeMobile }: { closeMobile?: () => void }) {
       </div>
 
       <nav className="mt-6">
-        <div className="grid grid-cols-4 gap-1 lg:hidden">
+        <div className="grid grid-cols-2 gap-2 lg:hidden">
           {navigation.map(({ to, label, icon: Icon, routes }) => {
             const active = routes.includes(pathname)
             return (
@@ -309,12 +309,11 @@ function SidebarContent({ closeMobile }: { closeMobile?: () => void }) {
                 key={to}
                 to={to}
                 onClick={closeMobile}
-                aria-label={label}
                 aria-current={active ? 'page' : undefined}
-                title={label}
-                className={`flex items-center justify-center rounded-xl px-3 py-2.5 transition ${active ? 'bg-white/8 text-white' : 'text-slate-400 hover:bg-white/[0.04] hover:text-slate-200'}`}
+                className={`flex min-h-12 items-center gap-2.5 rounded-xl border px-3 py-2.5 text-sm font-medium transition ${active ? 'border-cyan-300/20 bg-cyan-300/10 text-cyan-50' : 'border-white/6 bg-white/[0.02] text-slate-300 hover:border-white/10 hover:bg-white/[0.05] hover:text-white'}`}
               >
-                <Icon className="h-4.5 w-4.5" />
+                <Icon className="h-4.5 w-4.5 shrink-0" aria-hidden="true" />
+                <span className="truncate">{label}</span>
               </Link>
             )
           })}
@@ -329,7 +328,7 @@ function SidebarContent({ closeMobile }: { closeMobile?: () => void }) {
                   type="button"
                   onClick={() => setOpenGroups((current) => ({ ...current, [group.id]: !expanded }))}
                   aria-expanded={expanded}
-                  className="flex w-full items-center justify-between rounded-lg px-3 py-1.5 text-[10px] font-semibold uppercase tracking-[0.14em] text-slate-500 transition hover:bg-white/[0.03] hover:text-slate-300"
+                  className="flex w-full items-center justify-between rounded-lg px-3 py-1.5 text-xs font-semibold uppercase tracking-[0.12em] text-slate-400 transition hover:bg-white/[0.03] hover:text-slate-300"
                 >
                   <span>{group.label}</span>
                   <ChevronDown className={`h-3.5 w-3.5 transition-transform ${expanded ? 'rotate-180' : ''}`} />
@@ -362,7 +361,7 @@ function SidebarContent({ closeMobile }: { closeMobile?: () => void }) {
       {pathname === '/chat' ? <ConversationSection closeMobile={closeMobile} /> : <div className="flex-1" />}
 
       <div className="mt-4 border-t border-white/8 pt-4">
-        <p className="mb-2 px-3 text-[10px] uppercase tracking-[0.14em] text-slate-400" title={HIVE_UI_BUILD}>UI {HIVE_UI_VERSION}</p>
+        <p className="mb-2 px-3 text-xs uppercase tracking-[0.12em] text-slate-300" title={HIVE_UI_BUILD}>UI {HIVE_UI_VERSION}</p>
         <button
           type="button"
           onClick={logout}
@@ -390,14 +389,14 @@ function InspectorRowView({ row }: { row: InspectorRow }) {
   return (
     <div className="rounded-xl border border-white/8 bg-[#071426] p-3">
       <div className="flex items-center justify-between gap-3">
-        <dt className="text-[11px] uppercase tracking-[0.16em] text-slate-400">{row.label}</dt>
-        <button type="button" onClick={() => void copyRow()} className="inline-flex items-center gap-1 rounded-lg px-2 py-1 text-[11px] text-slate-400 hover:bg-white/5 hover:text-cyan-200" aria-label={`Copy ${row.label}`}>
+        <dt className="text-xs font-semibold uppercase tracking-[0.12em] text-slate-300">{row.label}</dt>
+        <button type="button" onClick={() => void copyRow()} className="inline-flex items-center gap-1 rounded-lg px-2 py-1 text-xs text-slate-400 hover:bg-white/5 hover:text-cyan-200" aria-label={`Copy ${row.label}`}>
           {copied ? <Check className="h-3 w-3" /> : <Copy className="h-3 w-3" />} {copied ? 'Copied' : 'Copy'}
         </button>
       </div>
-      <dd className="mt-1 break-words text-xs leading-5 text-slate-300">{value}</dd>
+      <dd className="mt-1 break-words text-sm leading-6 text-slate-200">{value}</dd>
       {long && (
-        <button type="button" onClick={() => setExpanded((current) => !current)} className="mt-2 text-[11px] font-medium text-cyan-200 hover:text-cyan-100">
+        <button type="button" onClick={() => setExpanded((current) => !current)} className="mt-2 text-xs font-medium text-cyan-200 hover:text-cyan-100">
           {expanded ? 'Show less' : 'Show more'}
         </button>
       )}
@@ -413,7 +412,7 @@ function InspectorPanel() {
       <div className="flex h-full flex-col">
         <div className="flex h-[73px] items-center justify-between border-b border-white/8 px-5">
           <div className="min-w-0">
-            <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-cyan-300/80">{payload.eyebrow ?? 'Inspector'}</p>
+            <p className="text-xs font-semibold uppercase tracking-[0.2em] text-cyan-300/80">{payload.eyebrow ?? 'Inspector'}</p>
             <h2 className="mt-1 truncate text-sm font-semibold text-white">{payload.title}</h2>
           </div>
           <button type="button" onClick={() => setOpen(false)} aria-label="Close inspector" className="rounded-lg p-2 text-slate-400 hover:bg-white/5 hover:text-white">
@@ -432,7 +431,7 @@ function InspectorPanel() {
             </dl>
           ) : null}
           {payload.json !== undefined && !payload.loading && (
-            <pre className="mt-5 overflow-x-auto whitespace-pre-wrap rounded-xl border border-white/8 bg-[#040b18] p-4 text-[11px] leading-5 text-slate-400">
+            <pre className="mt-5 overflow-x-auto whitespace-pre-wrap rounded-xl border border-white/8 bg-[#040b18] p-4 text-xs leading-5 text-slate-400">
               {JSON.stringify(payload.json, null, 2)}
             </pre>
           )}
@@ -466,7 +465,7 @@ function ContextTabs({ pathname }: { pathname: string }) {
 function HeaderActions({ health, open, toggle }: { health: ReturnType<typeof useAuth>['health']; open: boolean; toggle: () => void }) {
   return (
     <div className="flex shrink-0 items-center gap-2">
-      <div className="hidden items-center gap-2 rounded-full border border-white/8 bg-white/[0.035] px-3 py-1.5 text-[11px] text-slate-400 sm:flex">
+      <div className="hidden items-center gap-2 rounded-full border border-white/8 bg-white/[0.035] px-3 py-1.5 text-xs text-slate-400 sm:flex">
         <span className={`h-2 w-2 rounded-full ${health?.ok ? 'bg-emerald-300 shadow-[0_0_12px_rgba(110,231,183,.7)]' : 'bg-amber-300'}`} />
         {health?.build ?? 'HIVE'}
       </div>
