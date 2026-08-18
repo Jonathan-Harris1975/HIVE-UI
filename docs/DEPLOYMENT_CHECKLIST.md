@@ -33,6 +33,7 @@ HIVE_COMMS_ROLE               variable: admin
 HIVE_COMMS_URL                variable: https://chat.jonathan-harris.online/console/
 HIVE_ADMIN_TOKEN              secret: matches HIVE ADMIN_BEARER_TOKEN
 HIVE_UI_ACCESS_KEY            secret: separate high-entropy UI access key
+HIVE_UI_SESSION_SECRET        secret: distinct high-entropy session-signing key
 KOYEB_TOKEN                   secret: Koyeb service-control token
 HIVE_COMMS_HANDOFF_SECRET     secret: identical to AIMS-UI Worker handoff secret
 ```
@@ -44,7 +45,7 @@ HIVE_UI_SESSION_TTL_SECONDS=43200
 HIVE_UI_IDLE_TIMEOUT_SECONDS=1800
 ```
 
-The absolute session TTL supports 900 to 86400 seconds. Idle timeout supports 300 to 7200 seconds. Rotating `HIVE_UI_ACCESS_KEY` invalidates all active UI sessions.
+The absolute session TTL supports 900 to 86400 seconds. Idle timeout supports 300 to 7200 seconds. Rotating `HIVE_UI_ACCESS_KEY` changes the login credential without invalidating existing sessions. Rotating `HIVE_UI_SESSION_SECRET` invalidates all active UI sessions; never reuse the access key as the session secret.
 
 Configure Preview values separately only when preview deployments need working backend access. Do not expose production credentials to untrusted branch previews.
 
