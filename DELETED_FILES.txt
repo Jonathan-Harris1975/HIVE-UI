@@ -1,0 +1,6 @@
+Files removed by the production remediation pass.
+Delete these paths from the repository when applying this update ZIP.
+
+HIVE-UI-main/node_modules/.tmp/tsconfig.app.tsbuildinfo
+HIVE-UI-main/node_modules/.tmp/tsconfig.node.tsbuildinfo
+HIVE-UI-main/public/hive-app-icon.png
