@@ -169,3 +169,27 @@ select option {
     padding-right: env(safe-area-inset-right);
   }
 }
+
+/* UI/UX audit remediation: preserve density without making controls microscopic. */
+@media (pointer: coarse) {
+  button,
+  a[role="button"] {
+    min-height: 44px;
+  }
+
+  button[aria-label] {
+    min-width: 44px;
+  }
+}
+
+/* Stronger visual separation for decision surfaces while keeping metadata quieter. */
+[data-ui-priority="decision"] {
+  color: #f8fdff;
+  font-weight: 650;
+}
+
+[data-ui-priority="metadata"] {
+  color: #94a3b8;
+  font-size: 0.75rem;
+  line-height: 1.25rem;
+}
