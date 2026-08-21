@@ -16,8 +16,17 @@
   --color-hive-canvas: #061126;
   --color-hive-panel: #0a192d;
   --color-hive-panel-deep: #0b1b31;
+  --color-hive-panel-hover: #0d2038;
   --color-hive-surface: #071426;
   --color-hive-accent-deep: #052035;
+  --color-hive-elevated: #09182b;
+  --color-hive-code: #040b18;
+  --color-hive-dialog: #08172b;
+  --color-hive-overlay: #020817;
+  --color-hive-border: rgba(255, 255, 255, 0.08);
+  --color-hive-border-strong: rgba(103, 232, 249, 0.28);
+  --color-hive-text: #eaf7ff;
+  --color-hive-muted: #a9c1d1;
 }
 
 :root {
@@ -45,7 +54,7 @@ body,
 }
 
 body {
-  min-height: 100vh;
+  min-height: 100dvh;
   overflow: hidden;
 }
 
@@ -192,4 +201,35 @@ select option {
   color: #94a3b8;
   font-size: 0.75rem;
   line-height: 1.25rem;
+}
+
+
+
+/* The console is intentionally dense, but 12px body text was overused as a default.
+   Keep badges compact while bringing ordinary `text-xs` copy up one notch. */
+.text-xs { font-size: 0.8125rem; }
+.text-xs:not([class*="leading-"]) { line-height: 1.125rem; }
+.text-slate-500 { color: #8497ad; }
+button.h-7, button.h-8, select.h-7, select.h-8, input.h-7, input.h-8 { min-height: 2.25rem; }
+button.w-7.h-7, button.w-8.h-8 { min-width: 2.25rem; }
+
+/* 2026 UI/UX overhaul: shared interaction treatment without replacing Tailwind. */
+button, a, input, textarea, select, [role="button"] { touch-action: manipulation; }
+button, a, input, textarea, select { scroll-margin: 12px; }
+input::placeholder, textarea::placeholder { opacity: 1; }
+[aria-busy="true"] { cursor: progress; }
+[role="alert"] { overflow-wrap: anywhere; }
+
+.ui-scroll-region { scrollbar-gutter: stable; overscroll-behavior: contain; }
+.ui-panel { border: 1px solid var(--color-hive-border); background: color-mix(in srgb, var(--color-hive-panel) 92%, transparent); }
+.ui-subtle-divider { border-color: var(--color-hive-border); }
+
+@media (max-width: 639px) {
+  .prose-hive { font-size: 0.9375rem; line-height: 1.65; }
+  .prose-hive table { min-width: 38rem; }
+}
+
+@media (pointer: coarse) {
+  input, textarea, select { min-height: 44px; }
+  [role="button"] { min-height: 44px; }
 }

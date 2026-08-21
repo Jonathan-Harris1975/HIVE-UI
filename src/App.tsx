@@ -47,8 +47,8 @@ const CommunicationsPage = lazy(() =>
 
 function LoadingScreen({ compact = false }: { compact?: boolean }) {
   return (
-    <main className={`flex items-center justify-center bg-[#061126] text-slate-400 ${compact ? 'h-full' : 'min-h-screen'}`}>
-      <LoaderCircle className="mr-2 h-5 w-5 animate-spin text-cyan-300" /> Verifying HIVE access
+    <main role="status" aria-live="polite" aria-busy="true" className={`flex items-center justify-center bg-hive-canvas text-slate-300 ${compact ? 'h-full' : 'min-h-dvh'}`}>
+      <LoaderCircle className="mr-2 h-5 w-5 animate-spin text-cyan-300" aria-hidden="true" /> Verifying HIVE access
     </main>
   )
 }
