@@ -20,6 +20,8 @@ test('shell keeps keyboard and mobile viewport affordances', () => {
   assert.match(shell, /h-dvh/)
   assert.match(shell, /aria-label="Search conversations"/)
   assert.match(shell, /role="dialog"/)
+  assert.match(shell, /aria-controls="hive-mobile-navigation"/)
+  assert.match(shell, /aria-label="Inspector"/)
 })
 
 test('core HIVE palette is expressed through theme tokens rather than repeated hex utilities', () => {
@@ -53,4 +55,10 @@ test('chat and operational cards expose native and announced interaction semanti
   assert.doesNotMatch(ops, /role="button"/)
   assert.match(dialog, /aria-busy=\{busy\}/)
   assert.match(dialog, /role="alert"/)
+
+  const communications = source('src/pages/CommunicationsPage.tsx')
+  const files = source('src/pages/FilesPage.tsx')
+  assert.match(communications, /aria-busy=\{!ready && !error\}/)
+  assert.match(communications, /role="status"/)
+  assert.match(files, /aria-label=\{loadingSkills \? "Searching skills" : "Search skills"\}/)
 })
