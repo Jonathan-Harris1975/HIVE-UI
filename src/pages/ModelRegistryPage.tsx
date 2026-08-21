@@ -198,7 +198,7 @@ export function ModelRegistryPage() {
     else setProviderModels([])
   }, [selectedProvider, loadProviderModels])
 
-  function useCatalogueModel(model: ProviderModel, providerName: string) {
+  function loadCatalogueModel(model: ProviderModel, providerName: string) {
     setDraft((current) => ({
       ...current,
       model_id: model.model_id,
@@ -521,7 +521,7 @@ export function ModelRegistryPage() {
                       <li key={model.model_id}>
                         <button
                           type="button"
-                          onClick={() => selectedProvider && useCatalogueModel(model, selectedProvider)}
+                          onClick={() => selectedProvider && loadCatalogueModel(model, selectedProvider)}
                           className="flex w-full flex-col gap-1 rounded-xl border border-white/8 bg-white/[0.02] px-3 py-2 text-left hover:bg-white/[0.05] sm:flex-row sm:items-center sm:justify-between"
                         >
                           <span className="min-w-0">
