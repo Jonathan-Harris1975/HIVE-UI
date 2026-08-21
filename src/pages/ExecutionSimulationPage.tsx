@@ -144,7 +144,7 @@ export function ExecutionSimulationPage() {
   return (
     <div className="h-full overflow-y-auto p-4 sm:p-6 lg:p-8">
       <div className="mx-auto max-w-6xl">
-        <section className="rounded-3xl border border-white/8 bg-[#0a192d]/75 p-5 sm:p-7">
+        <section className="rounded-3xl border border-white/8 bg-hive-panel/75 p-5 sm:p-7">
           <p className="text-xs font-semibold uppercase tracking-[0.2em] text-cyan-300/70">Execution simulation</p>
           <h2 className="mt-2 text-2xl font-semibold text-white">Pretend-mode workflow simulation</h2>
           <p className="mt-2 max-w-2xl text-sm leading-6 text-slate-400">
@@ -157,26 +157,30 @@ export function ExecutionSimulationPage() {
               value={task}
               onChange={(event) => setTask(event.target.value)}
               placeholder="Describe the task to simulate…"
+              aria-label="Task to simulate"
               rows={3}
-              className="w-full resize-none rounded-xl border border-white/8 bg-[#071426] px-3 py-2 text-sm text-slate-100 outline-none placeholder:text-slate-500 focus:border-cyan-300/30"
+              className="w-full resize-none rounded-xl border border-white/8 bg-hive-surface px-3 py-2 text-sm text-slate-100 outline-none placeholder:text-slate-500 focus:border-cyan-300/30"
             />
             <div className="flex flex-wrap gap-2">
               <input
                 value={repo}
                 onChange={(event) => setRepo(event.target.value)}
                 placeholder="Repo (optional)"
-                className="h-9 flex-1 rounded-lg border border-white/8 bg-[#071426] px-3 text-xs text-slate-100 outline-none placeholder:text-slate-500"
+                aria-label="Repository"
+                className="h-9 flex-1 rounded-lg border border-white/8 bg-hive-surface px-3 text-xs text-slate-100 outline-none placeholder:text-slate-500"
               />
               <input
                 value={preset}
                 onChange={(event) => setPreset(event.target.value)}
                 placeholder="Workflow preset (optional)"
-                className="h-9 flex-1 rounded-lg border border-white/8 bg-[#071426] px-3 text-xs text-slate-100 outline-none placeholder:text-slate-500"
+                aria-label="Workflow preset"
+                className="h-9 flex-1 rounded-lg border border-white/8 bg-hive-surface px-3 text-xs text-slate-100 outline-none placeholder:text-slate-500"
               />
               <select
                 value={policyProfileInput}
+                aria-label="Policy profile"
                 onChange={(event) => setPolicyProfileInput(event.target.value)}
-                className="h-9 rounded-lg border border-white/8 bg-[#071426] px-3 text-xs text-slate-300 outline-none"
+                className="h-9 rounded-lg border border-white/8 bg-hive-surface px-3 text-xs text-slate-300 outline-none"
               >
                 <option value="">Default policy</option>
                 {Object.entries(profiles).map(([key, profile]) => (
@@ -186,7 +190,7 @@ export function ExecutionSimulationPage() {
               <button
                 type="submit"
                 disabled={simulating || !task.trim()}
-                className="flex h-9 items-center gap-1.5 rounded-lg bg-gradient-to-r from-cyan-400 to-emerald-300 px-4 text-xs font-semibold text-[#052035] disabled:opacity-50"
+                className="flex h-9 items-center gap-1.5 rounded-lg bg-gradient-to-r from-cyan-400 to-emerald-300 px-4 text-xs font-semibold text-hive-accent-deep disabled:opacity-50"
               >
                 {simulating ? <LoaderCircle className="h-3.5 w-3.5 animate-spin" /> : <PlayCircle className="h-3.5 w-3.5" />} Simulate
               </button>
@@ -194,11 +198,11 @@ export function ExecutionSimulationPage() {
           </form>
         </section>
 
-        {error && <div className="mt-4 rounded-xl border border-rose-400/20 bg-rose-400/8 px-4 py-3 text-sm text-rose-200">{error}</div>}
-        {notice && <div className="mt-4 rounded-xl border border-emerald-300/20 bg-emerald-300/8 px-4 py-3 text-sm text-emerald-100">{notice}</div>}
+        {error && <div role="alert" className="mt-4 rounded-xl border border-rose-400/20 bg-rose-400/8 px-4 py-3 text-sm text-rose-200">{error}</div>}
+        {notice && <div role="status" aria-live="polite" className="mt-4 rounded-xl border border-emerald-300/20 bg-emerald-300/8 px-4 py-3 text-sm text-emerald-100">{notice}</div>}
 
         {simulation && (
-          <section className="mt-6 rounded-3xl border border-white/8 bg-[#0a192d]/70 p-5">
+          <section className="mt-6 rounded-3xl border border-white/8 bg-hive-panel/70 p-5">
             <div className="flex items-center justify-between">
               <h3 className="text-sm font-semibold text-white">{simulation.task}</h3>
               <button
@@ -244,7 +248,7 @@ export function ExecutionSimulationPage() {
               {simulation.estimated_cost && (
                 <article className="rounded-2xl border border-white/8 bg-white/[0.02] p-3">
                   <h4 className="flex items-center gap-1.5 text-xs font-semibold text-slate-300"><Database className="h-3.5 w-3.5" /> Estimated cost</h4>
-                  <pre className="mt-2 overflow-x-auto rounded-lg bg-[#061126] p-2 font-mono text-xs text-slate-400">
+                  <pre className="mt-2 overflow-x-auto rounded-lg bg-hive-canvas p-2 font-mono text-xs text-slate-400">
                     {JSON.stringify(simulation.estimated_cost, null, 2)}
                   </pre>
                 </article>
@@ -253,7 +257,7 @@ export function ExecutionSimulationPage() {
               {simulation.risk_summary && (
                 <article className="rounded-2xl border border-white/8 bg-white/[0.02] p-3">
                   <h4 className="flex items-center gap-1.5 text-xs font-semibold text-slate-300"><ShieldCheck className="h-3.5 w-3.5" /> Risk summary</h4>
-                  <pre className="mt-2 overflow-x-auto rounded-lg bg-[#061126] p-2 font-mono text-xs text-slate-400">
+                  <pre className="mt-2 overflow-x-auto rounded-lg bg-hive-canvas p-2 font-mono text-xs text-slate-400">
                     {JSON.stringify(simulation.risk_summary, null, 2)}
                   </pre>
                 </article>
@@ -319,7 +323,7 @@ export function ExecutionSimulationPage() {
             </div>
           )}
           {selectedPreview && (
-            <pre className="mt-3 max-h-96 overflow-auto rounded-xl border border-white/8 bg-[#061126] p-3 font-mono text-xs leading-5 text-slate-300">
+            <pre className="mt-3 max-h-96 overflow-auto rounded-xl border border-white/8 bg-hive-canvas p-3 font-mono text-xs leading-5 text-slate-300">
               {JSON.stringify(selectedPreview, null, 2)}
             </pre>
           )}

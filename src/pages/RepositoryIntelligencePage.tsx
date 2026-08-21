@@ -261,7 +261,7 @@ export function RepositoryIntelligencePage() {
   return (
     <div className="h-full overflow-y-auto p-4 sm:p-6 lg:p-8">
       <div className="mx-auto max-w-6xl">
-        <section className="rounded-3xl border border-white/8 bg-[#0a192d]/75 p-5 sm:p-7">
+        <section className="rounded-3xl border border-white/8 bg-hive-panel/75 p-5 sm:p-7">
           <p className="text-xs font-semibold uppercase tracking-[0.2em] text-cyan-300/70">Repository intelligence</p>
           <h2 className="mt-2 text-2xl font-semibold text-white">QA, Council review &amp; learned patterns</h2>
           <p className="mt-2 max-w-2xl text-sm leading-6 text-slate-400">
@@ -276,8 +276,9 @@ export function RepositoryIntelligencePage() {
                 value={repoInput}
                 onChange={(event) => setRepoInput(event.target.value)}
                 list="known-repos-intel"
+                aria-label="Repository id"
                 placeholder="Repository id (e.g. HIVE)"
-                className="h-10 w-full rounded-xl border border-white/8 bg-[#071426] pl-10 pr-3 text-sm text-slate-200 outline-none placeholder:text-slate-400 focus:border-cyan-300/30"
+                className="h-10 w-full rounded-xl border border-white/8 bg-hive-surface pl-10 pr-3 text-sm text-slate-200 outline-none placeholder:text-slate-400 focus:border-cyan-300/30"
               />
               <datalist id="known-repos-intel">
                 {KNOWN_REPOS.map((repo) => (
@@ -287,25 +288,26 @@ export function RepositoryIntelligencePage() {
             </label>
             <select
               value={KNOWN_REPOS.includes(repoInput) ? repoInput : ''}
+              aria-label="Choose known repository"
               onChange={(event) => event.target.value && setRepoInput(event.target.value)}
-              className="h-10 rounded-xl border border-white/8 bg-[#071426] px-3 text-xs text-slate-300 outline-none"
+              className="h-10 rounded-xl border border-white/8 bg-hive-surface px-3 text-xs text-slate-300 outline-none"
             >
               <option value="">Known repositories…</option>
               {KNOWN_REPOS.map((repo) => (
                 <option key={repo} value={repo}>{repo}</option>
               ))}
             </select>
-            <button type="submit" className="flex h-10 items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-cyan-400 to-emerald-300 px-4 text-xs font-semibold text-[#052035]">
+            <button type="submit" className="flex h-10 items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-cyan-400 to-emerald-300 px-4 text-xs font-semibold text-hive-accent-deep">
               Load
             </button>
           </form>
         </section>
 
-        {error && <div className="mt-4 rounded-xl border border-rose-400/20 bg-rose-400/8 px-4 py-3 text-sm text-rose-200">{error}</div>}
-        {notice && <div className="mt-4 rounded-xl border border-emerald-300/20 bg-emerald-300/8 px-4 py-3 text-sm text-emerald-100">{notice}</div>}
+        {error && <div role="alert" className="mt-4 rounded-xl border border-rose-400/20 bg-rose-400/8 px-4 py-3 text-sm text-rose-200">{error}</div>}
+        {notice && <div role="status" aria-live="polite" className="mt-4 rounded-xl border border-emerald-300/20 bg-emerald-300/8 px-4 py-3 text-sm text-emerald-100">{notice}</div>}
 
         {/* QA */}
-        <section className="mt-6 rounded-3xl border border-white/8 bg-[#0a192d]/70 p-5">
+        <section className="mt-6 rounded-3xl border border-white/8 bg-hive-panel/70 p-5">
           <div className="flex items-center justify-between">
             <h3 className="flex items-center gap-2 text-sm font-semibold text-white"><ShieldAlert className="h-4 w-4 text-cyan-300" /> Repository QA</h3>
             <button
@@ -362,7 +364,7 @@ export function RepositoryIntelligencePage() {
                         <div className="border-t border-white/6 px-3 py-2.5 text-xs leading-5 text-slate-400">
                           <p>{check.summary}</p>
                           {Object.keys(check.details).length > 0 && (
-                            <pre className="mt-2 overflow-x-auto rounded-lg bg-[#061126] p-2 font-mono text-xs text-slate-400">
+                            <pre className="mt-2 overflow-x-auto rounded-lg bg-hive-canvas p-2 font-mono text-xs text-slate-400">
                               {JSON.stringify(check.details, null, 2)}
                             </pre>
                           )}
@@ -377,7 +379,7 @@ export function RepositoryIntelligencePage() {
         </section>
 
         {/* Council */}
-        <section className="mt-6 rounded-3xl border border-white/8 bg-[#0a192d]/70 p-5">
+        <section className="mt-6 rounded-3xl border border-white/8 bg-hive-panel/70 p-5">
           <div className="flex items-center justify-between">
             <h3 className="flex items-center gap-2 text-sm font-semibold text-white"><Gavel className="h-4 w-4 text-cyan-300" /> Repository Council</h3>
             <button
@@ -454,7 +456,7 @@ export function RepositoryIntelligencePage() {
         </section>
 
         {/* Learning */}
-        <section className="mt-6 rounded-3xl border border-white/8 bg-[#0a192d]/70 p-5">
+        <section className="mt-6 rounded-3xl border border-white/8 bg-hive-panel/70 p-5">
           <div className="flex items-center justify-between">
             <h3 className="flex items-center gap-2 text-sm font-semibold text-white"><Brain className="h-4 w-4 text-cyan-300" /> Learning</h3>
             <button
@@ -489,14 +491,16 @@ export function RepositoryIntelligencePage() {
                 value={patchSummary}
                 onChange={(event) => setPatchSummary(event.target.value)}
                 placeholder="What did the patch do?"
+                aria-label="Patch summary"
                 rows={3}
-                className="mt-2 w-full resize-none rounded-lg border border-white/8 bg-[#071426] px-3 py-2 text-xs text-slate-100 outline-none placeholder:text-slate-500 focus:border-cyan-300/30"
+                className="mt-2 w-full resize-none rounded-lg border border-white/8 bg-hive-surface px-3 py-2 text-xs text-slate-100 outline-none placeholder:text-slate-500 focus:border-cyan-300/30"
               />
               <input
                 value={patchFiles}
                 onChange={(event) => setPatchFiles(event.target.value)}
                 placeholder="Files changed (comma or newline separated)"
-                className="mt-2 h-9 w-full rounded-lg border border-white/8 bg-[#071426] px-3 text-xs text-slate-100 outline-none placeholder:text-slate-500 focus:border-cyan-300/30"
+                aria-label="Files changed"
+                className="mt-2 h-9 w-full rounded-lg border border-white/8 bg-hive-surface px-3 text-xs text-slate-100 outline-none placeholder:text-slate-500 focus:border-cyan-300/30"
               />
               <div className="mt-2 flex items-center justify-between">
                 <label className="flex items-center gap-2 text-xs text-slate-300">
@@ -519,14 +523,16 @@ export function RepositoryIntelligencePage() {
                 value={patternText}
                 onChange={(event) => setPatternText(event.target.value)}
                 placeholder="Pattern (e.g. 'repositories use apiFetch, not raw fetch')"
-                className="mt-2 h-9 w-full rounded-lg border border-white/8 bg-[#071426] px-3 text-xs text-slate-100 outline-none placeholder:text-slate-500 focus:border-cyan-300/30"
+                aria-label="Coding pattern"
+                className="mt-2 h-9 w-full rounded-lg border border-white/8 bg-hive-surface px-3 text-xs text-slate-100 outline-none placeholder:text-slate-500 focus:border-cyan-300/30"
               />
               <textarea
                 value={patternContext}
                 onChange={(event) => setPatternContext(event.target.value)}
                 placeholder="Context (optional)"
+                aria-label="Pattern context"
                 rows={2}
-                className="mt-2 w-full resize-none rounded-lg border border-white/8 bg-[#071426] px-3 py-2 text-xs text-slate-100 outline-none placeholder:text-slate-500 focus:border-cyan-300/30"
+                className="mt-2 w-full resize-none rounded-lg border border-white/8 bg-hive-surface px-3 py-2 text-xs text-slate-100 outline-none placeholder:text-slate-500 focus:border-cyan-300/30"
               />
               <div className="mt-2 flex justify-end">
                 <button
@@ -547,8 +553,9 @@ export function RepositoryIntelligencePage() {
               </p>
               <select
                 value={preferredCategory}
+                aria-label="Preferred model category"
                 onChange={(event) => setPreferredCategory(event.target.value)}
-                className="mt-2 h-9 w-full rounded-lg border border-white/8 bg-[#071426] px-3 text-xs text-slate-100 outline-none focus:border-cyan-300/30"
+                className="mt-2 h-9 w-full rounded-lg border border-white/8 bg-hive-surface px-3 text-xs text-slate-100 outline-none focus:border-cyan-300/30"
               >
                 {MODEL_REGISTRY_CATEGORIES.map((item) => (
                   <option key={item} value={item}>{item.replace(/_/g, ' ')}</option>
@@ -558,14 +565,16 @@ export function RepositoryIntelligencePage() {
                 value={preferredModelId}
                 onChange={(event) => setPreferredModelId(event.target.value)}
                 placeholder="Model id (e.g. anthropic/claude-sonnet-5)"
-                className="mt-2 h-9 w-full rounded-lg border border-white/8 bg-[#071426] px-3 text-xs text-slate-100 outline-none placeholder:text-slate-500 focus:border-cyan-300/30"
+                aria-label="Preferred model id"
+                className="mt-2 h-9 w-full rounded-lg border border-white/8 bg-hive-surface px-3 text-xs text-slate-100 outline-none placeholder:text-slate-500 focus:border-cyan-300/30"
               />
               <textarea
                 value={preferredReason}
                 onChange={(event) => setPreferredReason(event.target.value)}
                 placeholder="Why this model works well here (optional)"
+                aria-label="Preferred model reason"
                 rows={2}
-                className="mt-2 w-full resize-none rounded-lg border border-white/8 bg-[#071426] px-3 py-2 text-xs text-slate-100 outline-none placeholder:text-slate-500 focus:border-cyan-300/30"
+                className="mt-2 w-full resize-none rounded-lg border border-white/8 bg-hive-surface px-3 py-2 text-xs text-slate-100 outline-none placeholder:text-slate-500 focus:border-cyan-300/30"
               />
               <div className="mt-2 flex justify-end">
                 <button

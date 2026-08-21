@@ -80,16 +80,16 @@ export function CommunicationsPage() {
   }
 
   return (
-    <section className="relative h-full min-h-0 bg-[#061126]" aria-label="AIMS Communications Interface">
+    <section className="relative h-full min-h-0 bg-hive-canvas" aria-label="AIMS Communications Interface" aria-busy={!ready && !error}>
       {!ready && !error && (
-        <div className="absolute inset-0 z-10 flex items-center justify-center bg-[#061126] text-sm text-slate-400">
-          <LoaderCircle className="mr-2 h-5 w-5 animate-spin text-cyan-300" /> Opening AIMS Comms Hub
+        <div role="status" aria-live="polite" className="absolute inset-0 z-10 flex items-center justify-center bg-hive-canvas text-sm text-slate-400">
+          <LoaderCircle className="mr-2 h-5 w-5 animate-spin text-cyan-300" aria-hidden="true" /> Opening AIMS Comms Hub
         </div>
       )}
 
       {error && (
-        <div className="absolute inset-0 z-20 flex items-center justify-center bg-[#061126] p-6">
-          <div className="max-w-md rounded-2xl border border-amber-300/20 bg-[#0a192d] p-6 text-center shadow-xl">
+        <div className="absolute inset-0 z-20 flex items-center justify-center bg-hive-canvas p-6">
+          <div role="alert" className="max-w-md rounded-2xl border border-amber-300/20 bg-hive-panel p-6 text-center shadow-xl">
             <AlertTriangle className="mx-auto mb-3 h-7 w-7 text-amber-300" />
             <h2 className="text-base font-semibold text-slate-100">Communications Interface unavailable</h2>
             <p className="mt-2 text-sm leading-6 text-slate-400">{error}</p>
@@ -105,7 +105,7 @@ export function CommunicationsPage() {
           key={frameKey}
           title="AIMS Comms Hub"
           src={frameUrl}
-          className="h-full w-full border-0 bg-[#061126]"
+          className="h-full w-full border-0 bg-hive-canvas"
           referrerPolicy="no-referrer"
           allow="clipboard-read; clipboard-write"
         />
@@ -114,7 +114,7 @@ export function CommunicationsPage() {
       <button
         type="button"
         onClick={reload}
-        className="absolute bottom-4 right-4 z-30 rounded-xl border border-white/10 bg-[#0a192d]/95 p-2.5 text-slate-300 shadow-xl backdrop-blur transition hover:border-cyan-300/30 hover:text-cyan-100"
+        className="absolute bottom-4 right-4 z-30 rounded-xl border border-white/10 bg-hive-panel/95 p-2.5 text-slate-300 shadow-xl backdrop-blur transition hover:border-cyan-300/30 hover:text-cyan-100"
         aria-label="Reload Communications Interface"
         title="Reload Communications Interface"
       >

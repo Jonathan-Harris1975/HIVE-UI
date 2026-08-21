@@ -72,7 +72,7 @@ export function IntegrationsPage() {
   return (
     <div className="h-full overflow-y-auto p-4 sm:p-6 lg:p-8">
       <div className="mx-auto max-w-5xl">
-        <section className="rounded-3xl border border-white/8 bg-[#0a192d]/75 p-5 sm:p-7">
+        <section className="rounded-3xl border border-white/8 bg-hive-panel/75 p-5 sm:p-7">
           <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
             <div>
               <p className="text-xs font-semibold uppercase tracking-[0.2em] text-cyan-300/70">Integrations</p>
@@ -139,7 +139,7 @@ export function IntegrationsPage() {
                   .map((item) => `${String('name' in item && item.name ? item.name : 'id' in item ? item.id : 'unknown')} (${String(item.error)})`)
 
                 return (
-                  <article key={connector.name} className="rounded-2xl border border-white/8 bg-[#0a192d]/70 p-4">
+                  <article key={connector.name} className="rounded-2xl border border-white/8 bg-hive-panel/70 p-4">
                     <div className="flex items-start justify-between gap-3">
                       <h4 className="text-sm font-semibold text-white">{connectorLabel(connector.name)}</h4>
                       <StatusBadge status={connectorStatus(connector)} variant="liveness" compact />
@@ -186,7 +186,7 @@ export function IntegrationsPage() {
                     {connector.rate_limit && (
                       <details className="mt-2 text-xs text-slate-500">
                         <summary className="cursor-pointer text-slate-400">Rate limit</summary>
-                        <pre className="mt-1 overflow-x-auto rounded-lg bg-[#061126] p-2 font-mono text-xs">
+                        <pre className="mt-1 overflow-x-auto rounded-lg bg-hive-canvas p-2 font-mono text-xs">
                           {JSON.stringify(connector.rate_limit, null, 2)}
                         </pre>
                       </details>

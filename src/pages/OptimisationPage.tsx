@@ -95,7 +95,7 @@ export function OptimisationPage() {
   return (
     <div className="h-full overflow-y-auto p-4 sm:p-6 lg:p-8">
       <div className="mx-auto max-w-6xl">
-        <section className="rounded-3xl border border-white/8 bg-[#0a192d]/75 p-5 sm:p-7">
+        <section className="rounded-3xl border border-white/8 bg-hive-panel/75 p-5 sm:p-7">
           <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
             <div>
               <p className="text-xs font-semibold uppercase tracking-[0.2em] text-cyan-300/70">Optimisation engine</p>
@@ -117,24 +117,24 @@ export function OptimisationPage() {
           </div>
         </section>
 
-        {error && <div className="mt-4 rounded-xl border border-rose-400/20 bg-rose-400/8 px-4 py-3 text-sm text-rose-200">{error}</div>}
-        {notice && <div className="mt-4 rounded-xl border border-emerald-300/20 bg-emerald-300/8 px-4 py-3 text-sm text-emerald-100">{notice}</div>}
+        {error && <div role="alert" className="mt-4 rounded-xl border border-rose-400/20 bg-rose-400/8 px-4 py-3 text-sm text-rose-200">{error}</div>}
+        {notice && <div role="status" aria-live="polite" className="mt-4 rounded-xl border border-emerald-300/20 bg-emerald-300/8 px-4 py-3 text-sm text-emerald-100">{notice}</div>}
 
         {stats && (
           <div className="mt-6 grid grid-cols-2 gap-3 sm:grid-cols-4">
-            <div className="rounded-2xl border border-white/8 bg-[#0a192d]/70 p-3 text-center">
+            <div className="rounded-2xl border border-white/8 bg-hive-panel/70 p-3 text-center">
               <p className="text-lg font-semibold text-white">{stats.decision_count}</p>
               <p className="text-xs text-slate-400">Decisions</p>
             </div>
-            <div className="rounded-2xl border border-white/8 bg-[#0a192d]/70 p-3 text-center">
+            <div className="rounded-2xl border border-white/8 bg-hive-panel/70 p-3 text-center">
               <p className="text-lg font-semibold text-amber-300">{pct(stats.rollback_rate)}</p>
               <p className="text-xs text-slate-400">Rollback rate</p>
             </div>
-            <div className="rounded-2xl border border-white/8 bg-[#0a192d]/70 p-3 text-center">
+            <div className="rounded-2xl border border-white/8 bg-hive-panel/70 p-3 text-center">
               <p className="text-lg font-semibold text-white">{stats.experiment_count}</p>
               <p className="text-xs text-slate-400">Experiments</p>
             </div>
-            <div className="rounded-2xl border border-white/8 bg-[#0a192d]/70 p-3 text-center">
+            <div className="rounded-2xl border border-white/8 bg-hive-panel/70 p-3 text-center">
               <p className="text-lg font-semibold text-emerald-300">{pct(stats.experiment_success_rate)}</p>
               <p className="text-xs text-slate-400">Experiment success</p>
             </div>
@@ -154,7 +154,7 @@ export function OptimisationPage() {
           ) : (
             <div className="mt-3 space-y-2">
               {decisions.map((decision) => (
-                <article key={decision.decision_id} className="rounded-2xl border border-white/8 bg-[#0a192d]/70 p-4">
+                <article key={decision.decision_id} className="rounded-2xl border border-white/8 bg-hive-panel/70 p-4">
                   <div className="flex items-start justify-between gap-3">
                     <div className="min-w-0">
                       <p className="truncate text-sm font-medium text-slate-100">{decision.description}</p>
@@ -193,7 +193,7 @@ export function OptimisationPage() {
           ) : (
             <div className="mt-3 grid gap-2 sm:grid-cols-2">
               {experiments.map((experiment) => (
-                <article key={experiment.experiment_id} className="rounded-2xl border border-white/8 bg-[#0a192d]/70 p-4">
+                <article key={experiment.experiment_id} className="rounded-2xl border border-white/8 bg-hive-panel/70 p-4">
                   <div className="flex items-start justify-between gap-2">
                     <p className="text-sm font-medium text-slate-100">{experiment.name}</p>
                     {experiment.success ? <CheckCircle2 className="h-4 w-4 shrink-0 text-emerald-300" /> : <XCircle className="h-4 w-4 shrink-0 text-rose-300" />}
@@ -218,7 +218,7 @@ export function OptimisationPage() {
               <EmptyState icon={<FileWarning className="h-5 w-5" />} title="Environment audit unavailable." />
             </div>
           ) : (
-            <div className="mt-3 rounded-2xl border border-white/8 bg-[#0a192d]/70 p-4">
+            <div className="mt-3 rounded-2xl border border-white/8 bg-hive-panel/70 p-4">
               <div className="flex flex-wrap items-center gap-3">
                 <span className={`text-xl font-semibold ${audit.coverage_ratio >= 0.9 ? 'text-emerald-300' : audit.coverage_ratio >= 0.7 ? 'text-amber-300' : 'text-rose-300'}`}>
                   {pct(audit.coverage_ratio)}

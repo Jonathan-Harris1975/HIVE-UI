@@ -117,7 +117,7 @@ export function CouncilPage() {
   return (
     <div className="h-full overflow-y-auto p-4 sm:p-6 lg:p-8">
       <div className="mx-auto max-w-6xl">
-        <section className="rounded-3xl border border-white/8 bg-[#0a192d]/75 p-5 sm:p-7">
+        <section className="rounded-3xl border border-white/8 bg-hive-panel/75 p-5 sm:p-7">
           <p className="text-xs font-semibold uppercase tracking-[0.2em] text-cyan-300/70">AI Council &amp; Benchmark</p>
           <h2 className="mt-2 text-2xl font-semibold text-white">Provider discovery, promotion &amp; model ranking</h2>
           <p className="mt-2 max-w-2xl text-sm leading-6 text-slate-400">
@@ -133,10 +133,10 @@ export function CouncilPage() {
           </div>
         </section>
 
-        {error && <div className="mt-4 rounded-xl border border-rose-400/20 bg-rose-400/8 px-4 py-3 text-sm text-rose-200">{error}</div>}
-        {notice && <div className="mt-4 rounded-xl border border-emerald-300/20 bg-emerald-300/8 px-4 py-3 text-sm text-emerald-100">{notice}</div>}
+        {error && <div role="alert" className="mt-4 rounded-xl border border-rose-400/20 bg-rose-400/8 px-4 py-3 text-sm text-rose-200">{error}</div>}
+        {notice && <div role="status" aria-live="polite" className="mt-4 rounded-xl border border-emerald-300/20 bg-emerald-300/8 px-4 py-3 text-sm text-emerald-100">{notice}</div>}
 
-        <section className="mt-6 rounded-3xl border border-white/8 bg-[#0a192d]/70 p-5">
+        <section className="mt-6 rounded-3xl border border-white/8 bg-hive-panel/70 p-5">
           <div className="flex items-center justify-between">
             <h3 className="flex items-center gap-2 text-sm font-semibold text-white"><Gauge className="h-4 w-4 text-cyan-300" /> AI Council</h3>
             <button
@@ -190,7 +190,7 @@ export function CouncilPage() {
           </div>
         </section>
 
-        <section className="mt-6 rounded-3xl border border-white/8 bg-[#0a192d]/70 p-5">
+        <section className="mt-6 rounded-3xl border border-white/8 bg-hive-panel/70 p-5">
           <div className="flex items-center justify-between">
             <h3 className="flex items-center gap-2 text-sm font-semibold text-white"><TrendingUp className="h-4 w-4 text-cyan-300" /> Benchmark ranking</h3>
             <button
@@ -213,12 +213,13 @@ export function CouncilPage() {
                 <div className="flex items-center gap-2">
                   <input
                     value={candidate.model_id}
+                    aria-label={`Candidate ${index + 1} model id`}
                     onChange={(event) => updateCandidate(index, { model_id: event.target.value })}
                     placeholder="model_id (e.g. anthropic/claude-sonnet-5)"
-                    className="h-9 flex-1 rounded-lg border border-white/8 bg-[#071426] px-3 text-xs text-slate-100 outline-none placeholder:text-slate-500 focus:border-cyan-300/30"
+                    className="h-9 flex-1 rounded-lg border border-white/8 bg-hive-surface px-3 text-xs text-slate-100 outline-none placeholder:text-slate-500 focus:border-cyan-300/30"
                   />
                   {candidates.length > 1 && (
-                    <button type="button" onClick={() => removeCandidate(index)} className="flex h-9 w-9 items-center justify-center rounded-lg border border-rose-300/20 bg-rose-300/8 text-rose-200 hover:bg-rose-300/12">
+                    <button type="button" onClick={() => removeCandidate(index)} aria-label={`Remove candidate ${index + 1}`} className="flex h-9 w-9 items-center justify-center rounded-lg border border-rose-300/20 bg-rose-300/8 text-rose-200 hover:bg-rose-300/12">
                       <X className="h-3.5 w-3.5" />
                     </button>
                   )}
@@ -239,7 +240,7 @@ export function CouncilPage() {
                               [key]: event.target.value === '' ? undefined : Number(event.target.value),
                             } as Partial<BenchmarkCandidateInput>)
                           }
-                          className="mt-1 h-8 w-full rounded-lg border border-white/8 bg-[#071426] px-2 text-xs text-slate-100 outline-none focus:border-cyan-300/30"
+                          className="mt-1 h-8 w-full rounded-lg border border-white/8 bg-hive-surface px-2 text-xs text-slate-100 outline-none focus:border-cyan-300/30"
                         />
                       </label>
                     ))}

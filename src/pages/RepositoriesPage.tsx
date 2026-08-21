@@ -240,7 +240,7 @@ export function RepositoriesPage() {
   return (
     <div className="h-full overflow-y-auto p-4 sm:p-6 lg:p-8">
       <div className="mx-auto max-w-6xl">
-        <section className="rounded-3xl border border-white/8 bg-[#0a192d]/75 p-5 sm:p-7">
+        <section className="rounded-3xl border border-white/8 bg-hive-panel/75 p-5 sm:p-7">
           <div className="flex flex-col gap-5 lg:flex-row lg:items-end lg:justify-between">
             <div>
               <p className="text-xs font-semibold uppercase tracking-[0.2em] text-cyan-300/70">Repository manager</p>
@@ -270,7 +270,7 @@ export function RepositoriesPage() {
           </div>
 
           <div className="mt-6 flex flex-wrap items-center gap-3 border-t border-white/8 pt-5">
-            <label className="flex h-10 cursor-pointer items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-cyan-400 to-emerald-300 px-4 text-xs font-semibold text-[#052035]">
+            <label className="flex h-10 cursor-pointer items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-cyan-400 to-emerald-300 px-4 text-xs font-semibold text-hive-accent-deep">
               {uploading ? <LoaderCircle className="h-4 w-4 animate-spin" /> : <Upload className="h-4 w-4" />}
               {uploading ? 'Uploading…' : 'Upload repository (.zip)'}
               <input
@@ -290,8 +290,8 @@ export function RepositoriesPage() {
           </div>
         </section>
 
-        {error && <div className="mt-4 rounded-xl border border-rose-400/20 bg-rose-400/8 px-4 py-3 text-sm text-rose-200">{error}</div>}
-        {notice && <div className="mt-4 rounded-xl border border-emerald-300/20 bg-emerald-300/8 px-4 py-3 text-sm text-emerald-100">{notice}</div>}
+        {error && <div role="alert" className="mt-4 rounded-xl border border-rose-400/20 bg-rose-400/8 px-4 py-3 text-sm text-rose-200">{error}</div>}
+        {notice && <div role="status" aria-live="polite" className="mt-4 rounded-xl border border-emerald-300/20 bg-emerald-300/8 px-4 py-3 text-sm text-emerald-100">{notice}</div>}
 
         <div className="mt-6 grid gap-4 lg:grid-cols-[1.1fr_1fr]">
           <section>
@@ -321,7 +321,7 @@ export function RepositoriesPage() {
                     className={`rounded-2xl border p-4 transition ${
                       selectedId === repo.repository_id
                         ? 'border-cyan-300/30 bg-cyan-300/[0.05]'
-                        : 'border-white/8 bg-[#0a192d]/70 hover:bg-white/[0.03]'
+                        : 'border-white/8 bg-hive-panel/70 hover:bg-white/[0.03]'
                     }`}
                   >
                     <div className="flex items-start justify-between gap-3">
@@ -409,7 +409,7 @@ export function RepositoriesPage() {
               <div className="mt-3 rounded-xl border border-rose-400/20 bg-rose-400/8 px-4 py-3 text-sm text-rose-200">{manifestError}</div>
             ) : manifest ? (
               <div className="mt-3 space-y-4">
-                <article className="rounded-2xl border border-white/8 bg-[#0a192d]/70 p-4">
+                <article className="rounded-2xl border border-white/8 bg-hive-panel/70 p-4">
                   <h4 className="text-sm font-semibold text-white">{manifest.repository_id}</h4>
                   <p className="mt-1 truncate font-mono text-xs text-slate-500">{manifest.fingerprint}</p>
                   <div className="mt-3 grid grid-cols-2 gap-2 text-xs text-slate-400 sm:grid-cols-4">
@@ -432,7 +432,7 @@ export function RepositoriesPage() {
                   </div>
                 </article>
 
-                <article className="rounded-2xl border border-white/8 bg-[#0a192d]/70 p-4">
+                <article className="rounded-2xl border border-white/8 bg-hive-panel/70 p-4">
                   <h4 className="text-xs font-semibold uppercase tracking-[0.14em] text-slate-400">Language breakdown</h4>
                   {languageBreakdown(manifest.languages).length === 0 ? (
                     <p className="mt-2 text-xs text-slate-500">No languages detected.</p>
@@ -453,7 +453,7 @@ export function RepositoriesPage() {
                   )}
                 </article>
 
-                <article className="rounded-2xl border border-white/8 bg-[#0a192d]/70 p-4">
+                <article className="rounded-2xl border border-white/8 bg-hive-panel/70 p-4">
                   <h4 className="text-xs font-semibold uppercase tracking-[0.14em] text-slate-400">Dependency manifests</h4>
                   {manifest.dependencies.length === 0 ? (
                     <p className="mt-2 text-xs text-slate-500">No dependency manifests found.</p>
@@ -471,7 +471,7 @@ export function RepositoriesPage() {
                   )}
                 </article>
 
-                <article className="rounded-2xl border border-white/8 bg-[#0a192d]/70 p-4">
+                <article className="rounded-2xl border border-white/8 bg-hive-panel/70 p-4">
                   <div className="flex items-center justify-between">
                     <h4 className="text-xs font-semibold uppercase tracking-[0.14em] text-slate-400">Diff since last index</h4>
                     <button

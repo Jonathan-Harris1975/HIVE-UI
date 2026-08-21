@@ -96,18 +96,19 @@ export function MonthlyReviewPage() {
         </button>
       </div>
 
-      <div className="mt-5 flex flex-col gap-2 rounded-2xl border border-white/8 bg-[#0a192d]/70 p-4 sm:flex-row sm:items-center">
+      <div className="mt-5 flex flex-col gap-2 rounded-2xl border border-white/8 bg-hive-panel/70 p-4 sm:flex-row sm:items-center">
         <input
           value={period}
           onChange={(event) => setPeriod(event.target.value)}
           placeholder="YYYY-MM (defaults to last month)"
-          className="h-9 w-full rounded-xl border border-white/10 bg-[#071426] px-3 text-xs text-slate-200 placeholder:text-slate-500 sm:max-w-[220px]"
+          aria-label="Review period"
+          className="h-9 w-full rounded-xl border border-white/10 bg-hive-surface px-3 text-xs text-slate-200 placeholder:text-slate-500 sm:max-w-[220px]"
         />
         <button
           type="button"
           onClick={() => void generate()}
           disabled={generating}
-          className="flex h-9 items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-cyan-400 to-emerald-300 px-4 text-xs font-semibold text-[#052035] disabled:opacity-50"
+          className="flex h-9 items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-cyan-400 to-emerald-300 px-4 text-xs font-semibold text-hive-accent-deep disabled:opacity-50"
         >
           {generating ? <LoaderCircle className="h-4 w-4 animate-spin" /> : <Sparkles className="h-4 w-4" />} Generate now
         </button>
@@ -139,7 +140,7 @@ export function MonthlyReviewPage() {
                   type="button"
                   disabled={busy}
                   onClick={() => void openReport(item)}
-                  className="rounded-2xl border border-white/8 bg-[#0a192d]/70 p-4 text-left transition hover:border-cyan-300/20 hover:bg-[#0d2038] disabled:opacity-60"
+                  className="rounded-2xl border border-white/8 bg-hive-panel/70 p-4 text-left transition hover:border-cyan-300/20 hover:bg-hive-panel-hover disabled:opacity-60"
                 >
                   <div className="flex items-center justify-between">
                     <span className="text-sm font-semibold text-white">{targetPeriod}</span>

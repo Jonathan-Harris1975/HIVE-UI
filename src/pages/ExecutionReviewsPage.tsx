@@ -217,7 +217,7 @@ export function ExecutionReviewsPage() {
   return (
     <div className="h-full overflow-y-auto p-4 sm:p-6 lg:p-8">
       <div className="mx-auto max-w-6xl">
-        <section className="rounded-3xl border border-white/8 bg-[#0a192d]/75 p-5 sm:p-7">
+        <section className="rounded-3xl border border-white/8 bg-hive-panel/75 p-5 sm:p-7">
           <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
             <div>
               <p className="text-xs font-semibold uppercase tracking-[0.2em] text-cyan-300/70">Execution reviews</p>
@@ -230,7 +230,7 @@ export function ExecutionReviewsPage() {
             <button
               type="button"
               onClick={() => setShowCreate((v) => !v)}
-              className="flex h-10 items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-cyan-400 to-emerald-300 px-4 text-xs font-semibold text-[#052035]"
+              className="flex h-10 items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-cyan-400 to-emerald-300 px-4 text-xs font-semibold text-hive-accent-deep"
             >
               <Plus className="h-4 w-4" /> New review plan
             </button>
@@ -242,26 +242,29 @@ export function ExecutionReviewsPage() {
                 value={taskInput}
                 onChange={(event) => setTaskInput(event.target.value)}
                 placeholder="Describe the task this plan covers…"
+                aria-label="Review plan task"
                 rows={3}
-                className="w-full resize-none rounded-xl border border-white/8 bg-[#071426] px-3 py-2 text-sm text-slate-100 outline-none placeholder:text-slate-500 focus:border-cyan-300/30"
+                className="w-full resize-none rounded-xl border border-white/8 bg-hive-surface px-3 py-2 text-sm text-slate-100 outline-none placeholder:text-slate-500 focus:border-cyan-300/30"
               />
               <div className="flex flex-wrap gap-2">
                 <input
                   value={repoInput}
                   onChange={(event) => setRepoInput(event.target.value)}
                   placeholder="Repo (optional)"
-                  className="h-9 flex-1 rounded-lg border border-white/8 bg-[#071426] px-3 text-xs text-slate-100 outline-none placeholder:text-slate-500"
+                  aria-label="Repository"
+                  className="h-9 flex-1 rounded-lg border border-white/8 bg-hive-surface px-3 text-xs text-slate-100 outline-none placeholder:text-slate-500"
                 />
                 <input
                   value={presetInput}
                   onChange={(event) => setPresetInput(event.target.value)}
                   placeholder="Workflow preset (optional)"
-                  className="h-9 flex-1 rounded-lg border border-white/8 bg-[#071426] px-3 text-xs text-slate-100 outline-none placeholder:text-slate-500"
+                  aria-label="Workflow preset"
+                  className="h-9 flex-1 rounded-lg border border-white/8 bg-hive-surface px-3 text-xs text-slate-100 outline-none placeholder:text-slate-500"
                 />
                 <button
                   type="submit"
                   disabled={creating || !taskInput.trim()}
-                  className="flex h-9 items-center gap-1.5 rounded-lg bg-gradient-to-r from-cyan-400 to-emerald-300 px-4 text-xs font-semibold text-[#052035] disabled:opacity-50"
+                  className="flex h-9 items-center gap-1.5 rounded-lg bg-gradient-to-r from-cyan-400 to-emerald-300 px-4 text-xs font-semibold text-hive-accent-deep disabled:opacity-50"
                 >
                   {creating ? <LoaderCircle className="h-3.5 w-3.5 animate-spin" /> : <ClipboardList className="h-3.5 w-3.5" />} Create
                 </button>
@@ -270,8 +273,8 @@ export function ExecutionReviewsPage() {
           )}
         </section>
 
-        {error && <div className="mt-4 rounded-xl border border-rose-400/20 bg-rose-400/8 px-4 py-3 text-sm text-rose-200">{error}</div>}
-        {notice && <div className="mt-4 rounded-xl border border-emerald-300/20 bg-emerald-300/8 px-4 py-3 text-sm text-emerald-100">{notice}</div>}
+        {error && <div role="alert" className="mt-4 rounded-xl border border-rose-400/20 bg-rose-400/8 px-4 py-3 text-sm text-rose-200">{error}</div>}
+        {notice && <div role="status" aria-live="polite" className="mt-4 rounded-xl border border-emerald-300/20 bg-emerald-300/8 px-4 py-3 text-sm text-emerald-100">{notice}</div>}
         {safetyNote && (
           <div className="mt-4 flex items-start gap-2 rounded-xl border border-amber-300/15 bg-amber-300/[0.04] px-3 py-2.5 text-xs leading-5 text-amber-200">
             <ShieldCheck className="mt-0.5 h-3.5 w-3.5 shrink-0" /> {safetyNote}
@@ -317,7 +320,7 @@ export function ExecutionReviewsPage() {
                     type="button"
                     onClick={() => void loadDetail(item.plan_id)}
                     className={`w-full rounded-2xl border p-4 text-left transition ${
-                      selectedId === item.plan_id ? 'border-cyan-300/30 bg-cyan-300/[0.05]' : 'border-white/8 bg-[#0a192d]/70 hover:bg-white/[0.03]'
+                      selectedId === item.plan_id ? 'border-cyan-300/30 bg-cyan-300/[0.05]' : 'border-white/8 bg-hive-panel/70 hover:bg-white/[0.03]'
                     }`}
                   >
                     <div className="flex items-start justify-between gap-3">
@@ -347,7 +350,7 @@ export function ExecutionReviewsPage() {
               <div className="rounded-xl border border-rose-400/20 bg-rose-400/8 px-4 py-3 text-sm text-rose-200">{detailError}</div>
             ) : detail ? (
               <div className="space-y-4">
-                <article className="rounded-2xl border border-white/8 bg-[#0a192d]/70 p-4">
+                <article className="rounded-2xl border border-white/8 bg-hive-panel/70 p-4">
                   <div className="flex items-center justify-between">
                     <h4 className="text-sm font-semibold text-white">{String(detail.task ?? selectedId)}</h4>
                     <StatusBadge status={String(detail.status ?? 'unknown')} compact />
@@ -367,8 +370,9 @@ export function ExecutionReviewsPage() {
                       value={decisionNote}
                       onChange={(event) => setDecisionNote(event.target.value)}
                       placeholder="Note (optional)"
+                      aria-label="Review decision note"
                       rows={2}
-                      className="w-full resize-none rounded-lg border border-white/8 bg-[#071426] px-3 py-2 text-xs text-slate-100 outline-none placeholder:text-slate-500"
+                      className="w-full resize-none rounded-lg border border-white/8 bg-hive-surface px-3 py-2 text-xs text-slate-100 outline-none placeholder:text-slate-500"
                     />
                     <div className="mt-2 flex flex-wrap gap-2">
                       {DECISIONS.map((decision) => (
@@ -417,11 +421,11 @@ export function ExecutionReviewsPage() {
                 </div>
 
                 {(auditTrail || evidencePack) && (
-                  <article className="rounded-2xl border border-white/8 bg-[#0a192d]/70 p-4">
+                  <article className="rounded-2xl border border-white/8 bg-hive-panel/70 p-4">
                     <h4 className="text-xs font-semibold uppercase tracking-[0.14em] text-slate-400">
                       {auditTrail ? 'Audit trail' : 'Evidence pack'}
                     </h4>
-                    <pre className="mt-2 max-h-96 overflow-auto rounded-lg bg-[#061126] p-3 font-mono text-xs leading-5 text-slate-300">
+                    <pre className="mt-2 max-h-96 overflow-auto rounded-lg bg-hive-canvas p-3 font-mono text-xs leading-5 text-slate-300">
                       {JSON.stringify(auditTrail ?? evidencePack, null, 2)}
                     </pre>
                   </article>

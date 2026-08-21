@@ -508,13 +508,13 @@ export function ChatPage() {
       </div>
 
       {showScrollButton && (
-        <button type="button" onClick={scrollToLatest} className="absolute bottom-[126px] left-1/2 z-20 flex -translate-x-1/2 items-center gap-2 rounded-full border border-white/10 bg-[#0b1b31]/95 px-3 py-2 text-xs text-slate-300 shadow-xl shadow-black/30 backdrop-blur hover:border-cyan-300/25 hover:text-cyan-100">
+        <button type="button" onClick={scrollToLatest} className="absolute bottom-[126px] left-1/2 z-20 flex -translate-x-1/2 items-center gap-2 rounded-full border border-white/10 bg-hive-panel-deep/95 px-3 py-2 text-xs text-slate-300 shadow-xl shadow-black/30 backdrop-blur hover:border-cyan-300/25 hover:text-cyan-100">
           <ArrowDown className="h-3.5 w-3.5" /> Latest message
         </button>
       )}
 
-      <div className="shrink-0 border-t border-white/8 bg-[#071426]/95 px-3 pb-[max(12px,env(safe-area-inset-bottom))] pt-3 backdrop-blur-xl sm:px-6">
-        <form onSubmit={handleSubmit} className="mx-auto max-w-4xl">
+      <div className="shrink-0 border-t border-white/8 bg-hive-surface/95 px-3 pb-[max(12px,env(safe-area-inset-bottom))] pt-3 backdrop-blur-xl sm:px-6">
+        <form onSubmit={handleSubmit} aria-busy={streaming} className="mx-auto max-w-4xl">
           {(hasAttachedFiles || error) && (
             <div className="mb-2 flex flex-wrap items-center gap-2">
               {hasAttachedFiles && (
@@ -530,7 +530,7 @@ export function ChatPage() {
                       ? attachedSources[0].lane.replace(/_/g, ' ')
                       : `${new Set(attachedSources.map((source) => source.lane)).size} lanes`}
                   </span>
-                  <button type="button" onClick={removeAttachment} className="rounded-full p-0.5 hover:bg-white/10"><X className="h-3.5 w-3.5" /></button>
+                  <button type="button" onClick={removeAttachment} aria-label="Remove attached files" className="rounded-full p-1.5 text-emerald-100/80 hover:bg-white/10 hover:text-emerald-50"><X className="h-3.5 w-3.5" aria-hidden="true" /></button>
                 </div>
               )}
               {attachedSkillId && (
@@ -539,11 +539,11 @@ export function ChatPage() {
                   <span className="max-w-[260px] truncate">Skill: {attachedSkillTitle || attachedSkillId}</span>
                 </div>
               )}
-              {error && <span className="text-xs text-rose-300">{error}</span>}
+              {error && <span role="alert" className="text-xs text-rose-300">{error}</span>}
             </div>
           )}
 
-          <div className="rounded-2xl border border-white/10 bg-[#0b1b31] p-2 shadow-2xl shadow-black/20 transition focus-within:border-cyan-300/30 focus-within:ring-4 focus-within:ring-cyan-300/[0.04]">
+          <div className="rounded-2xl border border-white/10 bg-hive-panel-deep p-2 shadow-2xl shadow-black/20 transition focus-within:border-cyan-300/30 focus-within:ring-4 focus-within:ring-cyan-300/[0.04]">
             <textarea
               ref={textareaRef}
               rows={1}
@@ -559,6 +559,7 @@ export function ChatPage() {
                 <label className="relative">
                   <select
                     value={mode}
+                    aria-label="Chat mode"
                     onChange={(event) => setMode(event.target.value as ChatMode)}
                     className="h-8 appearance-none rounded-lg border border-white/8 bg-white/[0.035] pl-3 pr-8 text-xs text-slate-300 outline-none hover:bg-white/[0.055]"
                   >
@@ -582,6 +583,7 @@ export function ChatPage() {
                   <label className="relative max-w-[210px]">
                     <select
                       value={workflowPreset}
+                      aria-label="Workflow preset"
                       onChange={(event) => setWorkflowPreset(event.target.value)}
                       className="h-8 w-full appearance-none truncate rounded-lg border border-white/8 bg-white/[0.035] pl-3 pr-8 text-xs text-slate-300 outline-none hover:bg-white/[0.055]"
                     >
@@ -601,7 +603,7 @@ export function ChatPage() {
                 <button
                   type="submit"
                   disabled={!prompt.trim()}
-                  className="flex h-9 items-center gap-2 rounded-xl bg-gradient-to-r from-cyan-400 to-emerald-300 px-3.5 text-xs font-semibold text-[#052035] transition hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-40"
+                  className="flex h-9 items-center gap-2 rounded-xl bg-gradient-to-r from-cyan-400 to-emerald-300 px-3.5 text-xs font-semibold text-hive-accent-deep transition hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-40"
                 >
                   Send <Send className="h-3.5 w-3.5" />
                 </button>

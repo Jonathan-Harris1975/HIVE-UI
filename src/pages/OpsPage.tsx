@@ -58,7 +58,7 @@ function flagTone(status: FlagStatus): string {
 
 function Flag({ label, status, detail, icon: Icon }: FlagProps) {
   return (
-    <article className="min-w-0 rounded-xl border border-white/8 bg-[#0a192d]/70 p-3">
+    <article className="min-w-0 rounded-xl border border-white/8 bg-hive-panel/70 p-3">
       <div className="flex items-center gap-2.5">
         <div className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-lg border ${flagTone(status)}`}>
           <Icon className="h-3.5 w-3.5" />
@@ -200,41 +200,50 @@ function RepoHealthCard({ item, onInspect, onRefresh }: { item: RepoHealthItem; 
     ? 'Background Worker'
     : item.category === 'background_api'
       ? 'Background API'
-    : item.category === 'static_service'
-      ? 'Public service'
-      : item.category === 'frontend'
-        ? 'Frontend'
-        : 'Core API'
+      : item.category === 'static_service'
+        ? 'Public service'
+        : item.category === 'frontend'
+          ? 'Frontend'
+          : 'Core API'
 
   return (
-    <div role="button" tabIndex={0} onClick={onInspect} onKeyDown={(event) => { if (event.key === 'Enter' || event.key === ' ') onInspect() }} className="min-w-0 cursor-pointer rounded-xl border border-white/8 bg-[#071426] p-3 text-left transition hover:border-cyan-300/20 hover:bg-[#0b1b31]">
-      <div className="flex items-center gap-2.5">
-        <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg border border-cyan-300/12 bg-cyan-300/6 text-cyan-200">
-          <RepoIcon category={item.category} />
+    <div className="min-w-0 rounded-xl border border-white/8 bg-hive-surface p-1.5 transition hover:border-cyan-300/20">
+      <button
+        type="button"
+        onClick={onInspect}
+        className="w-full rounded-lg p-1.5 text-left transition hover:bg-hive-panel-deep focus-visible:bg-hive-panel-deep"
+        aria-label={`Inspect ${item.label || item.repo} health`}
+      >
+        <div className="flex items-center gap-2.5">
+          <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg border border-cyan-300/12 bg-cyan-300/6 text-cyan-200" aria-hidden="true">
+            <RepoIcon category={item.category} />
+          </span>
+          <span className="min-w-0 flex-1">
+            <span className="flex items-center gap-1.5">
+              <span className="truncate text-xs font-semibold text-white">{item.label || item.repo}</span>
+              <span className="truncate text-xs uppercase tracking-[0.12em] text-slate-400">{category}</span>
+            </span>
+            <span className="mt-0.5 block truncate text-xs text-slate-400" title={item.detail || item.description}>{item.detail || item.description || 'No health detail returned.'}</span>
+          </span>
+          <span className="flex items-center">
+            <StatusBadge
+              status={item.operational?.status || item.readiness?.status || item.liveness?.status || item.status}
+              variant="operational"
+              compact
+            />
+          </span>
         </div>
-        <div className="min-w-0 flex-1">
-          <div className="flex items-center gap-1.5">
-            <h4 className="truncate text-xs font-semibold text-white">{item.label || item.repo}</h4>
-            <span className="truncate text-xs uppercase tracking-[0.12em] text-slate-400">{category}</span>
-          </div>
-          <p className="mt-0.5 truncate text-xs text-slate-400" title={item.detail || item.description}>{item.detail || item.description || 'No health detail returned.'}</p>
-        </div>
-        <div className="flex items-center">
-          <StatusBadge
-            status={item.operational?.status || item.readiness?.status || item.liveness?.status || item.status}
-            variant="operational"
-            compact
-          />
-        </div>
-      </div>
-      <div className="mt-2 flex items-center gap-2 text-xs text-slate-400">
-        <span>{typeof latency === 'number' ? `${latency} ms` : 'No latency'}</span>
-        {item.category === 'background_worker'
-          ? <span>Worker heartbeat</span>
-          : operationalStatus && <span>{operationalStatus.replace(/_/g, ' ')}</span>}
-      </div>
+        <span className="mt-2 flex items-center gap-2 text-xs text-slate-400">
+          <span>{typeof latency === 'number' ? `${latency} ms` : 'No latency'}</span>
+          {item.category === 'background_worker'
+            ? <span>Worker heartbeat</span>
+            : operationalStatus && <span>{operationalStatus.replace(/_/g, ' ')}</span>}
+        </span>
+      </button>
       {item.repo === 'RAMS' && !['healthy', 'busy'].includes(item.status) && (
-        <ServiceWakeControl repo="RAMS" onWoken={onRefresh} />
+        <div className="px-1.5 pb-1.5">
+          <ServiceWakeControl repo="RAMS" onWoken={onRefresh} />
+        </div>
       )}
     </div>
   )
@@ -244,7 +253,7 @@ function OpsEventCard({ item, onInspect }: { item: OpsEventItem; onInspect: () =
   const severity = item.severity || 'warning'
   const border = severity === 'critical' ? 'border-rose-300/20' : severity === 'warning' ? 'border-amber-300/20' : 'border-cyan-300/15'
   return (
-    <button type="button" onClick={onInspect} className={`w-full rounded-xl border ${border} bg-[#071426] p-3 text-left transition hover:bg-[#0b1b31]`}>
+    <button type="button" onClick={onInspect} className={`w-full rounded-xl border ${border} bg-hive-surface p-3 text-left transition hover:bg-hive-panel-deep`}>
       <div className="flex items-start gap-3">
         <BellRing className={`mt-0.5 h-4 w-4 shrink-0 ${severity === 'critical' ? 'text-rose-300' : severity === 'warning' ? 'text-amber-300' : 'text-cyan-300'}`} />
         <div className="min-w-0 flex-1">
@@ -509,7 +518,7 @@ export function OpsPage() {
   return (
     <div className="h-full overflow-y-auto p-4 sm:p-6 lg:p-8">
       <div className="mx-auto max-w-7xl">
-        <section className="flex flex-col gap-5 rounded-3xl border border-white/8 bg-[#0a192d]/75 p-5 sm:flex-row sm:items-center sm:justify-between sm:p-7">
+        <section className="flex flex-col gap-5 rounded-3xl border border-white/8 bg-hive-panel/75 p-5 sm:flex-row sm:items-center sm:justify-between sm:p-7">
           <div>
             <p className="text-xs font-semibold uppercase tracking-[0.2em] text-cyan-300/70">Control plane</p>
             <h2 className="mt-2 text-2xl font-semibold text-white">Operational health and controlled workflow planning</h2>
@@ -522,7 +531,7 @@ export function OpsPage() {
           </div>
         </section>
 
-        <div className="mt-4 flex gap-1 overflow-x-auto rounded-2xl border border-white/8 bg-[#071426] p-1.5">
+        <div className="mt-4 flex gap-1 overflow-x-auto rounded-2xl border border-white/8 bg-hive-surface p-1.5">
           {tabs.map((item) => (
             <button key={item.id} type="button" onClick={() => setTab(item.id)} className={`whitespace-nowrap rounded-xl px-4 py-2 text-xs font-medium transition ${tab === item.id ? 'bg-cyan-300/10 text-cyan-100' : 'text-slate-400 hover:bg-white/[0.04] hover:text-slate-300'}`}>
               {item.label}
@@ -530,13 +539,13 @@ export function OpsPage() {
           ))}
         </div>
 
-        {error && <div className="mt-4 rounded-xl border border-rose-400/20 bg-rose-400/8 px-4 py-3 text-sm text-rose-200">{error}</div>}
+        {error && <div role="alert" className="mt-4 rounded-xl border border-rose-400/20 bg-rose-400/8 px-4 py-3 text-sm text-rose-200">{error}</div>}
 
         {loading && !health ? (
           <div className="flex items-center justify-center py-20 text-slate-400"><LoaderCircle className="mr-2 h-5 w-5 animate-spin" /> Loading operational state</div>
         ) : tab === 'overview' ? (
           <>
-            <section className="mt-5 rounded-2xl border border-white/8 bg-[#0a192d]/60 p-3 sm:p-4">
+            <section className="mt-5 rounded-2xl border border-white/8 bg-hive-panel/60 p-3 sm:p-4">
               <div className="flex items-center justify-between gap-3">
                 <div>
                   <h3 className="text-sm font-semibold text-white">Repository and service health</h3>
@@ -555,7 +564,7 @@ export function OpsPage() {
               )}
             </section>
 
-            <section className="mt-5 rounded-3xl border border-white/8 bg-[#0a192d]/70 p-5 sm:p-6">
+            <section className="mt-5 rounded-3xl border border-white/8 bg-hive-panel/70 p-5 sm:p-6">
               <div className="flex items-center justify-between gap-3">
                 <div>
                   <h3 className="text-base font-semibold text-white">Operational alerts</h3>
@@ -586,7 +595,7 @@ export function OpsPage() {
               )}
             </section>
 
-            <section className="mt-5 rounded-3xl border border-white/8 bg-[#0a192d]/70 p-5 sm:p-6">
+            <section className="mt-5 rounded-3xl border border-white/8 bg-hive-panel/70 p-5 sm:p-6">
               <h3 className="text-base font-semibold text-white">Integration readiness</h3>
               <p className="mt-1 text-xs text-slate-400">Point-in-time configuration state for every backend dependency.</p>
               <div className="mt-4 grid grid-cols-2 gap-2 sm:grid-cols-3 xl:grid-cols-4">
@@ -594,36 +603,36 @@ export function OpsPage() {
               </div>
             </section>
 
-            <section className="mt-5 rounded-3xl border border-white/8 bg-[#0a192d]/70 p-5 sm:p-6">
+            <section className="mt-5 rounded-3xl border border-white/8 bg-hive-panel/70 p-5 sm:p-6">
               <h3 className="text-base font-semibold text-white">Live system snapshot</h3>
               <p className="mt-1 text-xs text-slate-400">Point-in-time state from the current HIVE runtime. No lifetime counters.</p>
               <div className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-3">
-                <button type="button" onClick={() => inspect('Repository health', repoHealth)} className="rounded-2xl border border-white/8 bg-[#071426] p-4 text-left transition hover:border-cyan-300/20">
+                <button type="button" onClick={() => inspect('Repository health', repoHealth)} className="rounded-2xl border border-white/8 bg-hive-surface p-4 text-left transition hover:border-cyan-300/20">
                   <Activity className="h-4 w-4 text-emerald-300" />
                   <p className="mt-3 text-xl font-semibold text-white">{repoHealth?.repos?.filter((item) => ['healthy', 'busy'].includes(item.status)).length ?? 0}/{repoHealth?.repos?.length ?? 0}</p>
                   <h3 className="mt-0.5 text-xs font-medium uppercase tracking-[0.14em] text-slate-400">Services healthy now</h3>
                 </button>
-                <Link to="/execution-reviews" className="rounded-2xl border border-white/8 bg-[#071426] p-4 text-left transition hover:border-cyan-300/20">
+                <Link to="/execution-reviews" className="rounded-2xl border border-white/8 bg-hive-surface p-4 text-left transition hover:border-cyan-300/20">
                   <ShieldCheck className="h-4 w-4 text-violet-300" />
                   <p className="mt-3 text-xl font-semibold text-white">{openReviewCount}</p>
                   <h3 className="mt-0.5 text-xs font-medium uppercase tracking-[0.14em] text-slate-400">Open reviews now</h3>
                 </Link>
-                <button type="button" onClick={() => inspect('Repository runtime', runtimeStats?.repository_manager ?? {})} className="rounded-2xl border border-white/8 bg-[#071426] p-4 text-left transition hover:border-cyan-300/20">
+                <button type="button" onClick={() => inspect('Repository runtime', runtimeStats?.repository_manager ?? {})} className="rounded-2xl border border-white/8 bg-hive-surface p-4 text-left transition hover:border-cyan-300/20">
                   <Database className="h-4 w-4 text-cyan-300" />
                   <p className="mt-3 text-xl font-semibold text-white">{runtimeStats?.repository_manager?.registered_count ?? 0}</p>
                   <h3 className="mt-0.5 text-xs font-medium uppercase tracking-[0.14em] text-slate-400">Repos available now</h3>
                 </button>
-                <button type="button" onClick={() => inspect('Model Registry', runtimeStats?.model_registry ?? {})} className="rounded-2xl border border-white/8 bg-[#071426] p-4 text-left transition hover:border-cyan-300/20">
+                <button type="button" onClick={() => inspect('Model Registry', runtimeStats?.model_registry ?? {})} className="rounded-2xl border border-white/8 bg-hive-surface p-4 text-left transition hover:border-cyan-300/20">
                   <Sparkles className="h-4 w-4 text-emerald-300" />
                   <p className="mt-3 text-xl font-semibold text-white">{runtimeStats?.model_registry?.total_models ?? 0}</p>
                   <h3 className="mt-0.5 text-xs font-medium uppercase tracking-[0.14em] text-slate-400">Qualified models now</h3>
                 </button>
-                <button type="button" onClick={() => inspect('Providers', runtimeStats?.providers ?? {})} className="rounded-2xl border border-white/8 bg-[#071426] p-4 text-left transition hover:border-cyan-300/20">
+                <button type="button" onClick={() => inspect('Providers', runtimeStats?.providers ?? {})} className="rounded-2xl border border-white/8 bg-hive-surface p-4 text-left transition hover:border-cyan-300/20">
                   <Network className="h-4 w-4 text-violet-300" />
                   <p className="mt-3 text-xl font-semibold text-white">{runtimeStats?.providers?.count ?? 0}</p>
                   <h3 className="mt-0.5 text-xs font-medium uppercase tracking-[0.14em] text-slate-400">Providers active now</h3>
                 </button>
-                <button type="button" onClick={() => inspect('Default coding model', { model: runtimeStats?.model_registry?.default_coding_model }, 'Current ranked coding default.')} className="rounded-2xl border border-white/8 bg-[#071426] p-4 text-left transition hover:border-cyan-300/20">
+                <button type="button" onClick={() => inspect('Default coding model', { model: runtimeStats?.model_registry?.default_coding_model }, 'Current ranked coding default.')} className="rounded-2xl border border-white/8 bg-hive-surface p-4 text-left transition hover:border-cyan-300/20">
                   <Activity className="h-4 w-4 text-amber-300" />
                   <p className="mt-3 truncate text-sm font-semibold text-white" title={runtimeStats?.model_registry?.default_coding_model ?? 'None'}>{runtimeStats?.model_registry?.default_coding_model ?? '—'}</p>
                   <h3 className="mt-0.5 text-xs font-medium uppercase tracking-[0.14em] text-slate-400">Coding default now</h3>
@@ -631,7 +640,7 @@ export function OpsPage() {
               </div>
             </section>
 
-            <section className="mt-5 rounded-3xl border border-white/8 bg-[#0a192d]/70 p-5 sm:p-6">
+            <section className="mt-5 rounded-3xl border border-white/8 bg-hive-panel/70 p-5 sm:p-6">
               <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
                 <div>
                   <h3 className="text-base font-semibold text-white">Workflow templates</h3>
@@ -643,7 +652,7 @@ export function OpsPage() {
               </div>
               <div className="mt-5 grid gap-3 md:grid-cols-2 xl:grid-cols-4">
                 {templateEntries.map(([id, item]) => (
-                  <button key={id} type="button" onClick={() => { setTemplate(id); setRepo(item.default_repo || 'HIVE'); setTab('workflow') }} className="rounded-2xl border border-white/8 bg-[#071426] p-4 text-left transition hover:border-cyan-300/20">
+                  <button key={id} type="button" onClick={() => { setTemplate(id); setRepo(item.default_repo || 'HIVE'); setTab('workflow') }} className="rounded-2xl border border-white/8 bg-hive-surface p-4 text-left transition hover:border-cyan-300/20">
                     <div className="flex items-center justify-between gap-2">
                       <Network className="h-4 w-4 text-emerald-300" />
                       {item.free_tier_safe && <StatusBadge status="ready" label="Free-tier safe" compact />}
@@ -657,33 +666,33 @@ export function OpsPage() {
           </>
         ) : (
           <section className="mt-5 grid gap-5 xl:grid-cols-[380px_minmax(0,1fr)]">
-            <form onSubmit={buildGraph} className="h-fit rounded-3xl border border-white/8 bg-[#0a192d]/75 p-5 sm:p-6">
+            <form onSubmit={buildGraph} className="h-fit rounded-3xl border border-white/8 bg-hive-panel/75 p-5 sm:p-6">
               <p className="text-xs font-semibold uppercase tracking-[0.2em] text-cyan-300/70">Plan only</p>
               <h3 className="mt-2 text-lg font-semibold text-white">Workflow builder</h3>
               <label className="mt-5 block text-xs font-medium text-slate-400">Task</label>
-              <textarea value={task} onChange={(event) => setTask(event.target.value)} rows={5} className="mt-2 w-full resize-none rounded-xl border border-white/8 bg-[#071426] px-3 py-3 text-sm leading-6 text-white outline-none focus:border-cyan-300/30" />
+              <textarea value={task} aria-label="Workflow task" onChange={(event) => setTask(event.target.value)} rows={5} className="mt-2 w-full resize-none rounded-xl border border-white/8 bg-hive-surface px-3 py-3 text-sm leading-6 text-white outline-none focus:border-cyan-300/30" />
               <div className="mt-4 grid gap-3 sm:grid-cols-2 xl:grid-cols-1">
                 <label className="text-xs font-medium text-slate-400">Repository
-                  <select value={repo} onChange={(event) => setRepo(event.target.value)} className="mt-2 h-10 w-full rounded-xl border border-white/8 bg-[#071426] px-3 text-sm text-slate-300 outline-none">
+                  <select value={repo} onChange={(event) => setRepo(event.target.value)} className="mt-2 h-10 w-full rounded-xl border border-white/8 bg-hive-surface px-3 text-sm text-slate-300 outline-none">
                     {['HIVE', 'AIMS', 'RAMS', 'Website'].map((value) => <option key={value}>{value}</option>)}
                   </select>
                 </label>
                 <label className="text-xs font-medium text-slate-400">Template
-                  <select value={template} onChange={(event) => setTemplate(event.target.value)} className="mt-2 h-10 w-full rounded-xl border border-white/8 bg-[#071426] px-3 text-sm text-slate-300 outline-none">
+                  <select value={template} onChange={(event) => setTemplate(event.target.value)} className="mt-2 h-10 w-full rounded-xl border border-white/8 bg-hive-surface px-3 text-sm text-slate-300 outline-none">
                     {templateEntries.map(([id, item]) => <option key={id} value={id}>{item.label || id}</option>)}
                   </select>
                 </label>
                 <label className="text-xs font-medium text-slate-400">Workflow preset
-                  <input value={workflowPreset} onChange={(event) => setWorkflowPreset(event.target.value)} placeholder="Optional preset" className="mt-2 h-10 w-full rounded-xl border border-white/8 bg-[#071426] px-3 text-sm text-slate-300 outline-none placeholder:text-slate-400" />
+                  <input value={workflowPreset} onChange={(event) => setWorkflowPreset(event.target.value)} placeholder="Optional preset" className="mt-2 h-10 w-full rounded-xl border border-white/8 bg-hive-surface px-3 text-sm text-slate-300 outline-none placeholder:text-slate-400" />
                 </label>
                 <label className="text-xs font-medium text-slate-400">Approval state
-                  <select value={approvalState} onChange={(event) => setApprovalState(event.target.value)} className="mt-2 h-10 w-full rounded-xl border border-white/8 bg-[#071426] px-3 text-sm text-slate-300 outline-none">
+                  <select value={approvalState} onChange={(event) => setApprovalState(event.target.value)} className="mt-2 h-10 w-full rounded-xl border border-white/8 bg-hive-surface px-3 text-sm text-slate-300 outline-none">
                     {['pending_review', 'approved', 'needs_changes', 'rejected', 'archived'].map((value) => <option key={value} value={value}>{value.replace(/_/g, ' ')}</option>)}
                   </select>
                 </label>
               </div>
               <div className="mt-5 grid gap-2 sm:grid-cols-2 xl:grid-cols-1">
-                <button type="submit" disabled={!task.trim() || buildingGraph} className="flex h-10 items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-cyan-400 to-emerald-300 px-4 text-xs font-semibold text-[#052035] disabled:opacity-50">
+                <button type="submit" disabled={!task.trim() || buildingGraph} className="flex h-10 items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-cyan-400 to-emerald-300 px-4 text-xs font-semibold text-hive-accent-deep disabled:opacity-50">
                   {buildingGraph ? <LoaderCircle className="h-4 w-4 animate-spin" /> : <Network className="h-4 w-4" />} Build graph
                 </button>
                 <button type="button" onClick={() => void buildPreview()} disabled={!task.trim() || buildingPreview} className="flex h-10 items-center justify-center gap-2 rounded-xl border border-violet-300/20 bg-violet-300/8 px-4 text-xs font-medium text-violet-100 disabled:opacity-50">
@@ -694,7 +703,7 @@ export function OpsPage() {
             </form>
 
             <div className="space-y-5">
-              <section className="rounded-3xl border border-white/8 bg-[#0a192d]/75 p-5 sm:p-6">
+              <section className="rounded-3xl border border-white/8 bg-hive-panel/75 p-5 sm:p-6">
                 <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
                   <div>
                     <p className="text-xs font-semibold uppercase tracking-[0.2em] text-emerald-300/70">Workflow graph</p>
@@ -707,7 +716,7 @@ export function OpsPage() {
               </section>
 
               {preview && (
-                <section className="rounded-3xl border border-white/8 bg-[#0a192d]/75 p-5 sm:p-6">
+                <section className="rounded-3xl border border-white/8 bg-hive-panel/75 p-5 sm:p-6">
                   <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                     <div>
                       <p className="text-xs font-semibold uppercase tracking-[0.2em] text-violet-300/70">Execution preview</p>
@@ -721,7 +730,7 @@ export function OpsPage() {
                   </div>
                   <div className="mt-5 space-y-2">
                     {(preview.step_statuses ?? []).map((step) => (
-                      <button key={step.node_id} type="button" onClick={() => inspect(step.label || step.node_id, step, step.summary)} className="grid w-full gap-3 rounded-2xl border border-white/8 bg-[#071426] p-4 text-left sm:grid-cols-[minmax(0,1fr)_auto] sm:items-center">
+                      <button key={step.node_id} type="button" onClick={() => inspect(step.label || step.node_id, step, step.summary)} className="grid w-full gap-3 rounded-2xl border border-white/8 bg-hive-surface p-4 text-left sm:grid-cols-[minmax(0,1fr)_auto] sm:items-center">
                         <span>
                           <span className="block text-sm font-medium text-white">{step.label || step.node_id}</span>
                           <span className="mt-1 block text-xs leading-5 text-slate-400">{step.summary || step.blocker || 'No additional detail.'}</span>

@@ -878,7 +878,7 @@ export function FilesPage() {
   return (
     <div className="h-full overflow-y-auto p-4 sm:p-6 lg:p-8">
       <div className="mx-auto max-w-7xl">
-        <section className="rounded-3xl border border-white/8 bg-[#0a192d]/75 p-5 shadow-xl shadow-black/10 sm:p-7">
+        <section className="rounded-3xl border border-white/8 bg-hive-panel/75 p-5 shadow-xl shadow-black/10 sm:p-7">
           <div className="flex flex-col gap-5 xl:flex-row xl:items-start xl:justify-between">
             <div>
               <p className="text-xs font-semibold uppercase tracking-[0.2em] text-cyan-300/70">
@@ -936,7 +936,7 @@ export function FilesPage() {
 
           {lanesOpen && (
             <section
-              className="mt-6 rounded-2xl border border-cyan-300/12 bg-[#071426]/75 p-4"
+              className="mt-6 rounded-2xl border border-cyan-300/12 bg-hive-surface/75 p-4"
               aria-label="R2 ecosystem storage map"
             >
               <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
@@ -962,7 +962,7 @@ export function FilesPage() {
                   return (
                     <article
                       key={lane.lane}
-                      className={`rounded-xl border p-3 transition ${selected ? "border-cyan-300/30 bg-cyan-300/[0.055]" : "border-white/8 bg-[#061126]/80"}`}
+                      className={`rounded-xl border p-3 transition ${selected ? "border-cyan-300/30 bg-cyan-300/[0.055]" : "border-white/8 bg-hive-canvas/80"}`}
                     >
                       <button
                         type="button"
@@ -1019,7 +1019,7 @@ export function FilesPage() {
                   );
                   if (lane) selectLane(lane);
                 }}
-                className="mt-2 h-11 w-full rounded-xl border border-white/8 bg-[#061126] px-3 text-sm text-slate-200 outline-none focus:border-cyan-300/30"
+                className="mt-2 h-11 w-full rounded-xl border border-white/8 bg-hive-canvas px-3 text-sm text-slate-200 outline-none focus:border-cyan-300/30"
               >
                 {lanes.map((lane) => (
                   <option
@@ -1044,7 +1044,8 @@ export function FilesPage() {
                       value={searchInput}
                       onChange={(event) => setSearchInput(event.target.value)}
                       placeholder="Search object names under the current prefix"
-                      className="h-11 w-full rounded-xl border border-white/8 bg-[#061126] pl-10 pr-10 text-sm text-slate-200 outline-none placeholder:text-slate-400 focus:border-cyan-300/30"
+                      aria-label="Search files in current storage lane"
+                      className="h-11 w-full rounded-xl border border-white/8 bg-hive-canvas pl-10 pr-10 text-sm text-slate-200 outline-none placeholder:text-slate-400 focus:border-cyan-300/30"
                     />
                     {(searchInput || activeSearch) && (
                       <button
@@ -1068,7 +1069,7 @@ export function FilesPage() {
             </form>
           </div>
 
-          <div className="mt-5 flex flex-wrap items-center gap-1.5 rounded-xl border border-white/8 bg-[#061126]/70 px-3 py-2.5 text-xs text-slate-500">
+          <div className="mt-5 flex flex-wrap items-center gap-1.5 rounded-xl border border-white/8 bg-hive-canvas/70 px-3 py-2.5 text-xs text-slate-500">
             <button
               type="button"
               onClick={() => changePrefix(rootPrefixForLane(activeLane))}
@@ -1098,7 +1099,7 @@ export function FilesPage() {
           {(selectedSources.length > 0 || activeLane?.writable) && (
             // Mobile action strip intentionally uses flex-wrap below 480px, so actions wrap into compact rows rather than clipping the viewport.
             <div
-              className="mt-5 flex flex-wrap gap-2 rounded-2xl border border-white/8 bg-[#071426]/70 p-2"
+              className="mt-5 flex flex-wrap gap-2 rounded-2xl border border-white/8 bg-hive-surface/70 p-2"
               aria-label="Available file actions"
             >
               {selectedSources.length > 0 && (
@@ -1213,7 +1214,7 @@ export function FilesPage() {
 
           {activeLane?.writable && selectedAction === "upload" ? (
             <div className="mt-6 border-t border-white/8 pt-5">
-              <div className="flex w-fit gap-1 rounded-xl border border-white/8 bg-[#071426] p-1">
+              <div className="flex w-fit gap-1 rounded-xl border border-white/8 bg-hive-surface p-1">
                 <button
                   type="button"
                   onClick={() => setUploadMode("file")}
@@ -1242,7 +1243,7 @@ export function FilesPage() {
                       setDragActive(false);
                   }}
                   onDrop={handleDrop}
-                  className={`mt-4 rounded-2xl border border-dashed p-6 text-center transition ${dragActive ? "border-cyan-300/45 bg-cyan-300/[0.06]" : "border-white/10 bg-[#071426]/70"}`}
+                  className={`mt-4 rounded-2xl border border-dashed p-6 text-center transition ${dragActive ? "border-cyan-300/45 bg-cyan-300/[0.06]" : "border-white/10 bg-hive-surface/70"}`}
                 >
                   {uploading ? (
                     <LoaderCircle className="mx-auto h-8 w-8 animate-spin text-cyan-300" />
@@ -1260,7 +1261,7 @@ export function FilesPage() {
                     type="button"
                     onClick={() => inputRef.current?.click()}
                     disabled={uploading}
-                    className="mt-4 inline-flex h-9 items-center gap-2 rounded-xl bg-gradient-to-r from-cyan-400 to-emerald-300 px-4 text-xs font-semibold text-[#052035] disabled:opacity-50"
+                    className="mt-4 inline-flex h-9 items-center gap-2 rounded-xl bg-gradient-to-r from-cyan-400 to-emerald-300 px-4 text-xs font-semibold text-hive-accent-deep disabled:opacity-50"
                   >
                     <FileUp className="h-4 w-4" /> Choose files
                   </button>
@@ -1268,6 +1269,7 @@ export function FilesPage() {
                     ref={inputRef}
                     multiple
                     type="file"
+                    aria-label="Choose files to upload"
                     className="hidden"
                     onChange={(event) =>
                       void uploadFiles(Array.from(event.target.files ?? []))
@@ -1277,14 +1279,14 @@ export function FilesPage() {
               ) : (
                 <form
                   onSubmit={uploadText}
-                  className="mt-4 grid gap-3 rounded-2xl border border-white/8 bg-[#071426]/70 p-4"
+                  className="mt-4 grid gap-3 rounded-2xl border border-white/8 bg-hive-surface/70 p-4"
                 >
                   <label className="text-xs font-medium text-slate-400">
                     Filename
                     <input
                       value={textFilename}
                       onChange={(event) => setTextFilename(event.target.value)}
-                      className="mt-2 h-10 w-full rounded-xl border border-white/8 bg-[#061126] px-3 text-sm text-slate-200 outline-none focus:border-cyan-300/30"
+                      className="mt-2 h-10 w-full rounded-xl border border-white/8 bg-hive-canvas px-3 text-sm text-slate-200 outline-none focus:border-cyan-300/30"
                     />
                   </label>
                   <label className="text-xs font-medium text-slate-400">
@@ -1294,7 +1296,7 @@ export function FilesPage() {
                       onChange={(event) => setTextContent(event.target.value)}
                       rows={7}
                       placeholder="Paste notes, logs, transcripts or source text…"
-                      className="mt-2 w-full resize-y rounded-xl border border-white/8 bg-[#061126] px-3 py-3 text-sm leading-6 text-slate-200 outline-none placeholder:text-slate-400 focus:border-cyan-300/30"
+                      className="mt-2 w-full resize-y rounded-xl border border-white/8 bg-hive-canvas px-3 py-3 text-sm leading-6 text-slate-200 outline-none placeholder:text-slate-400 focus:border-cyan-300/30"
                     />
                   </label>
                   <div className="flex justify-end">
@@ -1303,7 +1305,7 @@ export function FilesPage() {
                       disabled={
                         uploading || !textFilename.trim() || !textContent.trim()
                       }
-                      className="flex h-9 items-center gap-2 rounded-xl bg-gradient-to-r from-cyan-400 to-emerald-300 px-4 text-xs font-semibold text-[#052035] disabled:opacity-50"
+                      className="flex h-9 items-center gap-2 rounded-xl bg-gradient-to-r from-cyan-400 to-emerald-300 px-4 text-xs font-semibold text-hive-accent-deep disabled:opacity-50"
                     >
                       {uploading ? (
                         <LoaderCircle className="h-4 w-4 animate-spin" />
@@ -1475,7 +1477,7 @@ export function FilesPage() {
                 return (
                   <article
                     key={folderPrefix}
-                    className={`group rounded-2xl border p-4 transition hover:border-cyan-300/20 hover:bg-[#0d2038] ${selectedInside ? "border-cyan-300/25 bg-cyan-300/[0.04]" : "border-white/8 bg-[#0a192d]/70"}`}
+                    className={`group rounded-2xl border p-4 transition hover:border-cyan-300/20 hover:bg-hive-panel-hover ${selectedInside ? "border-cyan-300/25 bg-cyan-300/[0.04]" : "border-white/8 bg-hive-panel/70"}`}
                   >
                     <div className="flex h-10 w-10 items-center justify-center rounded-xl border border-amber-300/15 bg-amber-300/7 text-amber-200">
                       <Folder className="h-5 w-5" />
@@ -1523,7 +1525,7 @@ export function FilesPage() {
                 return (
                   <article
                     key={key}
-                    className={`group rounded-2xl border p-4 transition hover:border-cyan-300/20 hover:bg-[#0d2038] ${selected ? "border-cyan-300/35 bg-cyan-300/[0.055]" : "border-white/8 bg-[#0a192d]/70"}`}
+                    className={`group rounded-2xl border p-4 transition hover:border-cyan-300/20 hover:bg-hive-panel-hover ${selected ? "border-cyan-300/35 bg-cyan-300/[0.055]" : "border-white/8 bg-hive-panel/70"}`}
                   >
                     <div className="mb-3 flex items-center justify-between gap-2">
                       <button
@@ -1646,8 +1648,8 @@ export function FilesPage() {
       </div>
 
       {skillPickerFile && (
-        <div className="fixed inset-0 z-50 flex items-end bg-[#020817]/80 px-3 py-4 backdrop-blur-sm sm:items-center sm:justify-center">
-          <section className="max-h-[92vh] w-full overflow-y-auto rounded-3xl border border-white/10 bg-[#08172b] p-5 shadow-2xl shadow-black/40 sm:max-w-2xl sm:p-6">
+        <div className="fixed inset-0 z-50 flex items-end bg-hive-overlay/80 px-3 py-4 backdrop-blur-sm sm:items-center sm:justify-center">
+          <section className="max-h-[92vh] w-full overflow-y-auto rounded-3xl border border-white/10 bg-hive-dialog p-5 shadow-2xl shadow-black/40 sm:max-w-2xl sm:p-6">
             <div className="flex items-start justify-between gap-4">
               <div>
                 <p className="text-xs font-semibold uppercase tracking-[0.18em] text-cyan-200/75">
@@ -1688,12 +1690,15 @@ export function FilesPage() {
                   value={skillQuery}
                   onChange={(event) => setSkillQuery(event.target.value)}
                   placeholder="Search existing skills"
-                  className="h-11 w-full rounded-xl border border-white/8 bg-[#061126] pl-10 pr-3 text-sm text-slate-100 outline-none placeholder:text-slate-400 focus:border-cyan-300/40"
+                  aria-label="Search existing skills"
+                  className="h-11 w-full rounded-xl border border-white/8 bg-hive-canvas pl-10 pr-3 text-sm text-slate-100 outline-none placeholder:text-slate-400 focus:border-cyan-300/40"
                 />
               </div>
               <button
                 type="submit"
                 disabled={loadingSkills}
+                aria-busy={loadingSkills}
+                aria-label={loadingSkills ? "Searching skills" : "Search skills"}
                 className="flex h-11 items-center justify-center rounded-xl border border-cyan-300/20 bg-cyan-300/8 px-4 text-sm font-medium text-cyan-100 transition hover:bg-cyan-300/12 disabled:opacity-50"
               >
                 {loadingSkills ? (
@@ -1706,8 +1711,8 @@ export function FilesPage() {
 
             <div className="mt-4 grid max-h-80 gap-2 overflow-y-auto pr-1">
               {loadingSkills ? (
-                <div className="flex items-center justify-center rounded-2xl border border-white/8 bg-white/[0.025] py-8 text-sm text-slate-300">
-                  <LoaderCircle className="mr-2 h-4 w-4 animate-spin" /> Loading
+                <div role="status" aria-live="polite" className="flex items-center justify-center rounded-2xl border border-white/8 bg-white/[0.025] py-8 text-sm text-slate-300">
+                  <LoaderCircle aria-hidden="true" className="mr-2 h-4 w-4 animate-spin" /> Loading
                   skills
                 </div>
               ) : skillOptions.length === 0 ? (
@@ -1725,7 +1730,7 @@ export function FilesPage() {
                       key={`${id}-${index}`}
                       type="button"
                       onClick={() => setSelectedSkill(skill)}
-                      className={`rounded-2xl border p-3 text-left transition ${selected ? "border-cyan-300/35 bg-cyan-300/[0.07]" : "border-white/8 bg-[#061126]/75 hover:border-cyan-300/20 hover:bg-[#0d2038]"}`}
+                      className={`rounded-2xl border p-3 text-left transition ${selected ? "border-cyan-300/35 bg-cyan-300/[0.07]" : "border-white/8 bg-hive-canvas/75 hover:border-cyan-300/20 hover:bg-hive-panel-hover"}`}
                     >
                       <div className="flex items-start justify-between gap-3">
                         <div className="min-w-0">
@@ -1776,7 +1781,7 @@ export function FilesPage() {
                 type="button"
                 onClick={useSelectedSkillWithFile}
                 disabled={!selectedSkill}
-                className="flex h-10 items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-cyan-300 to-emerald-300 px-4 text-sm font-semibold text-[#061126] transition disabled:opacity-50"
+                className="flex h-10 items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-cyan-300 to-emerald-300 px-4 text-sm font-semibold text-hive-canvas transition disabled:opacity-50"
               >
                 <BrainCircuit className="h-4 w-4" /> Use selected skill
               </button>
@@ -1786,8 +1791,8 @@ export function FilesPage() {
       )}
 
       {skillFile && skillForm && (
-        <div className="fixed inset-0 z-50 flex items-end bg-[#020817]/80 px-3 py-4 backdrop-blur-sm sm:items-center sm:justify-center">
-          <section className="max-h-[92vh] w-full overflow-y-auto rounded-3xl border border-white/10 bg-[#08172b] p-5 shadow-2xl shadow-black/40 sm:max-w-2xl sm:p-6">
+        <div className="fixed inset-0 z-50 flex items-end bg-hive-overlay/80 px-3 py-4 backdrop-blur-sm sm:items-center sm:justify-center">
+          <section className="max-h-[92vh] w-full overflow-y-auto rounded-3xl border border-white/10 bg-hive-dialog p-5 shadow-2xl shadow-black/40 sm:max-w-2xl sm:p-6">
             <div className="flex items-start justify-between gap-4">
               <div>
                 <p className="text-xs font-semibold uppercase tracking-[0.18em] text-violet-200/70">
@@ -1831,7 +1836,7 @@ export function FilesPage() {
                   onChange={(event) =>
                     updateSkillForm("title", event.target.value)
                   }
-                  className="mt-2 h-11 w-full rounded-xl border border-white/8 bg-[#061126] px-3 text-sm text-slate-100 outline-none focus:border-violet-300/40"
+                  className="mt-2 h-11 w-full rounded-xl border border-white/8 bg-hive-canvas px-3 text-sm text-slate-100 outline-none focus:border-violet-300/40"
                 />
               </label>
 
@@ -1844,7 +1849,7 @@ export function FilesPage() {
                   }
                   rows={4}
                   placeholder="Explain what this skill should be used for…"
-                  className="mt-2 w-full resize-y rounded-xl border border-white/8 bg-[#061126] px-3 py-3 text-sm leading-6 text-slate-100 outline-none placeholder:text-slate-400 focus:border-violet-300/40"
+                  className="mt-2 w-full resize-y rounded-xl border border-white/8 bg-hive-canvas px-3 py-3 text-sm leading-6 text-slate-100 outline-none placeholder:text-slate-400 focus:border-violet-300/40"
                 />
               </label>
 
@@ -1856,7 +1861,7 @@ export function FilesPage() {
                     onChange={(event) =>
                       updateSkillForm("repo", event.target.value)
                     }
-                    className="mt-2 h-11 w-full rounded-xl border border-white/8 bg-[#061126] px-3 text-sm text-slate-100 outline-none focus:border-violet-300/40"
+                    className="mt-2 h-11 w-full rounded-xl border border-white/8 bg-hive-canvas px-3 text-sm text-slate-100 outline-none focus:border-violet-300/40"
                   >
                     <option value="HIVE">HIVE</option>
                     <option value="HIVE-UI">HIVE-UI</option>
@@ -1874,7 +1879,7 @@ export function FilesPage() {
                     onChange={(event) =>
                       updateSkillForm("hiveLane", event.target.value)
                     }
-                    className="mt-2 h-11 w-full rounded-xl border border-white/8 bg-[#061126] px-3 text-sm text-slate-100 outline-none focus:border-violet-300/40"
+                    className="mt-2 h-11 w-full rounded-xl border border-white/8 bg-hive-canvas px-3 text-sm text-slate-100 outline-none focus:border-violet-300/40"
                   />
                 </label>
               </div>
@@ -1887,7 +1892,7 @@ export function FilesPage() {
                     onChange={(event) =>
                       updateSkillForm("priorityTier", event.target.value)
                     }
-                    className="mt-2 h-11 w-full rounded-xl border border-white/8 bg-[#061126] px-3 text-sm text-slate-100 outline-none focus:border-violet-300/40"
+                    className="mt-2 h-11 w-full rounded-xl border border-white/8 bg-hive-canvas px-3 text-sm text-slate-100 outline-none focus:border-violet-300/40"
                   >
                     <option value="P0">P0</option>
                     <option value="P1">P1</option>
@@ -1903,7 +1908,7 @@ export function FilesPage() {
                     onChange={(event) =>
                       updateSkillForm("riskLevel", event.target.value)
                     }
-                    className="mt-2 h-11 w-full rounded-xl border border-white/8 bg-[#061126] px-3 text-sm text-slate-100 outline-none focus:border-violet-300/40"
+                    className="mt-2 h-11 w-full rounded-xl border border-white/8 bg-hive-canvas px-3 text-sm text-slate-100 outline-none focus:border-violet-300/40"
                   >
                     <option value="low">Low</option>
                     <option value="medium">Medium</option>
@@ -1920,7 +1925,7 @@ export function FilesPage() {
                     updateSkillForm("tags", event.target.value)
                   }
                   placeholder="uploaded-file, audits, brand-assets"
-                  className="mt-2 h-11 w-full rounded-xl border border-white/8 bg-[#061126] px-3 text-sm text-slate-100 outline-none placeholder:text-slate-400 focus:border-violet-300/40"
+                  className="mt-2 h-11 w-full rounded-xl border border-white/8 bg-hive-canvas px-3 text-sm text-slate-100 outline-none placeholder:text-slate-400 focus:border-violet-300/40"
                 />
                 <span className="mt-2 block text-xs leading-5 text-slate-400">
                   Comma-separated. These are used for search and routing, so
@@ -1942,7 +1947,7 @@ export function FilesPage() {
                 type="button"
                 onClick={() => void registerSkillFromSelectedFile()}
                 disabled={registeringSkill || !skillForm.title.trim()}
-                className="flex h-10 items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-violet-300 to-cyan-300 px-4 text-sm font-semibold text-[#061126] transition disabled:opacity-50"
+                className="flex h-10 items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-violet-300 to-cyan-300 px-4 text-sm font-semibold text-hive-canvas transition disabled:opacity-50"
               >
                 {registeringSkill ? (
                   <LoaderCircle className="h-4 w-4 animate-spin" />

@@ -310,7 +310,7 @@ export function ModelRegistryPage() {
   return (
     <div className="h-full overflow-y-auto p-4 sm:p-6 lg:p-8">
       <div className="mx-auto max-w-5xl">
-        <section className="rounded-3xl border border-white/8 bg-[#0a192d]/75 p-5 sm:p-7">
+        <section className="rounded-3xl border border-white/8 bg-hive-panel/75 p-5 sm:p-7">
           <div className="flex flex-col gap-5 lg:flex-row lg:items-end lg:justify-between">
             <div>
               <p className="text-xs font-semibold uppercase tracking-[0.2em] text-cyan-300/70">Model registry</p>
@@ -367,7 +367,7 @@ export function ModelRegistryPage() {
           </div>
         )}
 
-        <section className="mt-4 rounded-3xl border border-white/8 bg-[#0a192d]/60 p-5 sm:p-7">
+        <section className="mt-4 rounded-3xl border border-white/8 bg-hive-panel/60 p-5 sm:p-7">
           <div className="flex items-center justify-between gap-3">
             <h3 className="text-sm font-semibold text-slate-100">{categoryLabel(category)} models</h3>
             {defaultModel && <StatusBadge status="ready" label={`Default: ${defaultModel}`} />}
@@ -556,7 +556,7 @@ export function ModelRegistryPage() {
                 value={draft.model_id}
                 onChange={(event) => setDraft((current) => ({ ...current, model_id: event.target.value }))}
                 placeholder="e.g. anthropic/claude-sonnet-5"
-                className="h-10 w-full rounded-xl border border-white/8 bg-[#071426] px-3 text-sm text-slate-200 outline-none placeholder:text-slate-500 focus:border-cyan-300/30"
+                className="h-10 w-full rounded-xl border border-white/8 bg-hive-surface px-3 text-sm text-slate-200 outline-none placeholder:text-slate-500 focus:border-cyan-300/30"
               />
             </label>
             <label>
@@ -565,7 +565,7 @@ export function ModelRegistryPage() {
                 value={draft.score}
                 onChange={(event) => setDraft((current) => ({ ...current, score: event.target.value }))}
                 inputMode="decimal"
-                className="h-10 w-full rounded-xl border border-white/8 bg-[#071426] px-3 text-sm text-slate-200 outline-none focus:border-cyan-300/30"
+                className="h-10 w-full rounded-xl border border-white/8 bg-hive-surface px-3 text-sm text-slate-200 outline-none focus:border-cyan-300/30"
               />
             </label>
             <label>
@@ -574,7 +574,7 @@ export function ModelRegistryPage() {
                 value={draft.provider}
                 onChange={(event) => setDraft((current) => ({ ...current, provider: event.target.value }))}
                 placeholder="e.g. openrouter"
-                className="h-10 w-full rounded-xl border border-white/8 bg-[#071426] px-3 text-sm text-slate-200 outline-none placeholder:text-slate-500 focus:border-cyan-300/30"
+                className="h-10 w-full rounded-xl border border-white/8 bg-hive-surface px-3 text-sm text-slate-200 outline-none placeholder:text-slate-500 focus:border-cyan-300/30"
               />
             </label>
             <label className="sm:col-span-2">
@@ -583,7 +583,7 @@ export function ModelRegistryPage() {
                 value={draft.notes}
                 onChange={(event) => setDraft((current) => ({ ...current, notes: event.target.value }))}
                 placeholder="Why this model/score"
-                className="h-10 w-full rounded-xl border border-white/8 bg-[#071426] px-3 text-sm text-slate-200 outline-none placeholder:text-slate-500 focus:border-cyan-300/30"
+                className="h-10 w-full rounded-xl border border-white/8 bg-hive-surface px-3 text-sm text-slate-200 outline-none placeholder:text-slate-500 focus:border-cyan-300/30"
               />
             </label>
             <label>
@@ -593,7 +593,7 @@ export function ModelRegistryPage() {
                 onChange={(event) => setDraft((current) => ({ ...current, benchmark_score: event.target.value }))}
                 inputMode="decimal"
                 placeholder="e.g. 82.5"
-                className="h-10 w-full rounded-xl border border-white/8 bg-[#071426] px-3 text-sm text-slate-200 outline-none placeholder:text-slate-500 focus:border-cyan-300/30"
+                className="h-10 w-full rounded-xl border border-white/8 bg-hive-surface px-3 text-sm text-slate-200 outline-none placeholder:text-slate-500 focus:border-cyan-300/30"
               />
             </label>
             <label>
@@ -603,7 +603,7 @@ export function ModelRegistryPage() {
                 onChange={(event) =>
                   setDraft((current) => ({ ...current, confidence: event.target.value as ModelRegistryConfidence }))
                 }
-                className="h-10 w-full rounded-xl border border-white/8 bg-[#071426] px-3 text-sm text-slate-200 outline-none focus:border-cyan-300/30"
+                className="h-10 w-full rounded-xl border border-white/8 bg-hive-surface px-3 text-sm text-slate-200 outline-none focus:border-cyan-300/30"
               >
                 {MODEL_REGISTRY_CONFIDENCE_LEVELS.map((level) => (
                   <option key={level} value={level}>
@@ -619,7 +619,7 @@ export function ModelRegistryPage() {
                 onChange={(event) => setDraft((current) => ({ ...current, latency_ms: event.target.value }))}
                 inputMode="decimal"
                 placeholder="e.g. 420"
-                className="h-10 w-full rounded-xl border border-white/8 bg-[#071426] px-3 text-sm text-slate-200 outline-none placeholder:text-slate-500 focus:border-cyan-300/30"
+                className="h-10 w-full rounded-xl border border-white/8 bg-hive-surface px-3 text-sm text-slate-200 outline-none placeholder:text-slate-500 focus:border-cyan-300/30"
               />
             </label>
             <label>
@@ -629,13 +629,13 @@ export function ModelRegistryPage() {
                 onChange={(event) => setDraft((current) => ({ ...current, cost_per_1k_tokens: event.target.value }))}
                 inputMode="decimal"
                 placeholder="e.g. 0.015"
-                className="h-10 w-full rounded-xl border border-white/8 bg-[#071426] px-3 text-sm text-slate-200 outline-none placeholder:text-slate-500 focus:border-cyan-300/30"
+                className="h-10 w-full rounded-xl border border-white/8 bg-hive-surface px-3 text-sm text-slate-200 outline-none placeholder:text-slate-500 focus:border-cyan-300/30"
               />
             </label>
             <button
               type="submit"
               disabled={registering}
-              className="flex h-10 items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-cyan-400 to-emerald-300 px-4 text-xs font-semibold text-[#052035] disabled:opacity-60 sm:col-span-2 sm:w-fit"
+              className="flex h-10 items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-cyan-400 to-emerald-300 px-4 text-xs font-semibold text-hive-accent-deep disabled:opacity-60 sm:col-span-2 sm:w-fit"
             >
               {registering ? <LoaderCircle className="h-4 w-4 animate-spin" /> : <Plus className="h-4 w-4" />}
               Register model

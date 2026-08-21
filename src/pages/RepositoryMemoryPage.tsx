@@ -268,7 +268,7 @@ export function RepositoryMemoryPage() {
   return (
     <div className="h-full overflow-y-auto p-4 sm:p-6 lg:p-8">
       <div className="mx-auto max-w-6xl">
-        <section className="rounded-3xl border border-white/8 bg-[#0a192d]/75 p-5 sm:p-7">
+        <section className="rounded-3xl border border-white/8 bg-hive-panel/75 p-5 sm:p-7">
           <div className="flex flex-col gap-5 lg:flex-row lg:items-end lg:justify-between">
             <div>
               <p className="text-xs font-semibold uppercase tracking-[0.2em] text-cyan-300/70">Repository memory</p>
@@ -294,8 +294,9 @@ export function RepositoryMemoryPage() {
                 value={repoInput}
                 onChange={(event) => setRepoInput(event.target.value)}
                 list="known-repos"
+                aria-label="Repository id"
                 placeholder="Repository id (e.g. HIVE)"
-                className="h-10 w-full rounded-xl border border-white/8 bg-[#071426] pl-10 pr-3 text-sm text-slate-200 outline-none placeholder:text-slate-400 focus:border-cyan-300/30"
+                className="h-10 w-full rounded-xl border border-white/8 bg-hive-surface pl-10 pr-3 text-sm text-slate-200 outline-none placeholder:text-slate-400 focus:border-cyan-300/30"
               />
               <datalist id="known-repos">
                 {KNOWN_REPOS.map((repo) => (
@@ -305,15 +306,16 @@ export function RepositoryMemoryPage() {
             </label>
             <select
               value={KNOWN_REPOS.includes(repoInput) ? repoInput : ''}
+              aria-label="Choose known repository"
               onChange={(event) => event.target.value && setRepoInput(event.target.value)}
-              className="h-10 rounded-xl border border-white/8 bg-[#071426] px-3 text-xs text-slate-300 outline-none"
+              className="h-10 rounded-xl border border-white/8 bg-hive-surface px-3 text-xs text-slate-300 outline-none"
             >
               <option value="">Known repositories…</option>
               {KNOWN_REPOS.map((repo) => (
                 <option key={repo} value={repo}>{repo}</option>
               ))}
             </select>
-            <button type="submit" className="flex h-10 items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-cyan-400 to-emerald-300 px-4 text-xs font-semibold text-[#052035]">
+            <button type="submit" className="flex h-10 items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-cyan-400 to-emerald-300 px-4 text-xs font-semibold text-hive-accent-deep">
               Load
             </button>
           </form>
@@ -356,7 +358,7 @@ export function RepositoryMemoryPage() {
                 value={query}
                 onChange={(event) => setQuery(event.target.value)}
                 placeholder="Search this repository's memory (e.g. a past incident, a pattern, a patch)"
-                className="h-10 w-full rounded-xl border border-white/8 bg-[#071426] pl-10 pr-3 text-sm text-slate-200 outline-none placeholder:text-slate-400 focus:border-cyan-300/30"
+                className="h-10 w-full rounded-xl border border-white/8 bg-hive-surface pl-10 pr-3 text-sm text-slate-200 outline-none placeholder:text-slate-400 focus:border-cyan-300/30"
               />
             </label>
             <button type="submit" disabled={!query.trim() || searching} className="flex h-10 items-center justify-center gap-2 rounded-xl border border-white/8 bg-white/[0.04] px-4 text-xs text-slate-300 hover:bg-white/[0.07] disabled:opacity-50">
@@ -366,7 +368,7 @@ export function RepositoryMemoryPage() {
 
           {searchError && <p className="mt-3 text-xs text-rose-300">{searchError}</p>}
           {searchResults && (
-            <div className="mt-3 max-h-56 space-y-2 overflow-y-auto rounded-xl border border-white/8 bg-[#071426]/60 p-3">
+            <div className="mt-3 max-h-56 space-y-2 overflow-y-auto rounded-xl border border-white/8 bg-hive-surface/60 p-3">
               {(searchResults.items ?? []).length === 0 ? (
                 <p className="text-xs text-slate-400">No matches for that query in {repositoryId}.</p>
               ) : (
@@ -381,8 +383,8 @@ export function RepositoryMemoryPage() {
           )}
         </section>
 
-        {error && <div className="mt-4 rounded-xl border border-rose-400/20 bg-rose-400/8 px-4 py-3 text-sm text-rose-200">{error}</div>}
-        {notice && <div className="mt-4 rounded-xl border border-emerald-300/20 bg-emerald-300/8 px-4 py-3 text-sm text-emerald-100">{notice}</div>}
+        {error && <div role="alert" className="mt-4 rounded-xl border border-rose-400/20 bg-rose-400/8 px-4 py-3 text-sm text-rose-200">{error}</div>}
+        {notice && <div role="status" aria-live="polite" className="mt-4 rounded-xl border border-emerald-300/20 bg-emerald-300/8 px-4 py-3 text-sm text-emerald-100">{notice}</div>}
 
         {loading ? (
           <div className="mt-8 flex items-center justify-center py-16 text-slate-400"><LoaderCircle className="mr-2 h-5 w-5 animate-spin" /> Loading Repository Memory</div>
@@ -395,7 +397,7 @@ export function RepositoryMemoryPage() {
                   const content = memory[field]
                   const blank = isBlank(content)
                   return (
-                    <article key={field} className="rounded-2xl border border-white/8 bg-[#0a192d]/70 p-4">
+                    <article key={field} className="rounded-2xl border border-white/8 bg-hive-panel/70 p-4">
                       <div className="flex items-start justify-between gap-3">
                         <button type="button" onClick={() => inspectField(field)} className="text-left">
                           <h4 className="text-sm font-semibold text-white">{fieldLabel(field)}</h4>
@@ -406,10 +408,11 @@ export function RepositoryMemoryPage() {
                         <div className="mt-3">
                           <textarea
                             value={draftValue}
+                            aria-label={`Edit ${fieldLabel(field)}`}
                             onChange={(event) => setDraftValue(event.target.value)}
                             rows={6}
                             placeholder="Plain text or JSON"
-                            className="w-full resize-none rounded-xl border border-white/8 bg-[#071426] px-3 py-3 font-mono text-xs text-white outline-none placeholder:text-slate-500 focus:border-cyan-300/30"
+                            className="w-full resize-none rounded-xl border border-white/8 bg-hive-surface px-3 py-3 font-mono text-xs text-white outline-none placeholder:text-slate-500 focus:border-cyan-300/30"
                           />
                           <div className="mt-2 flex justify-end gap-2">
                             <button type="button" onClick={cancelEdit} className="h-8 rounded-lg border border-white/8 px-3 text-xs text-slate-300">Cancel</button>
@@ -445,7 +448,7 @@ export function RepositoryMemoryPage() {
                 {REPOSITORY_MEMORY_HISTORY_FIELDS.map((field) => {
                   const items = historyItems(memory[field])
                   return (
-                    <article key={field} className="rounded-2xl border border-white/8 bg-[#0a192d]/70 p-4">
+                    <article key={field} className="rounded-2xl border border-white/8 bg-hive-panel/70 p-4">
                       <div className="flex items-start justify-between gap-3">
                         <button type="button" onClick={() => inspectField(field)} className="text-left">
                           <h4 className="text-sm font-semibold text-white">{fieldLabel(field)}</h4>
@@ -477,9 +480,10 @@ export function RepositoryMemoryPage() {
                           <label className="text-xs font-medium text-slate-300">New entry (JSON object)</label>
                           <textarea
                             value={appendDraft}
+                            aria-label={`New ${fieldLabel(field)} entry`}
                             onChange={(event) => setAppendDraft(event.target.value)}
                             rows={4}
-                            className="mt-1.5 w-full resize-none rounded-lg border border-white/8 bg-[#071426] px-3 py-2 font-mono text-xs text-white outline-none focus:border-cyan-300/30"
+                            className="mt-1.5 w-full resize-none rounded-lg border border-white/8 bg-hive-surface px-3 py-2 font-mono text-xs text-white outline-none focus:border-cyan-300/30"
                           />
                           <div className="mt-2 flex justify-end gap-2">
                             <button type="button" onClick={() => setAppendField(null)} className="h-8 rounded-lg border border-white/8 px-3 text-xs text-slate-300">Cancel</button>
