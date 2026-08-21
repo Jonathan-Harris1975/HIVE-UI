@@ -186,7 +186,8 @@ function ConversationSection({ closeMobile }: { closeMobile?: () => void }) {
           value={query}
           onChange={(event) => setQuery(event.target.value)}
           placeholder="Search conversations"
-          className="h-9 w-full rounded-lg border border-white/8 bg-[#071426] pl-9 pr-3 text-xs text-slate-200 outline-none placeholder:text-slate-400 focus:border-cyan-300/30"
+          aria-label="Search conversations"
+          className="h-9 w-full rounded-lg border border-white/8 bg-hive-surface pl-9 pr-3 text-xs text-slate-200 outline-none placeholder:text-slate-400 focus:border-cyan-300/30"
         />
       </label>
 
@@ -387,7 +388,7 @@ function InspectorRowView({ row }: { row: InspectorRow }) {
   }
 
   return (
-    <div className="rounded-xl border border-white/8 bg-[#071426] p-3">
+    <div className="rounded-xl border border-white/8 bg-hive-surface p-3">
       <div className="flex items-center justify-between gap-3">
         <dt className="text-xs font-semibold uppercase tracking-[0.12em] text-slate-300">{row.label}</dt>
         <button type="button" onClick={() => void copyRow()} className="inline-flex items-center gap-1 rounded-lg px-2 py-1 text-xs text-slate-400 hover:bg-white/5 hover:text-cyan-200" aria-label={`Copy ${row.label}`}>
@@ -408,7 +409,7 @@ function InspectorPanel() {
   const { open, payload, setOpen } = useInspector()
 
   return (
-    <aside className={`fixed inset-y-0 right-0 z-40 w-[min(360px,92vw)] border-l border-white/8 bg-[#0a192d]/98 shadow-2xl shadow-black/40 backdrop-blur-xl transition-transform lg:static lg:z-auto lg:shadow-none ${open ? 'translate-x-0' : 'translate-x-full lg:hidden'}`}>
+    <aside className={`fixed inset-y-0 right-0 z-40 w-[min(360px,92vw)] border-l border-white/8 bg-hive-panel/98 shadow-2xl shadow-black/40 backdrop-blur-xl transition-transform lg:static lg:z-auto lg:shadow-none ${open ? 'translate-x-0' : 'translate-x-full lg:hidden'}`}>
       <div className="flex h-full flex-col">
         <div className="flex h-[73px] items-center justify-between border-b border-white/8 px-5">
           <div className="min-w-0">
@@ -431,7 +432,7 @@ function InspectorPanel() {
             </dl>
           ) : null}
           {payload.json !== undefined && !payload.loading && (
-            <pre className="mt-5 overflow-x-auto whitespace-pre-wrap rounded-xl border border-white/8 bg-[#040b18] p-4 text-xs leading-5 text-slate-400">
+            <pre className="mt-5 overflow-x-auto whitespace-pre-wrap rounded-xl border border-white/8 bg-hive-code p-4 text-xs leading-5 text-slate-400">
               {JSON.stringify(payload.json, null, 2)}
             </pre>
           )}
@@ -446,7 +447,7 @@ function ContextTabs({ pathname }: { pathname: string }) {
   if (!section) return null
 
   return (
-    <nav aria-label="Section navigation" className="min-w-0 overflow-x-auto border-t border-white/6 bg-[#071426]/85 px-4 sm:px-6">
+    <nav aria-label="Section navigation" className="ui-scroll-region min-w-0 overflow-x-auto border-t border-white/6 bg-hive-surface/85 px-4 sm:px-6">
       <div className="flex h-10 min-w-max items-center gap-1">
         {section.items.map((item) => (
           <NavLink
@@ -546,9 +547,9 @@ export function AppShell() {
   }, [meta.title])
 
   return (
-    <div className="flex h-screen overflow-hidden bg-[#061126] text-slate-100">
-      <a href="#hive-main-content" className="sr-only z-[100] rounded-lg bg-cyan-300 px-3 py-2 font-semibold text-[#052035] focus:not-sr-only focus:fixed focus:left-3 focus:top-3">Skip to main content</a>
-      <aside className="hidden w-[280px] shrink-0 border-r border-white/8 bg-[#0a192d] lg:block">
+    <div className="flex h-dvh min-h-[320px] overflow-hidden bg-hive-canvas text-slate-100">
+      <a href="#hive-main-content" className="sr-only z-[100] rounded-lg bg-cyan-300 px-3 py-2 font-semibold text-hive-accent-deep focus:not-sr-only focus:fixed focus:left-3 focus:top-3">Skip to main content</a>
+      <aside className="hidden w-[280px] shrink-0 border-r border-white/8 bg-hive-panel lg:block">
         <SidebarContent />
       </aside>
 
@@ -560,7 +561,7 @@ export function AppShell() {
             role="dialog"
             aria-modal="true"
             aria-label="Navigation"
-            className="absolute inset-y-0 left-0 w-[min(320px,90vw)] border-r border-white/10 bg-[#0a192d] shadow-2xl"
+            className="absolute inset-y-0 left-0 w-[min(320px,90vw)] border-r border-white/10 bg-hive-panel shadow-2xl"
           >
             <SidebarContent closeMobile={closeMobileMenu} />
           </aside>
@@ -573,7 +574,7 @@ export function AppShell() {
             Browser offline. Stored pages remain visible, but HIVE requests will wait for the connection to return.
           </div>
         )}
-        <header className="flex h-[73px] shrink-0 items-center justify-between gap-3 border-b border-white/8 bg-[#071426]/85 px-4 backdrop-blur-xl sm:px-6">
+        <header className="flex min-h-[72px] shrink-0 items-center justify-between gap-3 border-b border-white/8 bg-hive-surface/85 px-4 py-3 backdrop-blur-xl sm:px-6">
           <div className="flex min-w-0 items-center gap-3">
             <button type="button" onClick={() => setMobileMenuOpen(true)} aria-label="Open navigation" className="rounded-lg p-2 text-slate-400 hover:bg-white/5 hover:text-white lg:hidden">
               <Menu className="h-5 w-5" />

@@ -12,7 +12,7 @@ interface EmptyStateProps {
 
 export function EmptyState({ icon, title, body, action }: EmptyStateProps) {
   return (
-    <div className="rounded-3xl border border-dashed border-white/10 bg-white/[0.018] px-5 py-10 text-center">
+    <div role="status" className="rounded-3xl border border-dashed border-white/10 bg-white/[0.018] px-5 py-10 text-center">
       {icon && <div className="mx-auto flex h-11 w-11 items-center justify-center rounded-2xl border border-white/8 bg-white/[0.035] text-slate-400">{icon}</div>}
       <h3 className="mt-4 text-base font-semibold text-slate-100">{title}</h3>
       {body && <p className="mx-auto mt-2 max-w-md text-sm leading-6 text-slate-400">{body}</p>}

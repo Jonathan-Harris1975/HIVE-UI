@@ -12,7 +12,7 @@ const sizes = {
 export function HiveLogo({ size = 'md', showWordmark = true }: HiveLogoProps) {
   return (
     <div className="flex items-center gap-3">
-      <div className={`${sizes[size]} overflow-hidden rounded-2xl border border-cyan-300/20 bg-[#061126] shadow-[0_0_30px_rgba(36,200,240,0.12)]`}>
+      <div className={`${sizes[size]} overflow-hidden rounded-2xl border border-cyan-300/20 bg-hive-canvas shadow-[0_0_30px_rgba(36,200,240,0.12)]`}>
         <img src="/hive-mark.jpg" alt="HIVE neural brain mark" className="h-full w-full object-cover" />
       </div>
       {showWordmark && (

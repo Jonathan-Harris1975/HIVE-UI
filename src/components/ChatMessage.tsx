@@ -32,7 +32,7 @@ export function ChatMessage({ message, onInspect }: ChatMessageProps) {
 
       <div className={`min-w-0 max-w-[88%] ${assistant ? 'flex-1' : ''}`}>
         <div className={assistant
-          ? 'rounded-2xl border border-white/8 bg-[#0a192d]/70 px-4 py-4 text-sm leading-7 text-slate-300 sm:px-5'
+          ? 'rounded-2xl border border-white/8 bg-hive-panel/70 px-4 py-4 text-sm leading-7 text-slate-300 sm:px-5'
           : 'rounded-2xl rounded-tr-md bg-gradient-to-br from-[#163a59] to-[#102a43] px-4 py-3 text-sm text-slate-100 shadow-lg shadow-black/10'}
         >
           {assistant ? (

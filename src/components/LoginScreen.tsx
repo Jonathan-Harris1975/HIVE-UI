@@ -23,7 +23,7 @@ export function LoginScreen() {
   }
 
   return (
-    <main className="relative flex min-h-screen items-center justify-center overflow-hidden bg-hive-canvas px-5 py-10 text-slate-100">
+    <main className="relative flex min-h-dvh items-center justify-center overflow-hidden bg-hive-canvas px-5 py-10 text-slate-100">
       <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_50%_20%,rgba(36,200,240,0.12),transparent_34%),radial-gradient(circle_at_80%_80%,rgba(69,230,176,0.08),transparent_28%)]" />
       <div className="pointer-events-none absolute inset-0 opacity-30 [background-image:linear-gradient(rgba(148,163,184,0.04)_1px,transparent_1px),linear-gradient(90deg,rgba(148,163,184,0.04)_1px,transparent_1px)] [background-size:42px_42px]" />
 
@@ -40,7 +40,7 @@ export function LoginScreen() {
           <p className="mt-2 text-xs text-slate-500">HIVE is a private AI operations console. Access is restricted to its operator.</p>
         </div>
 
-        <form onSubmit={handleSubmit} className="mt-8 space-y-4">
+        <form onSubmit={handleSubmit} aria-busy={submitting} className="mt-8 space-y-4">
           <label className="block">
             <span className="mb-2 flex items-center gap-2 text-xs font-medium uppercase tracking-[0.16em] text-slate-400">
               <KeyRound className="h-4 w-4" /> UI access key
@@ -74,7 +74,7 @@ export function LoginScreen() {
             disabled={submitting || !accessKey.trim()}
             className="group flex h-12 w-full items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-cyan-400 to-emerald-300 px-4 font-semibold text-hive-accent-deep transition hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-50"
           >
-            {submitting ? <LoaderCircle className="h-5 w-5 animate-spin" /> : <ShieldCheck className="h-5 w-5" />}
+            {submitting ? <LoaderCircle className="h-5 w-5 animate-spin" aria-hidden="true" /> : <ShieldCheck className="h-5 w-5" aria-hidden="true" />}
             Unlock console
             {!submitting && <ArrowRight className="h-4 w-4 transition group-hover:translate-x-0.5" />}
           </button>

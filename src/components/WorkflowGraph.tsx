@@ -33,7 +33,7 @@ export function WorkflowGraph({ nodes, edges = [], onInspect }: WorkflowGraphPro
             <button
               type="button"
               onClick={() => onInspect?.(node)}
-              className="group grid w-full grid-cols-[38px_minmax(0,1fr)_auto] items-start gap-3 rounded-2xl border border-white/8 bg-[#071426] p-4 text-left transition hover:border-cyan-300/20 hover:bg-[#0a192d]"
+              className="group grid w-full grid-cols-[38px_minmax(0,1fr)_auto] items-start gap-3 rounded-2xl border border-white/8 bg-hive-surface p-4 text-left transition hover:border-cyan-300/20 hover:bg-hive-panel"
             >
               <span className="flex h-9 w-9 items-center justify-center rounded-xl border border-white/8 bg-white/[0.035]">
                 <NodeIcon status={node.status} />

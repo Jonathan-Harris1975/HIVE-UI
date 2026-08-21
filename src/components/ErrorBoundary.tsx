@@ -26,8 +26,8 @@ export class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundarySt
     if (!this.state.error) return this.props.children
 
     return (
-      <main className="flex min-h-screen items-center justify-center bg-[#061126] px-5 py-10 text-slate-100">
-        <section className="w-full max-w-lg rounded-[28px] border border-rose-300/20 bg-[#0b1b31] p-7 text-center shadow-2xl shadow-black/30 sm:p-9">
+      <main className="flex min-h-dvh items-center justify-center bg-hive-canvas px-5 py-10 text-slate-100">
+        <section className="w-full max-w-lg rounded-[28px] border border-rose-300/20 bg-hive-panel-deep p-7 text-center shadow-2xl shadow-black/30 sm:p-9">
           <div className="flex justify-center"><HiveLogo size="lg" showWordmark={false} /></div>
           <div className="mx-auto mt-6 flex h-11 w-11 items-center justify-center rounded-2xl border border-rose-300/20 bg-rose-300/8 text-rose-200">
             <ShieldAlert className="h-5 w-5" />
@@ -39,7 +39,7 @@ export class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundarySt
           <button
             type="button"
             onClick={() => window.location.reload()}
-            className="mt-6 inline-flex h-11 items-center gap-2 rounded-xl bg-gradient-to-r from-cyan-400 to-emerald-300 px-5 text-sm font-semibold text-[#052035] hover:brightness-110"
+            className="mt-6 inline-flex h-11 items-center gap-2 rounded-xl bg-gradient-to-r from-cyan-400 to-emerald-300 px-5 text-sm font-semibold text-hive-accent-deep hover:brightness-110"
           >
             <RefreshCw className="h-4 w-4" /> Reload console
           </button>

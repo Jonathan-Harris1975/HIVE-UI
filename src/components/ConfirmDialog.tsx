@@ -117,14 +117,15 @@ export function ConfirmDialog({
     : 'border-cyan-300/25 bg-cyan-300/12 text-cyan-100 hover:bg-cyan-300/18 focus:ring-cyan-300/40'
 
   return createPortal(
-    <div className="fixed inset-0 z-[80] flex items-end justify-center bg-[#020817]/80 px-3 py-4 backdrop-blur-sm sm:items-center" onKeyDown={handleKeyDown}>
+    <div className="fixed inset-0 z-[80] flex items-end justify-center bg-hive-overlay/80 px-3 py-4 backdrop-blur-sm sm:items-center" onKeyDown={handleKeyDown}>
       <div
         ref={panelRef}
         role="dialog"
         aria-modal="true"
         aria-labelledby={titleId}
         aria-describedby={descriptionId}
-        className="w-full max-w-lg rounded-3xl border border-white/10 bg-[#08172b] p-5 shadow-2xl shadow-black/45 sm:p-6"
+        aria-busy={busy}
+        className="w-full max-w-lg rounded-3xl border border-white/10 bg-hive-dialog p-5 shadow-2xl shadow-black/45 sm:p-6"
       >
         <div className="flex items-start justify-between gap-4">
           <div className="flex min-w-0 gap-3">
@@ -136,12 +137,12 @@ export function ConfirmDialog({
               <p id={descriptionId} className="mt-2 text-sm leading-6 text-slate-300">{summary}</p>
             </div>
           </div>
-          <button type="button" onClick={onCancel} disabled={busy} aria-label="Cancel dialog" className="rounded-xl border border-white/8 bg-white/[0.035] p-2 text-slate-400 transition hover:text-white disabled:opacity-40">
+          <button type="button" onClick={onCancel} disabled={busy} aria-label="Cancel dialog" className="flex min-h-10 min-w-10 items-center justify-center rounded-xl border border-white/8 bg-white/[0.035] p-2 text-slate-400 transition hover:text-white disabled:opacity-40">
             <X className="h-4 w-4" />
           </button>
         </div>
 
-        <div className="mt-5 space-y-3 rounded-2xl border border-white/8 bg-[#061126]/80 p-4 text-xs leading-5 text-slate-300">
+        <div className="mt-5 space-y-3 rounded-2xl border border-white/8 bg-hive-canvas/80 p-4 text-xs leading-5 text-slate-300">
           {objectName && <p><span className="font-semibold text-slate-100">Affected object:</span> {objectName}</p>}
           {systems.length > 0 && <p><span className="font-semibold text-slate-100">Systems touched:</span> {systems.join(' · ')}</p>}
           {children}
@@ -157,7 +158,7 @@ export function ConfirmDialog({
                 placeholder={textInput.placeholder}
                 required={textInput.required}
                 rows={4}
-                className="mt-2 w-full resize-y rounded-xl border border-white/8 bg-[#061126] px-3 py-3 text-sm leading-6 text-slate-100 outline-none placeholder:text-slate-500 focus:border-cyan-300/40"
+                className="mt-2 w-full resize-y rounded-xl border border-white/8 bg-hive-canvas px-3 py-3 text-sm leading-6 text-slate-100 outline-none placeholder:text-slate-500 focus:border-cyan-300/40"
               />
             ) : (
               <input
@@ -165,14 +166,14 @@ export function ConfirmDialog({
                 onChange={(event) => textInput.onChange(event.target.value)}
                 placeholder={textInput.placeholder}
                 required={textInput.required}
-                className="mt-2 h-11 w-full rounded-xl border border-white/8 bg-[#061126] px-3 text-sm text-slate-100 outline-none placeholder:text-slate-500 focus:border-cyan-300/40"
+                className="mt-2 h-11 w-full rounded-xl border border-white/8 bg-hive-canvas px-3 text-sm text-slate-100 outline-none placeholder:text-slate-500 focus:border-cyan-300/40"
               />
             )}
           </label>
         )}
 
         {error && (
-          <p className="mt-4 rounded-xl border border-rose-400/20 bg-rose-400/8 px-3 py-2.5 text-xs text-rose-200">{error}</p>
+          <p role="alert" className="mt-4 rounded-xl border border-rose-400/20 bg-rose-400/8 px-3 py-2.5 text-xs text-rose-200">{error}</p>
         )}
 
         <div className="mt-6 flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">

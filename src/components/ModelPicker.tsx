@@ -216,8 +216,9 @@ export function ModelPicker({ models, value, onChange, loading = false }: ModelP
         onClick={() => setOpen((current) => !current)}
         aria-expanded={open}
         aria-controls={listId}
+        aria-haspopup="listbox"
         aria-label="Choose HIVE model"
-        className="flex h-8 max-w-[260px] items-center gap-2 rounded-lg border border-white/8 bg-white/[0.035] px-2.5 text-left text-xs text-slate-300 outline-none transition hover:bg-white/[0.055] focus:ring-1 focus:ring-cyan-300/50"
+        className="flex h-9 max-w-[260px] items-center gap-2 rounded-lg border border-white/8 bg-white/[0.035] px-2.5 text-left text-xs text-slate-300 outline-none transition hover:bg-white/[0.055] focus:ring-1 focus:ring-cyan-300/50"
       >
         <BrainCircuit className="h-3.5 w-3.5 shrink-0 text-cyan-300/70" />
         <span className="min-w-0 flex-1 truncate">{selected ? modelLabel(selected) : loading ? 'Loading models…' : 'Auto route'}</span>
@@ -226,13 +227,13 @@ export function ModelPicker({ models, value, onChange, loading = false }: ModelP
       </button>
 
       {open && (
-        <div className="absolute bottom-[calc(100%+8px)] left-0 z-50 w-[min(94vw,460px)] overflow-hidden rounded-2xl border border-white/10 bg-[#09182b]/98 shadow-2xl shadow-black/50 backdrop-blur-xl">
+        <div className="absolute bottom-[calc(100%+8px)] left-0 z-50 w-[min(94vw,460px)] overflow-hidden rounded-2xl border border-white/10 bg-hive-elevated/98 shadow-2xl shadow-black/50 backdrop-blur-xl">
           <div className="space-y-2 border-b border-white/8 p-3">
             <label className="text-xs font-semibold uppercase tracking-[0.16em] text-slate-400">Model type</label>
             <select
               value={category}
               onChange={(event) => setCategory(event.target.value)}
-              className="h-10 w-full rounded-xl border border-white/8 bg-[#061126] px-3 text-xs text-slate-200 outline-none focus:border-cyan-300/30"
+              className="h-10 w-full rounded-xl border border-white/8 bg-hive-canvas px-3 text-xs text-slate-200 outline-none focus:border-cyan-300/30"
               aria-label="Filter models by category"
             >
               <option value="all">All model types · {visibleModels.length}</option>
@@ -249,7 +250,7 @@ export function ModelPicker({ models, value, onChange, loading = false }: ModelP
                 onKeyDown={handleListKeyDown}
                 placeholder="Search models, providers or capabilities"
                 aria-label="Search models"
-                className="h-10 w-full rounded-xl border border-white/8 bg-[#061126] pl-9 pr-9 text-xs text-slate-200 outline-none placeholder:text-slate-400 focus:border-cyan-300/30"
+                className="h-10 w-full rounded-xl border border-white/8 bg-hive-canvas pl-9 pr-9 text-xs text-slate-200 outline-none placeholder:text-slate-400 focus:border-cyan-300/30"
               />
               {query && (
                 <button type="button" onClick={() => setQuery('')} className="absolute right-2 top-1/2 -translate-y-1/2 rounded-md p-1 text-slate-400 hover:bg-white/5 hover:text-slate-300" aria-label="Clear model search">
@@ -259,7 +260,7 @@ export function ModelPicker({ models, value, onChange, loading = false }: ModelP
             </div>
           </div>
 
-          <div ref={listRef} id={listId} role="listbox" tabIndex={0} aria-label="HIVE models" aria-activedescendant={optionId(selectableOptions[activeIndex] ?? null)} onKeyDown={handleListKeyDown} className="max-h-[min(56vh,460px)] overflow-y-auto p-2 outline-none">
+          <div ref={listRef} id={listId} role="listbox" tabIndex={0} aria-label="HIVE models" aria-activedescendant={optionId(selectableOptions[activeIndex] ?? null)} onKeyDown={handleListKeyDown} className="ui-scroll-region max-h-[min(56vh,460px)] overflow-y-auto p-2 outline-none">
             <button
               id={autoOptionId}
               type="button"
@@ -278,7 +279,7 @@ export function ModelPicker({ models, value, onChange, loading = false }: ModelP
 
             {grouped.map(({ group, models: groupModels }) => (
               <section key={group} className="mt-2" aria-label={categoryLabel(group)}>
-                <div className="sticky top-0 z-10 flex items-center justify-between bg-[#09182b]/95 px-3 py-2 text-xs font-semibold uppercase tracking-[0.15em] text-slate-400 backdrop-blur">
+                <div className="sticky top-0 z-10 flex items-center justify-between bg-hive-elevated/95 px-3 py-2 text-xs font-semibold uppercase tracking-[0.15em] text-slate-400 backdrop-blur">
                   <span className="flex items-center gap-1.5">{groupIcon(group)} {categoryLabel(group)}</span>
                   <span>{groupModels.length}</span>
                 </div>
@@ -331,7 +332,7 @@ export function ModelPicker({ models, value, onChange, loading = false }: ModelP
             ))}
 
             {grouped.length === 0 && (
-              <div className="px-4 py-10 text-center text-xs text-slate-400">No matching models found.</div>
+              <div role="status" className="px-4 py-10 text-center text-sm text-slate-400">No matching models found.</div>
             )}
           </div>
         </div>
