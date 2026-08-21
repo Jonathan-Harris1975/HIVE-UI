@@ -27,7 +27,7 @@ export class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundarySt
 
     return (
       <main className="flex min-h-dvh items-center justify-center bg-hive-canvas px-5 py-10 text-slate-100">
-        <section className="w-full max-w-lg rounded-[28px] border border-rose-300/20 bg-hive-panel-deep p-7 text-center shadow-2xl shadow-black/30 sm:p-9">
+        <section role="alert" className="w-full max-w-lg rounded-[28px] border border-rose-300/20 bg-hive-panel-deep p-7 text-center shadow-2xl shadow-black/30 sm:p-9">
           <div className="flex justify-center"><HiveLogo size="lg" showWordmark={false} /></div>
           <div className="mx-auto mt-6 flex h-11 w-11 items-center justify-center rounded-2xl border border-rose-300/20 bg-rose-300/8 text-rose-200">
             <ShieldAlert className="h-5 w-5" />

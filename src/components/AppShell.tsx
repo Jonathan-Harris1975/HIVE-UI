@@ -409,7 +409,7 @@ function InspectorPanel() {
   const { open, payload, setOpen } = useInspector()
 
   return (
-    <aside className={`fixed inset-y-0 right-0 z-40 w-[min(360px,92vw)] border-l border-white/8 bg-hive-panel/98 shadow-2xl shadow-black/40 backdrop-blur-xl transition-transform lg:static lg:z-auto lg:shadow-none ${open ? 'translate-x-0' : 'translate-x-full lg:hidden'}`}>
+    <aside aria-label="Inspector" className={`fixed inset-y-0 right-0 z-40 w-[min(360px,92vw)] border-l border-white/8 bg-hive-panel/98 shadow-2xl shadow-black/40 backdrop-blur-xl transition-transform lg:static lg:z-auto lg:shadow-none ${open ? 'translate-x-0' : 'translate-x-full lg:hidden'}`}>
       <div className="flex h-full flex-col">
         <div className="flex h-[73px] items-center justify-between border-b border-white/8 px-5">
           <div className="min-w-0">
@@ -423,7 +423,7 @@ function InspectorPanel() {
         <div className="min-h-0 flex-1 overflow-y-auto p-5">
           {payload.description && <p className="text-sm leading-6 text-slate-400">{payload.description}</p>}
           {payload.loading ? (
-            <div className="mt-5 space-y-3" aria-live="polite" aria-label="Inspector loading">
+            <div className="mt-5 space-y-3" role="status" aria-live="polite" aria-label="Inspector loading" aria-busy="true">
               {[0, 1, 2].map((item) => <div key={item} className="h-16 animate-pulse rounded-xl border border-white/8 bg-white/[0.035]" />)}
             </div>
           ) : payload.rows && payload.rows.length > 0 ? (
@@ -467,7 +467,7 @@ function HeaderActions({ health, open, toggle }: { health: ReturnType<typeof use
   return (
     <div className="flex shrink-0 items-center gap-2">
       <div className="hidden items-center gap-2 rounded-full border border-white/8 bg-white/[0.035] px-3 py-1.5 text-xs text-slate-400 sm:flex">
-        <span className={`h-2 w-2 rounded-full ${health?.ok ? 'bg-emerald-300 shadow-[0_0_12px_rgba(110,231,183,.7)]' : 'bg-amber-300'}`} />
+        <span aria-hidden="true" className={`h-2 w-2 rounded-full ${health?.ok ? 'bg-emerald-300 shadow-[0_0_12px_rgba(110,231,183,.7)]' : 'bg-amber-300'}`} />
         {health?.build ?? 'HIVE'}
       </div>
       <button
@@ -557,6 +557,7 @@ export function AppShell() {
         <div className="fixed inset-0 z-50 lg:hidden">
           <button type="button" aria-label="Close navigation" className="absolute inset-0 bg-black/65 backdrop-blur-sm" onClick={closeMobileMenu} />
           <aside
+            id="hive-mobile-navigation"
             ref={mobileDrawerRef}
             role="dialog"
             aria-modal="true"
@@ -576,7 +577,7 @@ export function AppShell() {
         )}
         <header className="flex min-h-[72px] shrink-0 items-center justify-between gap-3 border-b border-white/8 bg-hive-surface/85 px-4 py-3 backdrop-blur-xl sm:px-6">
           <div className="flex min-w-0 items-center gap-3">
-            <button type="button" onClick={() => setMobileMenuOpen(true)} aria-label="Open navigation" className="rounded-lg p-2 text-slate-400 hover:bg-white/5 hover:text-white lg:hidden">
+            <button type="button" onClick={() => setMobileMenuOpen(true)} aria-label="Open navigation" aria-expanded={mobileMenuOpen} aria-controls="hive-mobile-navigation" className="rounded-lg p-2 text-slate-400 hover:bg-white/5 hover:text-white lg:hidden">
               <Menu className="h-5 w-5" />
             </button>
             <div className="min-w-0">
