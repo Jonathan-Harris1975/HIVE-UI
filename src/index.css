@@ -5,14 +5,9 @@
   --font-sans: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
   --font-mono: "SFMono-Regular", Consolas, "Liberation Mono", monospace;
 
-  /* Centralised brand palette. These were previously repeated as literal
-     hex values across 15+ files (bg-[#061126], bg-[#071426], etc — see
-     docs/production-readiness.md for the audit that flagged this). Prefer
-     bg-hive-canvas / bg-hive-panel / bg-hive-panel-deep / bg-hive-surface /
-     bg-hive-accent-deep over new hex literals going forward; existing
-     literals are being migrated incrementally (see FilesPage/LoginScreen
-     for the converted pattern) rather than in one unverified mass edit,
-     since that migration needs visual-regression coverage to be safe. */
+  /* Centralised brand palette. Core canvas/panel literals previously repeated
+     across page components are now mapped to these semantic HIVE tokens.
+     Extend this palette rather than introducing new one-off hex utilities. */
   --color-hive-canvas: #061126;
   --color-hive-panel: #0a192d;
   --color-hive-panel-deep: #0b1b31;
@@ -30,8 +25,8 @@
 }
 
 :root {
-  color: #eaf7ff;
-  background: #061126;
+  color: var(--color-hive-text);
+  background: var(--color-hive-canvas);
   font-family: var(--font-sans);
   font-synthesis: none;
   text-rendering: optimizeLegibility;
@@ -69,13 +64,21 @@ button {
   cursor: pointer;
 }
 
-button:disabled {
-  cursor: default;
+button:disabled,
+[aria-disabled="true"] {
+  cursor: not-allowed;
+}
+
+input:disabled,
+textarea:disabled,
+select:disabled {
+  cursor: not-allowed;
+  opacity: 0.65;
 }
 
 select option {
-  background: #0b1b31;
-  color: #eaf7ff;
+  background: var(--color-hive-panel-deep);
+  color: var(--color-hive-text);
 }
 
 ::selection {
