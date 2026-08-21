@@ -344,7 +344,7 @@ async function handleAuth(request: Request, env: Env, path: string, requestId: s
     const suppliedKey = await readLoginKey(request)
     const valid = suppliedKey !== null && await secureStringEqual(suppliedKey, configuredKey)
     if (!valid) {
-      let failure = { blocked: false, retryAfter: 0 }
+      let failure: { blocked: boolean; retryAfter: number }
       try { failure = await recordLoginFailure(env, request) } catch {
         return errorResponse('login_rate_limiter_unavailable', 'Login protection is temporarily unavailable.', 503, requestId)
       }
