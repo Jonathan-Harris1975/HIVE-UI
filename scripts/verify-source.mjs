@@ -39,4 +39,27 @@ for (const required of [
   if (!combined.includes(required)) throw new Error(`Worker gateway security control is missing: ${required}`)
 }
 
+
+
+const wranglerSource = await readFile('wrangler.toml', 'utf8')
+if (!/\[observability\]\s*\r?\n\s*enabled\s*=\s*true\b/.test(wranglerSource)) {
+  throw new Error('Cloudflare Workers observability must be enabled in production.')
+}
+if (!/\[observability\.logs\]\s*\r?\n\s*enabled\s*=\s*true\b/.test(wranglerSource)) {
+  throw new Error('Cloudflare Workers logs must be enabled in production.')
+}
+if (!/\[observability\.traces\]\s*\r?\n\s*enabled\s*=\s*true\b/.test(wranglerSource)) {
+  throw new Error('Cloudflare Workers traces must be enabled in production.')
+}
+
+const packageMetadata = JSON.parse(await readFile('package.json', 'utf8'))
+const bundleBudget = JSON.parse(await readFile('config/bundle-budget.json', 'utf8'))
+if (bundleBudget.policyVersion !== packageMetadata.version) {
+  throw new Error(`Bundle budget policy version (${bundleBudget.policyVersion}) must match package version (${packageMetadata.version}). Review bundle measurements when releasing.`)
+}
+const versionMatch = functionSource.match(/const UI_VERSION = '([^']+)'/)
+if (!versionMatch || versionMatch[1] !== packageMetadata.version) {
+  throw new Error(`Worker UI version (${versionMatch?.[1] || 'missing'}) must match package version (${packageMetadata.version}).`)
+}
+
 console.log('HIVE-UI source verification passed.')
