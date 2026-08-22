@@ -1,5 +1,5 @@
 > **Document status:** Production reference  
-> **Last reviewed:** 22 June 2026  
+> **Last reviewed:** 22 August 2026  
 > **Operational authority:** Current repository README, SECURITY policy and operations guide.
 
 # HIVE-UI Cloudflare Worker production checklist
@@ -70,6 +70,7 @@ Run:
 ```bash
 npm ci --no-audit --no-fund
 npm run check
+npm run check:bundle-budget
 npm audit --audit-level=high
 ```
 
@@ -82,7 +83,7 @@ Expected results:
 - ESLint passes;
 - Vite production build passes;
 - no source maps are published;
-- no browser chunk exceeds the configured gzip budget;
+- current JavaScript/CSS gzip measurements are written to `dist/bundle-metrics.json` and remain within the configured production budgets;
 - no high or critical dependency vulnerabilities are reported.
 
 ## 5. Deployment verification
@@ -100,11 +101,12 @@ Expected results:
 11. Sign out and confirm the session cookie is cleared and HIVE returns to standby when the UI session woke it.
 12. Log in again and confirm HIVE and AIMS are automatically resumed without manual Wake/Sleep controls.
 13. Log out and confirm each service is paused only if the UI session woke it; services already active for MAST must remain untouched.
-13. Confirm genuine clicks/typing/scrolling keep the session active while background polling alone does not.
-14. Confirm 30 minutes of no user interaction signs the UI out and returns UI-owned HIVE uptime to standby.
-15. Confirm `/api/v1/...` requests without the cookie return `401` with `x-hive-auth-state: session-invalid`.
-16. Confirm unknown proxy paths return `404` and do not reach Koyeb.
-17. Check one mobile-width and one desktop-width layout.
+14. Confirm genuine clicks/typing/scrolling keep the session active while background polling alone does not.
+15. Confirm 30 minutes of no user interaction signs the UI out and returns UI-owned HIVE uptime to standby.
+16. Confirm `/api/v1/...` requests without the cookie return `401` with `x-hive-auth-state: session-invalid`.
+17. Confirm unknown proxy paths return `404` and do not reach Koyeb.
+18. Check one mobile-width and one desktop-width layout.
+19. In Cloudflare Workers Observability, confirm the canary request ID appears in logs and that at least one trace is captured.
 
 ## 6. Response security checks
 
@@ -123,7 +125,7 @@ X-Robots-Tag: noindex, nofollow, noarchive, nosnippet
 API responses also include:
 
 ```text
-X-HIVE-UI-Version: 0.11.1
+X-HIVE-UI-Version: 0.12.0
 X-Request-ID: <request correlation id>
 Cache-Control: no-store, max-age=0
 ```

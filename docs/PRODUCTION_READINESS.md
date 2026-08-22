@@ -1,10 +1,10 @@
 > **Document status:** Production reference  
-> **Last reviewed:** 5 July 2026  
+> **Last reviewed:** 22 August 2026  
 > **Operational authority:** Current repository README, SECURITY policy and operations guide.
 
 # HIVE-UI production-readiness record
 
-**Current UI marker:** `0.10.11` / `a11y-hardening-pass`.
+**Current UI marker:** `0.12.0`.
 
 ## Security boundary
 
@@ -27,9 +27,9 @@
 - HSTS, COOP, CORP, anti-framing, no-sniff and no-index headers are present.
 - Production source maps are prohibited.
 - Browser bundles are scanned for backend/UI secret patterns.
-- JavaScript chunks and total gzip output are constrained by build budgets.
+- JavaScript and CSS gzip output are measured from every production build, written to `dist/bundle-metrics.json`, surfaced in the GitHub Actions step summary and constrained by reviewed hard budgets in `config/bundle-budget.json`.
 - The npm lockfile is restricted to the public HTTPS npm registry.
-- CI performs TypeScript, ESLint, security tests, production build, dist verification and dependency audit.
+- CI performs TypeScript, ESLint, security tests, production build, dist verification, measured bundle-budget enforcement and dependency audit.
 - Dependabot checks npm dependencies weekly.
 
 ## Operational behaviour
@@ -48,3 +48,9 @@
 - Public indexing, analytics trackers or third-party browser telemetry.
 
 These are not required for the current single-owner private console. Cloudflare Access would be the natural next security layer if HIVE-UI later gains multiple users.
+
+## August 2026 release-governance updates
+
+- Cloudflare Workers observability is explicitly enabled, with logs and traces retained as separate explicit controls.
+- `scripts/verify-source.mjs` fails if observability is disabled or the Worker `UI_VERSION` drifts from `package.json`.
+- The obsolete v0.7.0 bundle measurement is no longer treated as a current baseline. CI now emits the actual bundle sizes for every build, creating reviewable evidence for future budget ratcheting.
