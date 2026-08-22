@@ -68,29 +68,12 @@ export async function secureStringEqual(left: string, right: string): Promise<bo
   return constantTimeEqual(leftDigest, rightDigest)
 }
 
-export async function resolveSessionSigningSecret(configuredSecret: string | undefined, accessKey: string | undefined): Promise<string> {
-  const explicit = configuredSecret?.trim() ?? ''
-  if (explicit) return explicit
-
-  const legacyAccessKey = accessKey?.trim() ?? ''
-  if (!legacyAccessKey) return ''
-
-  // Backwards-compatible key separation for deployments that pre-date the
-  // dedicated session secret. The access key itself is never used directly as
-  // an HMAC signing key, and setting HIVE_UI_SESSION_SECRET still takes priority.
-  return base64UrlEncode(await hmac(legacyAccessKey, 'hive-ui/session-signing/v1'))
+export async function resolveSessionSigningSecret(configuredSecret: string | undefined): Promise<string> {
+  return configuredSecret?.trim() ?? ''
 }
 
-export async function resolveCommsHandoffSecret(configuredSecret: string | undefined, accessKey: string | undefined): Promise<string> {
-  const explicit = configuredSecret?.trim() ?? ''
-  if (explicit) return explicit
-
-  const legacyAccessKey = accessKey?.trim() ?? ''
-  if (!legacyAccessKey) return ''
-
-  // A separate derived subkey preserves existing deployments without making
-  // the UI access credential itself a communications signing key.
-  return base64UrlEncode(await hmac(legacyAccessKey, 'hive-ui/comms-handoff/v1'))
+export async function resolveCommsHandoffSecret(configuredSecret: string | undefined): Promise<string> {
+  return configuredSecret?.trim() ?? ''
 }
 
 export function parseIdleTimeout(raw: string | undefined): number {

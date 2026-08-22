@@ -310,7 +310,7 @@ async function releaseSessionServices(env: Env, session: SessionPayload | null, 
 
 async function handleAuth(request: Request, env: Env, path: string, requestId: string): Promise<Response> {
   const configuredKey = env.HIVE_UI_ACCESS_KEY?.trim() ?? ''
-  const sessionSecret = await resolveSessionSigningSecret(env.HIVE_UI_SESSION_SECRET, configuredKey)
+  const sessionSecret = await resolveSessionSigningSecret(env.HIVE_UI_SESSION_SECRET)
 
   if (path === 'auth/login') {
     if (!configuredKey) {
@@ -488,7 +488,7 @@ async function handleCommsHandoff(request: Request, env: Env, requestId: string)
   if (request.method !== 'GET') return errorResponse('method_not_allowed', 'Use GET to open the Communications Interface.', 405, requestId, { allow: 'GET' })
   if (!isSameOriginRequest(request)) return errorResponse('cross_origin_denied', 'Cross-origin handoff requests are not allowed.', 403, requestId)
 
-  const sessionSecret = await resolveSessionSigningSecret(env.HIVE_UI_SESSION_SECRET, env.HIVE_UI_ACCESS_KEY)
+  const sessionSecret = await resolveSessionSigningSecret(env.HIVE_UI_SESSION_SECRET)
   if (!sessionSecret) return errorResponse('ui_session_secret_not_configured', 'HIVE UI session signing is not configured.', 503, requestId)
   const session = await readSession(request, sessionSecret)
   if (!session) {
@@ -498,7 +498,7 @@ async function handleCommsHandoff(request: Request, env: Env, requestId: string)
     })
   }
 
-  const secret = await resolveCommsHandoffSecret(env.HIVE_COMMS_HANDOFF_SECRET, env.HIVE_UI_ACCESS_KEY)
+  const secret = await resolveCommsHandoffSecret(env.HIVE_COMMS_HANDOFF_SECRET)
   if (!secret) return errorResponse('comms_handoff_not_configured', 'Communications Interface handoff is not configured.', 503, requestId)
 
   const actor = env.HIVE_COMMS_ACTOR?.trim() || 'hive-owner'
@@ -549,7 +549,7 @@ async function handleCommsIdentity(request: Request, env: Env, requestId: string
   if (!token || token === authorization) {
     return errorResponse('comms_handoff_invalid', 'Communications handoff token is missing or invalid.', 401, requestId)
   }
-  const secret = await resolveCommsHandoffSecret(env.HIVE_COMMS_HANDOFF_SECRET, env.HIVE_UI_ACCESS_KEY)
+  const secret = await resolveCommsHandoffSecret(env.HIVE_COMMS_HANDOFF_SECRET)
   if (!secret) {
     return errorResponse('comms_handoff_not_configured', 'Communications Interface handoff is not configured.', 503, requestId)
   }
@@ -600,7 +600,7 @@ async function handleApi(request: Request, env: Env, path: string): Promise<Resp
     return errorResponse('cross_origin_denied', 'Cross-origin API requests are not allowed.', 403, requestId)
   }
 
-  const sessionSecret = await resolveSessionSigningSecret(env.HIVE_UI_SESSION_SECRET, env.HIVE_UI_ACCESS_KEY)
+  const sessionSecret = await resolveSessionSigningSecret(env.HIVE_UI_SESSION_SECRET)
   if (!sessionSecret) {
     return errorResponse('ui_session_secret_not_configured', 'HIVE UI session signing is not configured.', 503, requestId)
   }
