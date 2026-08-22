@@ -20,7 +20,8 @@
     "test:security": "rm -rf .security-test && tsc -p tsconfig.security-test.json && node --test scripts/security.test.mjs",
     "test:ux-contract": "node --test scripts/ux-contract.test.mjs scripts/ui-overhaul.test.mjs",
     "deploy": "npm run build && npx wrangler deploy",
-    "secret:scan": "python3 scripts/secret_scan.py"
+    "secret:scan": "python3 scripts/secret_scan.py",
+    "prebuild": "node scripts/generate-build-meta.mjs"
   },
   "dependencies": {
     "lucide-react": "^1.18.0",
