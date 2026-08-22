@@ -32,6 +32,7 @@ for (const required of [
   'proxy_path_denied',
   'x-hive-auth-state',
   'HIVE_UI_SESSION_SECRET',
+  'HIVE_COMMS_HANDOFF_SECRET',
   'LOGIN_RATE_LIMITER',
   "|| 'read_only'",
 ]) {
@@ -40,6 +41,13 @@ for (const required of [
 }
 
 
+const securitySource = await readFile('workers/gateway/security.ts', 'utf8')
+for (const forbidden of [
+  'hive-ui/session-signing/v1',
+  'hive-ui/comms-handoff/v1',
+]) {
+  if (securitySource.includes(forbidden)) throw new Error(`Worker gateway must not derive dedicated signing secrets from the login access key: ${forbidden}`)
+}
 
 const wranglerSource = await readFile('wrangler.toml', 'utf8')
 if (!/\[observability\]\s*\r?\n\s*enabled\s*=\s*true\b/.test(wranglerSource)) {

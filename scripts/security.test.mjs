@@ -20,24 +20,16 @@ test('access-key comparison accepts exact values and rejects different values', 
   assert.equal(await secureStringEqual('', 'x'), false)
 })
 
-test('session signing keeps legacy deployments working without reusing the access key directly', async () => {
-  const accessKey = 'legacy-ui-access-key-with-enough-entropy'
-  const derived = await resolveSessionSigningSecret(undefined, accessKey)
-  assert.ok(derived)
-  assert.notEqual(derived, accessKey)
-  assert.equal(derived, await resolveSessionSigningSecret('', accessKey))
-  assert.notEqual(derived, await resolveSessionSigningSecret(undefined, `${accessKey}-rotated`))
-  assert.equal(await resolveSessionSigningSecret('dedicated-session-secret', accessKey), 'dedicated-session-secret')
+test('session signing requires an independent configured secret', async () => {
+  assert.equal(await resolveSessionSigningSecret(undefined), '')
+  assert.equal(await resolveSessionSigningSecret(''), '')
+  assert.equal(await resolveSessionSigningSecret(' dedicated-session-secret '), 'dedicated-session-secret')
 })
 
-test('communications handoff keeps legacy deployments working with a distinct derived subkey', async () => {
-  const accessKey = 'legacy-ui-access-key-with-enough-entropy'
-  const sessionSecret = await resolveSessionSigningSecret(undefined, accessKey)
-  const commsSecret = await resolveCommsHandoffSecret(undefined, accessKey)
-  assert.ok(commsSecret)
-  assert.notEqual(commsSecret, accessKey)
-  assert.notEqual(commsSecret, sessionSecret)
-  assert.equal(await resolveCommsHandoffSecret('dedicated-comms-secret', accessKey), 'dedicated-comms-secret')
+test('communications handoff requires an independent configured secret', async () => {
+  assert.equal(await resolveCommsHandoffSecret(undefined), '')
+  assert.equal(await resolveCommsHandoffSecret(''), '')
+  assert.equal(await resolveCommsHandoffSecret(' dedicated-comms-secret '), 'dedicated-comms-secret')
 })
 
 test('signed sessions verify, expire and reject tampering', async () => {
