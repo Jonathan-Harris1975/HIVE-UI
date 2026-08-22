@@ -57,9 +57,17 @@ const bundleBudget = JSON.parse(await readFile('config/bundle-budget.json', 'utf
 if (bundleBudget.policyVersion !== packageMetadata.version) {
   throw new Error(`Bundle budget policy version (${bundleBudget.policyVersion}) must match package version (${packageMetadata.version}). Review bundle measurements when releasing.`)
 }
-const versionMatch = functionSource.match(/const UI_VERSION = '([^']+)'/)
-if (!versionMatch || versionMatch[1] !== packageMetadata.version) {
-  throw new Error(`Worker UI version (${versionMatch?.[1] || 'missing'}) must match package version (${packageMetadata.version}).`)
+const sharedVersionSource = await readFile('shared/version.ts', 'utf8')
+const sharedVersionMatch = sharedVersionSource.match(/HIVE_UI_VERSION\s*=\s*'([^']+)'/)
+if (!sharedVersionMatch || sharedVersionMatch[1] !== packageMetadata.version) {
+  throw new Error(`Shared UI version (${sharedVersionMatch?.[1] || 'missing'}) must match package version (${packageMetadata.version}).`)
+}
+if (!/const UI_VERSION\s*=\s*HIVE_UI_VERSION\b/.test(functionSource)) {
+  throw new Error('Worker UI version must consume the shared HIVE_UI_VERSION source.')
+}
+const browserBuildSource = await readFile('src/lib/build.ts', 'utf8')
+if (!browserBuildSource.includes("export { HIVE_UI_VERSION } from '../../shared/version'")) {
+  throw new Error('Browser UI version must consume the shared HIVE_UI_VERSION source.')
 }
 
 console.log('HIVE-UI source verification passed.')
