@@ -16,6 +16,7 @@ import {
   type SessionPayload,
 } from './security'
 import { HIVE_UI_VERSION } from '../../shared/version'
+import { HIVE_UI_BUILD_BRANCH, HIVE_UI_BUILD_SHA } from './build-meta'
 
 interface Env {
   ASSETS: Fetcher
@@ -682,8 +683,8 @@ function handleHealth(request: Request, env: Env): Response {
     status: 'healthy',
     service: 'HIVE-UI',
     version: UI_VERSION,
-    branch: env.HIVE_UI_BUILD_BRANCH ?? null,
-    commit: env.HIVE_UI_BUILD_SHA?.slice(0, 12) ?? null,
+    branch: HIVE_UI_BUILD_BRANCH !== 'development' ? HIVE_UI_BUILD_BRANCH : (env.HIVE_UI_BUILD_BRANCH ?? null),
+    commit: (HIVE_UI_BUILD_SHA !== 'development' ? HIVE_UI_BUILD_SHA : env.HIVE_UI_BUILD_SHA)?.slice(0, 12) ?? null,
     time: new Date().toISOString(),
   }), { status: 200, headers: healthHeaders() })
 }
