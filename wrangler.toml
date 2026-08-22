@@ -47,8 +47,8 @@ new_sqlite_classes = ["LoginRateLimiter"]
 # Configure these as encrypted Cloudflare Worker secrets, never in this file:
 # HIVE_ADMIN_TOKEN
 # HIVE_UI_ACCESS_KEY
-# HIVE_UI_SESSION_SECRET (optional; recommended for independent session-key rotation)
+# HIVE_UI_SESSION_SECRET (required; independent session-signing key)
 # KOYEB_TOKEN
 # KOYEB_SERVICE_ID_HIVE (normal variable in Cloudflare dashboard)
 # KOYEB_SERVICE_ID_AIMS (normal variable in Cloudflare dashboard)
-# HIVE_COMMS_HANDOFF_SECRET (optional; recommended for independent handoff-key rotation)
+# HIVE_COMMS_HANDOFF_SECRET (required; independent handoff-signing key)
