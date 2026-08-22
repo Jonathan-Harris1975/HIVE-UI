@@ -1,0 +1,7 @@
+{
+  "schemaVersion": 1,
+  "policyVersion": "0.12.0",
+  "jsGzipBudgetBytes": 327680,
+  "cssGzipBudgetBytes": 81920,
+  "policy": "Hard production ceiling. Current-build measurements are emitted by CI to dist/bundle-metrics.json and the GitHub Actions step summary; tighten after reviewed main-branch measurements, never raise silently."
+}
