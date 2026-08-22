@@ -40,7 +40,7 @@ jobs:
         run: npm audit --audit-level=high
 
       - name: Upload production bundle
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: hive-ui-dist-${{ github.sha }}
           path: dist
@@ -82,7 +82,7 @@ jobs:
 
       - name: Upload Playwright report
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: playwright-report-${{ github.sha }}
           path: playwright-report
