@@ -15,6 +15,7 @@ import {
   verifySessionToken,
   type SessionPayload,
 } from './security'
+import { HIVE_UI_VERSION } from '../../shared/version'
 
 interface Env {
   ASSETS: Fetcher
@@ -48,7 +49,7 @@ interface LoginAttempt {
   resetAt: number
 }
 
-const UI_VERSION = '0.11.1'
+const UI_VERSION = HIVE_UI_VERSION
 const LOGIN_WINDOW_MS = 10 * 60 * 1000
 const LOGIN_MAX_FAILURES = 5
 
