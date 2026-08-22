@@ -84,3 +84,78 @@ test.describe('HIVE-UI critical path', () => {
     }
   })
 })
+
+test.describe('HIVE-UI deployed gateway', () => {
+  test.skip(!usingRealDeployment, 'Requires HIVE_UI_E2E_BASE_URL pointing at the deployed Worker.')
+
+  test('real Worker login, session, HIVE proxy, communications handoff and AIMS delegation', async ({ request, baseURL }) => {
+    const accessKey = process.env.HIVE_UI_E2E_ACCESS_KEY?.trim() ?? ''
+    expect(accessKey, 'HIVE_UI_E2E_ACCESS_KEY must be configured for deployed integration').not.toBe('')
+    expect(baseURL).toBeTruthy()
+    const hiveOrigin = new URL(baseURL!).origin
+
+    const health = await request.get('/health')
+    expect(health.status()).toBe(200)
+    const healthBody = await health.json()
+    expect(healthBody.ok).toBe(true)
+    expect(String(healthBody.service).toLowerCase()).toContain('hive')
+    const expectedSha = process.env.EXPECTED_DEPLOYMENT_SHA?.trim() ?? ''
+    if (expectedSha) expect(healthBody.commit).toBe(expectedSha.slice(0, 12))
+
+    const login = await request.post('/api/auth/login', {
+      headers: { origin: hiveOrigin },
+      data: { access_key: accessKey },
+    })
+    expect(login.status()).toBe(200)
+    expect((await login.json()).authenticated).toBe(true)
+
+    try {
+      const session = await request.get('/api/auth/session', { headers: { origin: hiveOrigin } })
+      expect(session.status()).toBe(200)
+      expect((await session.json()).authenticated).toBe(true)
+
+      const backendHealth = await request.get('/api/health', { headers: { origin: hiveOrigin } })
+      expect(backendHealth.status()).toBe(200)
+      const backendHealthBody = await backendHealth.json()
+      expect(backendHealthBody.ok === true || backendHealthBody.status === 'healthy').toBe(true)
+
+      const handoff = await request.get('/api/auth/comms-handoff?format=json', { headers: { origin: hiveOrigin } })
+      expect(handoff.status()).toBe(200)
+      const handoffBody = await handoff.json()
+      const communicationsUrl = new URL(String(handoffBody.url || ''))
+      expect(communicationsUrl.protocol).toBe('https:')
+      expect(communicationsUrl.pathname).toBe('/console/')
+      const handoffToken = new URLSearchParams(communicationsUrl.hash.replace(/^#/, '')).get('handoff') || ''
+      expect(handoffToken).not.toBe('')
+
+      const identity = await request.get('/api/auth/comms-identity', {
+        headers: { origin: hiveOrigin, authorization: `Bearer ${handoffToken}` },
+      })
+      expect(identity.status()).toBe(200)
+      const identityBody = await identity.json()
+      expect(identityBody.actor).toBeTruthy()
+      expect(identityBody.role).toBeTruthy()
+
+      const aimsOrigin = communicationsUrl.origin
+      const exchange = await request.post(`${aimsOrigin}/console/api/auth/handoff`, {
+        headers: { origin: aimsOrigin, authorization: `Bearer ${handoffToken}` },
+      })
+      expect(exchange.status()).toBe(200)
+      const exchangeBody = await exchange.json()
+      expect(exchangeBody.authenticated).toBe(true)
+      expect(exchangeBody.actor).toBe(identityBody.actor)
+      expect(exchangeBody.role).toBe(identityBody.role)
+
+      const delegatedHealth = await request.get(`${aimsOrigin}/console/api/health`, {
+        headers: { origin: aimsOrigin },
+      })
+      expect(delegatedHealth.status()).toBe(200)
+      const delegatedBody = await delegatedHealth.json()
+      expect(delegatedBody.ok).toBe(true)
+      expect(delegatedBody.service).toBe('comms-hub')
+    } finally {
+      const logout = await request.post('/api/auth/logout', { headers: { origin: hiveOrigin } })
+      expect(logout.status()).toBe(200)
+    }
+  })
+})
