@@ -1,0 +1,90 @@
+name: HIVE-UI deployed integration
+
+on:
+  workflow_run:
+    workflows: ["HIVE-UI CI"]
+    types: [completed]
+  workflow_dispatch:
+    inputs:
+      expected_sha:
+        description: Exact deployed commit SHA to require
+        required: false
+        type: string
+
+permissions:
+  contents: read
+
+concurrency:
+  group: hive-ui-deployed-integration
+  cancel-in-progress: true
+
+jobs:
+  integration:
+    if: ${{ github.event_name == 'workflow_dispatch' || (github.event.workflow_run.conclusion == 'success' && github.event.workflow_run.head_branch == 'main') }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6.1.0
+        with:
+          ref: ${{ inputs.expected_sha || github.event.workflow_run.head_sha || github.sha }}
+      - uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6.5.0
+        with:
+          node-version: 22.22.0
+          cache: npm
+      - name: Install locked dependencies
+        run: npm ci --no-audit --no-fund
+      - name: Wait for the exact Worker release
+        env:
+          HIVE_UI_E2E_BASE_URL: ${{ vars.HIVE_UI_E2E_BASE_URL || 'https://hive.jonathan-harris.online' }}
+          EXPECTED_DEPLOYMENT_SHA: ${{ inputs.expected_sha || github.event.workflow_run.head_sha || github.sha }}
+        run: |
+          set -euo pipefail
+          expected="${EXPECTED_DEPLOYMENT_SHA:0:12}"
+          for attempt in $(seq 1 60); do
+            body="$(curl --fail --silent --show-error --max-time 15 "${HIVE_UI_E2E_BASE_URL%/}/health" || true)"
+            deployed="$(printf '%s' "$body" | jq -r '.commit // empty' 2>/dev/null || true)"
+            if [ "$deployed" = "$expected" ]; then
+              printf 'Exact HIVE-UI release %s is live\n' "$deployed"
+              exit 0
+            fi
+            sleep 10
+          done
+          echo "Expected HIVE-UI release $expected did not become live" >&2
+          exit 1
+      - name: Verify exact deployed Worker, authentication and upstream proxies
+        env:
+          HIVE_UI_E2E_BASE_URL: ${{ vars.HIVE_UI_E2E_BASE_URL || 'https://hive.jonathan-harris.online' }}
+          HIVE_UI_E2E_ACCESS_KEY: ${{ secrets.HIVE_UI_ACCESS_KEY }}
+          EXPECTED_DEPLOYMENT_SHA: ${{ inputs.expected_sha || github.event.workflow_run.head_sha || github.sha }}
+        run: |
+          test -n "${HIVE_UI_E2E_ACCESS_KEY:-}" || { echo "HIVE_UI_ACCESS_KEY is required" >&2; exit 1; }
+          npm run test:e2e -- --grep "HIVE-UI deployed gateway"
+      - name: Record deployed-integration attestation
+        env:
+          EXPECTED_DEPLOYMENT_SHA: ${{ inputs.expected_sha || github.event.workflow_run.head_sha || github.sha }}
+        run: |
+          printf '{"repository":"%s","sha":"%s","workflow_run":"%s","status":"deployed-integration-green"}\n' \
+            "$GITHUB_REPOSITORY" "$EXPECTED_DEPLOYMENT_SHA" "$GITHUB_RUN_ID" > deployed-integration-attestation.json
+      - name: Retain deployed-integration attestation
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: deployed-integration-attestation-${{ inputs.expected_sha || github.event.workflow_run.head_sha || github.sha }}
+          path: deployed-integration-attestation.json
+          retention-days: 90
+      - name: Trigger central ecosystem smoke
+        env:
+          ECOSYSTEM_SMOKE_DISPATCH_TOKEN: ${{ secrets.ECOSYSTEM_SMOKE_DISPATCH_TOKEN }}
+          ECOSYSTEM_SMOKE_REPOSITORY: ${{ vars.ECOSYSTEM_SMOKE_REPOSITORY }}
+          SOURCE_SHA: ${{ inputs.expected_sha || github.event.workflow_run.head_sha || github.sha }}
+        run: |
+          set -euo pipefail
+          test -n "${ECOSYSTEM_SMOKE_DISPATCH_TOKEN:-}" || { echo "ECOSYSTEM_SMOKE_DISPATCH_TOKEN is required" >&2; exit 1; }
+          target="${ECOSYSTEM_SMOKE_REPOSITORY:-${GITHUB_REPOSITORY_OWNER}/MAST}"
+          payload="$(jq -cn --arg ref main --arg repo "$GITHUB_REPOSITORY" --arg sha "$SOURCE_SHA" '{ref:$ref,inputs:{source_repository:$repo,source_sha:$sha}}')"
+          curl --fail-with-body --silent --show-error \
+            --request POST \
+            --header "Authorization: Bearer ${ECOSYSTEM_SMOKE_DISPATCH_TOKEN}" \
+            --header "Accept: application/vnd.github+json" \
+            --header "X-GitHub-Api-Version: 2022-11-28" \
+            --data "$payload" \
+            "https://api.github.com/repos/${target}/actions/workflows/ecosystem-smoke.yml/dispatches"
