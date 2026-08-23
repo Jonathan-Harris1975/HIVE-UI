@@ -4,7 +4,6 @@ import { extname, resolve } from 'node:path'
 const required = [
   'dist/index.html',
   'dist/_headers',
-  'dist/_redirects',
   'dist/favicon.ico',
   'dist/favicon.svg',
   'dist/apple-touch-icon.png',
@@ -13,6 +12,13 @@ const required = [
 ]
 
 for (const path of required) await access(resolve(path))
+
+try {
+  await access(resolve('dist/_redirects'))
+  throw new Error('Legacy Pages _redirects must not be published in the Worker-native bundle.')
+} catch (error) {
+  if (error?.code !== 'ENOENT') throw error
+}
 
 const index = await readFile(resolve('dist/index.html'), 'utf8')
 const requiredReferences = ['/favicon.ico', '/favicon.svg', '/site.webmanifest', '/apple-touch-icon.png']
