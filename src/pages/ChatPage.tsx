@@ -288,9 +288,12 @@ export function ChatPage() {
       }
       if (event.type === 'conversation') return
     }
-    if (event.event === 'token' && typeof event.content === 'string') {
-      queueToken(assistantId, event.content)
-      return
+    if (event.event === 'token') {
+      const tokenContent = typeof event.content === 'string' ? event.content : event.message
+      if (typeof tokenContent === 'string') {
+        queueToken(assistantId, tokenContent)
+        return
+      }
     }
     if (event.event === 'error') {
       flushTokenBuffer(assistantId)
