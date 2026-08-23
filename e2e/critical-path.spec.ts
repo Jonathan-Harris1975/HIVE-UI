@@ -65,7 +65,7 @@ test.describe('HIVE-UI critical path', () => {
     await page.getByRole('button', { name: /unlock console/i }).click()
 
     // --- One streamed chat turn ---
-    const chatInput = page.getByRole('textbox').first()
+    const chatInput = page.getByRole('textbox', { name: 'Message HIVE' })
     await expect(chatInput).toBeVisible({ timeout: 15_000 })
     await chatInput.fill('Hello HIVE')
     await page.keyboard.press('Enter')
