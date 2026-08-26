@@ -121,3 +121,18 @@ test('repository pages use the live HIVE catalogue and expose setup recovery', (
   assert.doesNotMatch(memory, /GOVERNED_REPOSITORIES/)
   assert.doesNotMatch(intelligence, /GOVERNED_REPOSITORIES/)
 })
+
+test('repository memory and intelligence are one durable workspace', () => {
+  const app = source('src/App.tsx')
+  const shell = source('src/components/AppShell.tsx')
+  const intelligence = source('src/pages/RepositoryIntelligencePage.tsx')
+
+  assert.match(app, /function LegacyRepositoryMemoryRedirect\(\)/)
+  assert.match(app, /Navigate to=\{`\/intelligence\$\{location\.search\}`\} replace/)
+  assert.match(shell, /Memory & Intelligence/)
+  assert.match(intelligence, /\/intelligence\/run/)
+  assert.match(intelligence, /<RepositoryMemoryPage embedded \/>/)
+  assert.match(intelligence, /Run Repository Intelligence/)
+  assert.doesNotMatch(intelligence, />Run QA</)
+  assert.doesNotMatch(intelligence, />Run review</)
+})
