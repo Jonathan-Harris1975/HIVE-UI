@@ -13,6 +13,7 @@ import { EmptyState } from '../components/EmptyState'
 import { StatusBadge } from '../components/StatusBadge'
 import { useInspector } from '../context/InspectorContext'
 import { apiFetch } from '../lib/api'
+import { MEMORY_REPOSITORIES } from '../lib/repositories'
 import type { SkillItem, SkillListResponse } from '../types/api'
 
 function itemsFrom(response: SkillListResponse): SkillItem[] {
@@ -42,7 +43,7 @@ function skillDescription(skill: SkillItem): string {
   return `${title} supports ${category.toLowerCase()} using governed HIVE skill metadata.`
 }
 
-const KNOWN_REPOS = ['AIMS', 'HIVE', 'HIVE-UI', 'RAMS', 'Website', 'Shared']
+const KNOWN_REPOS = MEMORY_REPOSITORIES
 const KNOWN_RISKS = ['low', 'medium', 'high']
 
 function validParam(value: string | null, allowed: readonly string[]): string {

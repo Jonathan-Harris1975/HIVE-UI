@@ -8,7 +8,6 @@ import {
   Minus,
   Plus,
   RefreshCcw,
-  Sparkles,
   Trash2,
   Upload,
 } from 'lucide-react'
@@ -20,7 +19,6 @@ import { useInspector } from '../context/InspectorContext'
 import { apiFetch } from '../lib/api'
 import { formatBytes, formatDate } from '../lib/format'
 import type {
-  RepositoryCleanupResponse,
   RepositoryDiffResponse,
   RepositoryListResponse,
   RepositoryManifest,
@@ -76,7 +74,6 @@ export function RepositoriesPage() {
   const [reindexingId, setReindexingId] = useState<string | null>(null)
   const [pendingDelete, setPendingDelete] = useState<PendingDelete | null>(null)
   const [deleting, setDeleting] = useState(false)
-  const [cleaning, setCleaning] = useState(false)
 
   const loadRepositories = useCallback(async () => {
     setLoading(true)
@@ -193,30 +190,6 @@ export function RepositoriesPage() {
     }
   }
 
-  async function runCleanup() {
-    setCleaning(true)
-    setError(null)
-    setNotice(null)
-    try {
-      const response = await apiFetch<RepositoryCleanupResponse>('/v1/repositories/cleanup', { method: 'POST' })
-      setNotice(
-        response.removed_count > 0
-          ? `Cleaned up ${response.removed_count} idle ${response.removed_count === 1 ? 'repository' : 'repositories'}.`
-          : 'No idle repositories to clean up.',
-      )
-      await loadRepositories()
-      if (selectedId && response.removed.includes(selectedId)) {
-        setSelectedId(null)
-        setManifest(null)
-        setDiff(null)
-      }
-    } catch (caught) {
-      setError(caught instanceof Error ? caught.message : 'Cleanup failed.')
-    } finally {
-      setCleaning(false)
-    }
-  }
-
   function inspectRepository(summary: RepositorySummary) {
     setPayload({
       eyebrow: 'Repository',
@@ -246,8 +219,8 @@ export function RepositoriesPage() {
               <p className="text-xs font-semibold uppercase tracking-[0.2em] text-cyan-300/70">Repository manager</p>
               <h2 className="mt-2 text-2xl font-semibold text-white">Registered repository snapshots</h2>
               <p className="mt-2 max-w-2xl text-sm leading-6 text-slate-400">
-                Upload a zipped repository to index it for QA, learning and council review. Manifests persist in R2;
-                local working copies remain temporary and are cleaned up when idle.
+                Upload a zipped repository to index it for QA, learning and council review. Manifests and Repository
+                Memory persist across backend restarts; re-upload only when a fresh working copy is needed for diff or reindex.
               </p>
             </div>
             <div className="flex gap-2">
@@ -257,14 +230,6 @@ export function RepositoriesPage() {
                 className="flex h-10 items-center justify-center gap-2 rounded-xl border border-white/8 bg-white/[0.04] px-4 text-xs font-medium text-slate-300 hover:bg-white/[0.07]"
               >
                 <RefreshCcw className="h-4 w-4" /> Refresh
-              </button>
-              <button
-                type="button"
-                onClick={() => void runCleanup()}
-                disabled={cleaning}
-                className="flex h-10 items-center justify-center gap-2 rounded-xl border border-amber-300/20 bg-amber-300/8 px-4 text-xs font-medium text-amber-100 hover:bg-amber-300/12 disabled:opacity-50"
-              >
-                {cleaning ? <LoaderCircle className="h-4 w-4 animate-spin" /> : <Sparkles className="h-4 w-4" />} Clean up idle
               </button>
             </div>
           </div>

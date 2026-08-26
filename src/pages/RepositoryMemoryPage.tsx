@@ -18,18 +18,20 @@ import { StatusBadge } from '../components/StatusBadge'
 import { useInspector } from '../context/InspectorContext'
 import { apiFetch } from '../lib/api'
 import { formatDate } from '../lib/format'
+import { MEMORY_REPOSITORIES } from '../lib/repositories'
 import {
   REPOSITORY_MEMORY_HISTORY_FIELDS,
   REPOSITORY_MEMORY_SCALAR_FIELDS,
-  type AiSearchDiagnosticsResponse,
+  type RepositoryMemoryDiagnosticsResponse,
   type RepositoryMemoryFieldResponse,
   type RepositoryMemoryResponse,
   type RepositoryMemorySearchResponse,
 } from '../types/api'
 
-const KNOWN_REPOS = ['AIMS', 'HIVE', 'HIVE-UI', 'RAMS', 'Website', 'Shared']
+const KNOWN_REPOS = MEMORY_REPOSITORIES
 
 const FIELD_LABELS: Record<string, string> = {
+  project_manifest: 'Project manifest',
   project_dna: 'Project DNA',
   architecture_summary: 'Architecture summary',
   coding_standards: 'Coding standards',
@@ -101,7 +103,7 @@ export function RepositoryMemoryPage() {
   const [searchResults, setSearchResults] = useState<RepositoryMemorySearchResponse | null>(null)
   const [searchError, setSearchError] = useState<string | null>(null)
 
-  const [diagnostics, setDiagnostics] = useState<AiSearchDiagnosticsResponse | null>(null)
+  const [diagnostics, setDiagnostics] = useState<RepositoryMemoryDiagnosticsResponse | null>(null)
 
   const loadMemory = useCallback(async (repo: string) => {
     setLoading(true)
@@ -136,7 +138,7 @@ export function RepositoryMemoryPage() {
   }, [repositoryId, setSearchParams])
 
   useEffect(() => {
-    apiFetch<AiSearchDiagnosticsResponse>('/v1/repository-memory/ai-search/diagnostics')
+    apiFetch<RepositoryMemoryDiagnosticsResponse>('/v1/repository-memory/diagnostics')
       .then(setDiagnostics)
       .catch(() => setDiagnostics(null))
   }, [])
@@ -264,6 +266,9 @@ export function RepositoryMemoryPage() {
     () => REPOSITORY_MEMORY_HISTORY_FIELDS.reduce((sum, field) => sum + historyItems(memory[field]).length, 0),
     [memory],
   )
+  const persistenceDiagnostics = diagnostics?.persistence
+  const aiDiagnostics = diagnostics?.ai_search
+  const persistenceReady = persistenceDiagnostics?.ok === true && persistenceDiagnostics?.schema_ready === true
 
   return (
     <div className="h-full overflow-y-auto p-4 sm:p-6 lg:p-8">
@@ -324,32 +329,51 @@ export function RepositoryMemoryPage() {
             <span className="rounded-full border border-white/10 px-2.5 py-1">Repository: <span className="text-slate-200">{repositoryId}</span></span>
             <span className="rounded-full border border-cyan-300/15 bg-cyan-300/7 px-2.5 py-1 text-cyan-100">{scalarCount}/{REPOSITORY_MEMORY_SCALAR_FIELDS.length} scalar fields set</span>
             <span className="rounded-full border border-emerald-300/15 bg-emerald-300/7 px-2.5 py-1 text-emerald-100">{historyCount} history entries</span>
-            {diagnostics && (
+            {persistenceDiagnostics && (
               <>
-                <StatusBadge status={diagnostics.configured ? diagnostics.status || 'ok' : 'not_configured'} compact />
-                {typeof diagnostics.instance_count === 'number' && (
+                <StatusBadge status={persistenceReady ? 'ready' : 'not_ready'} compact />
+                <span className={`rounded-full border px-2.5 py-1 ${
+                  persistenceReady
+                    ? 'border-emerald-300/15 bg-emerald-300/7 text-emerald-100'
+                    : 'border-rose-300/20 bg-rose-300/8 text-rose-200'
+                }`}>
+                  D1 Memory: {persistenceReady ? 'ready' : 'unavailable'}
+                </span>
+              </>
+            )}
+            {aiDiagnostics && (
+              <>
+                <StatusBadge status={aiDiagnostics.configured ? aiDiagnostics.status || 'ok' : 'not_configured'} compact />
+                {typeof aiDiagnostics.instance_count === 'number' && (
                   <span className="rounded-full border border-cyan-300/15 bg-cyan-300/7 px-2.5 py-1 text-cyan-100">
-                    AI Search: {diagnostics.active_instance_count ?? diagnostics.instance_count}/{diagnostics.instance_count} active
+                    AI Search: {aiDiagnostics.active_instance_count ?? aiDiagnostics.instance_count}/{aiDiagnostics.instance_count} active
                   </span>
                 )}
-                {(diagnostics.paused_instance_count ?? 0) > 0 && (
+                {(aiDiagnostics.paused_instance_count ?? 0) > 0 && (
                   <span className="rounded-full border border-amber-300/20 bg-amber-300/8 px-2.5 py-1 text-amber-100">
-                    {diagnostics.paused_instance_count} paused
+                    {aiDiagnostics.paused_instance_count} paused
                   </span>
                 )}
-                {(diagnostics.indexing_error_count ?? 0) > 0 && (
+                {(aiDiagnostics.indexing_error_count ?? 0) > 0 && (
                   <span className="rounded-full border border-rose-300/20 bg-rose-300/8 px-2.5 py-1 text-rose-200">
-                    {diagnostics.indexing_error_count} indexing error{diagnostics.indexing_error_count === 1 ? '' : 's'}
+                    {aiDiagnostics.indexing_error_count} indexing error{aiDiagnostics.indexing_error_count === 1 ? '' : 's'}
                   </span>
                 )}
-                {(diagnostics.stats_failure_count ?? 0) > 0 && (
+                {(aiDiagnostics.stats_failure_count ?? 0) > 0 && (
                   <span className="rounded-full border border-amber-300/20 bg-amber-300/8 px-2.5 py-1 text-amber-100">
-                    {diagnostics.stats_failure_count} stats unverified
+                    {aiDiagnostics.stats_failure_count} stats unverified
                   </span>
                 )}
               </>
             )}
           </div>
+
+          {persistenceDiagnostics && !persistenceReady && (
+            <div role="alert" className="mt-4 rounded-xl border border-rose-400/20 bg-rose-400/8 px-4 py-3 text-xs leading-5 text-rose-200">
+              Repository Memory persistence is not ready. HIVE could reach neither a usable D1 metadata schema nor a
+              healthy persistence path. Saves and searches are blocked until D1 is restored.
+            </div>
+          )}
 
           <form onSubmit={runSearch} className="mt-5 flex gap-2 border-t border-white/8 pt-5">
             <label className="relative flex-1">

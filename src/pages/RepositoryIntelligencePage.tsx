@@ -22,6 +22,7 @@ import { EmptyState } from '../components/EmptyState'
 import { StatusBadge } from '../components/StatusBadge'
 import { apiFetch } from '../lib/api'
 import { formatDate } from '../lib/format'
+import { MEMORY_REPOSITORIES } from '../lib/repositories'
 import { MODEL_REGISTRY_CATEGORIES } from '../types/api'
 import type {
   RepositoryCouncilHistoryResponse,
@@ -31,7 +32,7 @@ import type {
   RepositoryQaReport,
 } from '../types/api'
 
-const KNOWN_REPOS = ['AIMS', 'HIVE', 'HIVE-UI', 'MAST', 'RAMS', 'Website', 'Shared']
+const KNOWN_REPOS = MEMORY_REPOSITORIES
 
 function scorePct(score: number): number {
   return Math.round(Math.max(0, Math.min(1, score)) * 100)

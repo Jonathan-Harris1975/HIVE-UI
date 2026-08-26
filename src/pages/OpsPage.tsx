@@ -22,6 +22,7 @@ import { useAuth } from '../context/AuthContext'
 import { useInspector } from '../context/InspectorContext'
 import { apiFetch } from '../lib/api'
 import { formatDate } from '../lib/format'
+import { GOVERNED_REPOSITORIES } from '../lib/repositories'
 import type {
   ExecutionPreviewResponse,
   ExecutionReviewItem,
@@ -673,7 +674,7 @@ export function OpsPage() {
               <div className="mt-4 grid gap-3 sm:grid-cols-2 xl:grid-cols-1">
                 <label className="text-xs font-medium text-slate-400">Repository
                   <select value={repo} onChange={(event) => setRepo(event.target.value)} className="mt-2 h-10 w-full rounded-xl border border-white/8 bg-hive-surface px-3 text-sm text-slate-300 outline-none">
-                    {['HIVE', 'AIMS', 'RAMS', 'Website'].map((value) => <option key={value}>{value}</option>)}
+                    {GOVERNED_REPOSITORIES.map((value) => <option key={value}>{value}</option>)}
                   </select>
                 </label>
                 <label className="text-xs font-medium text-slate-400">Template
