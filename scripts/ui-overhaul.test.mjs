@@ -62,3 +62,32 @@ test('chat and operational cards expose native and announced interaction semanti
   assert.match(communications, /role="status"/)
   assert.match(files, /aria-label=\{loadingSkills \? "Searching skills" : "Search skills"\}/)
 })
+
+
+test('chat mobile controls remain reachable and reset cleanly', () => {
+  const chat = source('src/pages/ChatPage.tsx')
+  const shell = source('src/components/AppShell.tsx')
+  const skills = source('src/pages/SkillsPage.tsx')
+  const css = source('src/index.css')
+  assert.match(chat, /chat-empty-state/)
+  assert.match(css, /\.chat-empty-state \{ justify-content: safe center; \}/)
+  assert.match(chat, /aria-label="Send message"/)
+  assert.match(chat, /aria-label="Choose files for chat"/)
+  assert.match(chat, /aria-label=\{useSkillContext \? 'Disable shared skills' : 'Enable shared skills'\}/)
+  assert.match(chat, /hasAttachedFiles \|\| attachedSkillId \|\| error/)
+  assert.match(chat, /removeAttachedSkill/)
+  assert.match(chat, /event\.nativeEvent\.isComposing/)
+  assert.match(chat, /newConversationRequested/)
+  assert.match(shell, /navigate\('\/chat\?new=1'\)/)
+  assert.match(skills, /skill_id: skillId/)
+  assert.match(skills, /skill_title: title/)
+})
+
+test('model picker escapes composer clipping with a viewport-positioned portal', () => {
+  const picker = source('src/components/ModelPicker.tsx')
+  assert.match(picker, /createPortal/)
+  assert.match(picker, /getBoundingClientRect\(\)/)
+  assert.match(picker, /window\.visualViewport/)
+  assert.match(picker, /className="fixed z-\[80\]/)
+  assert.match(picker, /popupRef\.current\?\.contains/)
+})
