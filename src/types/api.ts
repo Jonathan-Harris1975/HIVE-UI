@@ -530,6 +530,7 @@ export interface R2LanesResponse {
 }
 
 export const REPOSITORY_MEMORY_SCALAR_FIELDS = [
+  'project_manifest',
   'project_dna',
   'architecture_summary',
   'coding_standards',
@@ -616,6 +617,24 @@ export interface AiSearchDiagnosticsResponse {
   reason?: string | null
   error?: string
   [key: string]: unknown
+}
+
+export interface RepositoryMemoryPersistenceDiagnostics {
+  ok?: boolean
+  enabled?: boolean
+  schema_ready?: boolean
+  database_name?: string | null
+  probe?: Record<string, unknown>
+  table_counts?: Record<string, unknown>
+  error?: string
+  message?: string
+  [key: string]: unknown
+}
+
+export interface RepositoryMemoryDiagnosticsResponse {
+  ok?: boolean
+  persistence?: RepositoryMemoryPersistenceDiagnostics
+  ai_search?: AiSearchDiagnosticsResponse
 }
 
 export const MODEL_REGISTRY_CATEGORIES = [
