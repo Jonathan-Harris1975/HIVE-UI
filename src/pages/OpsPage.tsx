@@ -227,7 +227,7 @@ function RepoHealthCard({ item, onInspect, onRefresh }: { item: RepoHealthItem; 
           </span>
           <span className="flex items-center">
             <StatusBadge
-              status={item.operational?.status || item.readiness?.status || item.liveness?.status || item.status}
+              status={item.status || item.operational?.status || item.readiness?.status || item.liveness?.status}
               variant="operational"
               compact
             />
@@ -653,9 +653,8 @@ export function OpsPage() {
               <div className="mt-5 grid gap-3 md:grid-cols-2 xl:grid-cols-4">
                 {templateEntries.map(([id, item]) => (
                   <button key={id} type="button" onClick={() => { setTemplate(id); setRepo(item.default_repo || 'HIVE'); setTab('workflow') }} className="rounded-2xl border border-white/8 bg-hive-surface p-4 text-left transition hover:border-cyan-300/20">
-                    <div className="flex items-center justify-between gap-2">
+                    <div className="flex items-center gap-2">
                       <Network className="h-4 w-4 text-emerald-300" />
-                      {item.free_tier_safe && <StatusBadge status="ready" label="Free-tier safe" compact />}
                     </div>
                     <h4 className="mt-4 text-sm font-semibold text-white">{item.label || id}</h4>
                     <p className="mt-2 text-xs leading-5 text-slate-400">{item.description || 'Workflow planning template.'}</p>
