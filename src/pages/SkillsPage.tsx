@@ -206,7 +206,12 @@ export function SkillsPage() {
     const title = skillTitle(skill, index)
     const skillId = String(skill.id || meta(skill).skill_id || title)
     const draft = `Use the shared skill ${title} (${skillId}) as a planning reference for this task: `
-    navigate(`/chat?draft=${encodeURIComponent(draft)}`)
+    const params = new URLSearchParams({
+      draft,
+      skill_id: skillId,
+      skill_title: title,
+    })
+    navigate(`/chat?${params.toString()}`)
   }
 
   return (

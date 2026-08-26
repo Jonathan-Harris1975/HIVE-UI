@@ -6,6 +6,7 @@ import {
   LoaderCircle,
   Files,
   Paperclip,
+  Plus,
   Send,
   Sparkles,
   X,
@@ -123,6 +124,7 @@ export function ChatPage() {
   const attachedSkillId = searchParams.get('skill_id')
   const attachedSkillTitle = searchParams.get('skill_title')
   const draft = searchParams.get('draft')
+  const newConversationRequested = searchParams.get('new') === '1'
   const [prompt, setPrompt] = useState('')
   const [mode, setMode] = useState<ChatMode>(hasAttachedFiles ? 'file_analysis' : 'auto')
   const [model, setModel] = useState('')
@@ -169,6 +171,22 @@ export function ChatPage() {
   }, [draft, searchParams, setSearchParams])
 
   useEffect(() => {
+    if (!newConversationRequested) return
+    newConversation()
+    setPrompt('')
+    setError(null)
+    setMode('auto')
+    setModel('')
+    setWorkflowPreset('')
+    setUseSkillContext(false)
+    setShowScrollButton(false)
+    const next = new URLSearchParams(searchParams)
+    next.delete('new')
+    setSearchParams(next, { replace: true })
+    window.setTimeout(() => textareaRef.current?.focus(), 0)
+  }, [newConversation, newConversationRequested, searchParams, setSearchParams])
+
+  useEffect(() => {
     if (hasAttachedFiles) setMode('file_analysis')
   }, [hasAttachedFiles])
 
@@ -183,11 +201,29 @@ export function ChatPage() {
     next.delete('name')
     next.delete('lane')
     next.delete('sources')
-    next.delete('skill_id')
-    next.delete('skill_title')
     setSearchParams(next, { replace: true })
     setMode('auto')
     setWorkflowPreset('')
+  }
+
+  function removeAttachedSkill() {
+    const next = new URLSearchParams(searchParams)
+    next.delete('skill_id')
+    next.delete('skill_title')
+    setSearchParams(next, { replace: true })
+  }
+
+  function startNewConversation() {
+    newConversation()
+    setPrompt('')
+    setError(null)
+    setMode('auto')
+    setModel('')
+    setWorkflowPreset('')
+    setUseSkillContext(false)
+    setShowScrollButton(false)
+    setSearchParams(new URLSearchParams(), { replace: true })
+    window.setTimeout(() => textareaRef.current?.focus(), 0)
   }
 
   function resizeTextarea() {
@@ -395,6 +431,17 @@ export function ChatPage() {
           if (event.conversation_id) completedConversationId = event.conversation_id
           handleStreamEvent(assistantMessage.id, event)
         } }, controller.signal)
+        flushTokenBuffer(assistantMessage.id)
+        setMessages((current) => current.map((message) => {
+          if (message.id !== assistantMessage.id || !message.pending) return message
+          return {
+            ...message,
+            pending: false,
+            streaming_status: null,
+            warning: message.content ? 'The stream closed before HIVE sent a completion status.' : message.warning,
+            error: message.content ? message.error : 'The stream closed before HIVE returned a response.',
+          }
+        }))
       }
       setStreaming(false)
       abortRef.current = null
@@ -433,7 +480,7 @@ export function ChatPage() {
   }
 
   function handleKeyDown(event: KeyboardEvent<HTMLTextAreaElement>) {
-    if (event.key === 'Enter' && !event.shiftKey) {
+    if (event.key === 'Enter' && !event.shiftKey && !event.nativeEvent.isComposing) {
       event.preventDefault()
       void submitMessage()
     }
@@ -464,38 +511,38 @@ export function ChatPage() {
               <LoaderCircle className="mr-2 h-5 w-5 animate-spin" /> Loading conversation
             </div>
           ) : messages.length === 0 ? (
-            <div className="flex flex-1 flex-col items-center justify-center py-12 text-center">
-              <div className="relative">
+            <div className="chat-empty-state flex flex-1 flex-col items-center justify-start py-6 text-center sm:py-8 lg:py-10">
+              <div className="relative hidden sm:block">
                 <div className="absolute inset-0 rounded-full bg-cyan-300/10 blur-3xl" />
-                <img src="/hive-mark.jpg" alt="" className="relative h-24 w-24 rounded-[28px] border border-cyan-300/15 object-cover opacity-90" />
+                <img src="/hive-mark.jpg" alt="" className="relative h-20 w-20 rounded-[24px] border border-cyan-300/15 object-cover opacity-90" />
               </div>
-              <p className="mt-7 text-xs font-semibold uppercase tracking-[0.24em] text-cyan-300/80">Shared intelligence layer</p>
-              <h2 className="mt-3 text-3xl font-semibold tracking-tight text-white">What are we solving?</h2>
-              <p className="mt-3 max-w-xl text-sm leading-6 text-slate-300">
+              <p className="mt-2 text-xs font-semibold uppercase tracking-[0.22em] text-cyan-300/80 sm:mt-5">Shared intelligence layer</p>
+              <h2 className="mt-2 text-2xl font-semibold tracking-tight text-white sm:text-3xl">What are we solving?</h2>
+              <p className="mt-2 max-w-xl text-sm leading-6 text-slate-300 sm:mt-3">
                 Auto route chooses the safest configured model policy. Select a specialist mode when you need tighter control.
               </p>
-              <div className="mt-8 grid w-full max-w-2xl gap-3 sm:grid-cols-3">
+              <div className="mt-5 grid w-full max-w-2xl gap-2.5 sm:mt-7 sm:grid-cols-3">
                 {starters.map((starter) => (
                   <button
                     key={starter.category}
                     type="button"
                     onClick={() => void submitMessage(starter.prompt)}
-                    className={`rounded-2xl border border-l-2 border-white/8 ${starter.border} bg-white/[0.025] p-4 text-left text-xs leading-5 text-slate-400 transition hover:border-cyan-300/20 hover:bg-cyan-300/[0.04] hover:text-slate-200`}
+                    className={`rounded-2xl border border-l-2 border-white/8 ${starter.border} bg-white/[0.025] p-3.5 text-left text-xs leading-5 text-slate-400 transition hover:border-cyan-300/20 hover:bg-cyan-300/[0.04] hover:text-slate-200 focus-visible:border-cyan-300/35`}
                   >
                     <span className="mb-2 flex items-center gap-1.5 text-xs font-semibold uppercase tracking-[0.16em] text-slate-300"><Sparkles className="h-3.5 w-3.5 text-cyan-300/70" /> {starter.category}</span>
                     {starter.prompt}
                   </button>
                 ))}
               </div>
-              <div className="mt-5 flex flex-wrap justify-center gap-2">
-                <button type="button" onClick={newConversation} className="inline-flex h-10 items-center gap-2 rounded-xl border border-white/10 bg-white/[0.035] px-3 text-xs font-medium text-slate-200 transition hover:bg-white/[0.06]">
-                  New conversation
+              <div className="mt-4 grid w-full max-w-sm grid-cols-3 gap-2 sm:mt-5 sm:flex sm:max-w-none sm:flex-wrap sm:justify-center">
+                <button type="button" onClick={startNewConversation} className="inline-flex h-11 items-center justify-center gap-2 rounded-xl border border-white/10 bg-white/[0.035] px-3 text-xs font-medium text-slate-200 transition hover:bg-white/[0.06]">
+                  <Plus className="h-4 w-4" aria-hidden="true" /> <span className="sm:hidden">New chat</span><span className="hidden sm:inline">New conversation</span>
                 </button>
-                <Link to="/files" className="inline-flex h-10 items-center gap-2 rounded-xl border border-cyan-300/15 bg-cyan-300/7 px-3 text-xs font-medium text-cyan-100 transition hover:bg-cyan-300/12">
-                  <Files className="h-4 w-4" /> Files
+                <Link to="/files" className="inline-flex h-11 items-center justify-center gap-2 rounded-xl border border-cyan-300/15 bg-cyan-300/7 px-3 text-xs font-medium text-cyan-100 transition hover:bg-cyan-300/12">
+                  <Files className="h-4 w-4" aria-hidden="true" /> Files
                 </Link>
-                <Link to="/skills" className="inline-flex h-10 items-center gap-2 rounded-xl border border-violet-300/15 bg-violet-300/7 px-3 text-xs font-medium text-violet-100 transition hover:bg-violet-300/12">
-                  <BrainCircuit className="h-4 w-4" /> Skills
+                <Link to="/skills" className="inline-flex h-11 items-center justify-center gap-2 rounded-xl border border-violet-300/15 bg-violet-300/7 px-3 text-xs font-medium text-violet-100 transition hover:bg-violet-300/12">
+                  <BrainCircuit className="h-4 w-4" aria-hidden="true" /> Skills
                 </Link>
               </div>
             </div>
@@ -511,14 +558,14 @@ export function ChatPage() {
       </div>
 
       {showScrollButton && (
-        <button type="button" onClick={scrollToLatest} className="absolute bottom-[126px] left-1/2 z-20 flex -translate-x-1/2 items-center gap-2 rounded-full border border-white/10 bg-hive-panel-deep/95 px-3 py-2 text-xs text-slate-300 shadow-xl shadow-black/30 backdrop-blur hover:border-cyan-300/25 hover:text-cyan-100">
+        <button type="button" onClick={scrollToLatest} className="absolute bottom-[112px] left-1/2 z-20 flex sm:bottom-[126px] -translate-x-1/2 items-center gap-2 rounded-full border border-white/10 bg-hive-panel-deep/95 px-3 py-2 text-xs text-slate-300 shadow-xl shadow-black/30 backdrop-blur hover:border-cyan-300/25 hover:text-cyan-100">
           <ArrowDown className="h-3.5 w-3.5" /> Latest message
         </button>
       )}
 
-      <div className="shrink-0 border-t border-white/8 bg-hive-surface/95 px-3 pb-[max(12px,env(safe-area-inset-bottom))] pt-3 backdrop-blur-xl sm:px-6">
+      <div className="shrink-0 border-t border-white/8 bg-hive-surface/95 px-3 pb-[max(8px,env(safe-area-inset-bottom))] pt-2 backdrop-blur-xl sm:px-6 sm:pb-[max(12px,env(safe-area-inset-bottom))] sm:pt-3">
         <form onSubmit={handleSubmit} aria-busy={streaming} className="mx-auto max-w-4xl">
-          {(hasAttachedFiles || error) && (
+          {(hasAttachedFiles || attachedSkillId || error) && (
             <div className="mb-2 flex flex-wrap items-center gap-2">
               {hasAttachedFiles && (
                 <div className="flex max-w-full items-center gap-2 rounded-full border border-emerald-300/20 bg-emerald-300/8 px-3 py-1.5 text-xs text-emerald-100">
@@ -540,6 +587,7 @@ export function ChatPage() {
                 <div className="flex max-w-full items-center gap-2 rounded-full border border-cyan-300/20 bg-cyan-300/8 px-3 py-1.5 text-xs text-cyan-100">
                   <Sparkles className="h-3.5 w-3.5" />
                   <span className="max-w-[260px] truncate">Skill: {attachedSkillTitle || attachedSkillId}</span>
+                  <button type="button" onClick={removeAttachedSkill} aria-label="Remove attached skill" className="rounded-full p-1.5 text-cyan-100/80 hover:bg-white/10 hover:text-cyan-50"><X className="h-3.5 w-3.5" aria-hidden="true" /></button>
                 </div>
               )}
               {error && <span role="alert" className="text-xs text-rose-300">{error}</span>}
@@ -547,73 +595,85 @@ export function ChatPage() {
           )}
 
           <div className="rounded-2xl border border-white/10 bg-hive-panel-deep p-2 shadow-2xl shadow-black/20 transition focus-within:border-cyan-300/30 focus-within:ring-4 focus-within:ring-cyan-300/[0.04]">
-            <textarea
-              ref={textareaRef}
-              rows={1}
-              value={prompt}
-              onChange={(event) => { setPrompt(event.target.value); resizeTextarea() }}
-              onKeyDown={handleKeyDown}
-              placeholder={hasAttachedFiles ? 'Ask about the attached files…' : 'Message HIVE…'}
-              aria-label={hasAttachedFiles ? 'Ask about the attached files' : 'Message HIVE'}
-              className="block min-h-12 max-h-[180px] w-full resize-none bg-transparent px-3 py-3 text-sm leading-6 text-white outline-none placeholder:text-slate-400"
-            />
-            <div className="flex flex-wrap items-center justify-between gap-2 border-t border-white/6 px-1 pt-2">
-              <div className="flex min-w-0 flex-wrap items-center gap-1.5">
-                <label className="relative">
-                  <select
-                    value={mode}
-                    aria-label="Chat mode"
-                    onChange={(event) => setMode(event.target.value as ChatMode)}
-                    className="h-8 appearance-none rounded-lg border border-white/8 bg-white/[0.035] pl-3 pr-8 text-xs text-slate-300 outline-none hover:bg-white/[0.055]"
-                  >
-                    {modeOptions.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}
-                  </select>
-                  <ChevronDown className="pointer-events-none absolute right-2 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-slate-400" />
-                </label>
-                <ModelPicker models={models} value={model} onChange={setModel} loading={modelsLoading} />
-                {!hasAttachedFiles && (
-                  <button
-                    type="button"
-                    onClick={() => setUseSkillContext((value) => !value)}
-                    className={`h-8 rounded-lg border px-3 text-xs font-medium transition ${useSkillContext ? 'border-cyan-300/30 bg-cyan-300/10 text-cyan-100' : 'border-white/8 bg-white/[0.035] text-slate-400 hover:bg-white/[0.055] hover:text-slate-200'}`}
-                    aria-pressed={useSkillContext}
-                    title="Use retrieved HIVE skills for this message. Off keeps ordinary chat fast."
-                  >
-                    Skills {useSkillContext ? 'on' : 'off'}
-                  </button>
-                )}
-                {hasAttachedFiles && workflowPresets.length > 0 && (
-                  <label className="relative max-w-[210px]">
-                    <select
-                      value={workflowPreset}
-                      aria-label="Workflow preset"
-                      onChange={(event) => setWorkflowPreset(event.target.value)}
-                      className="h-8 w-full appearance-none truncate rounded-lg border border-white/8 bg-white/[0.035] pl-3 pr-8 text-xs text-slate-300 outline-none hover:bg-white/[0.055]"
-                    >
-                      <option value="">No workflow preset</option>
-                      {workflowPresets.map((item) => <option key={String(item.name)} value={String(item.name)}>{item.label || item.name}</option>)}
-                    </select>
-                    <ChevronDown className="pointer-events-none absolute right-2 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-slate-400" />
-                  </label>
-                )}
-              </div>
-
+            <div className="relative">
+              <textarea
+                ref={textareaRef}
+                rows={1}
+                value={prompt}
+                onChange={(event) => { setPrompt(event.target.value); resizeTextarea() }}
+                onKeyDown={handleKeyDown}
+                placeholder={hasAttachedFiles ? 'Ask about the attached files…' : 'Message HIVE…'}
+                aria-label={hasAttachedFiles ? 'Ask about the attached files' : 'Message HIVE'}
+                className="block min-h-11 max-h-[180px] w-full resize-none bg-transparent px-3 py-2.5 pr-14 text-sm leading-6 text-white outline-none placeholder:text-slate-400"
+              />
               {streaming ? (
-                <button type="button" onClick={stopGeneration} className="flex h-9 items-center gap-2 rounded-xl border border-rose-300/20 bg-rose-300/8 px-3 text-xs font-medium text-rose-200 hover:bg-rose-300/12">
-                  <CircleStop className="h-4 w-4" /> Stop
+                <button type="button" onClick={stopGeneration} aria-label="Stop generation" title="Stop generation" className="absolute bottom-1 right-1 flex h-10 w-10 items-center justify-center rounded-xl border border-rose-300/20 bg-rose-300/8 text-rose-200 transition hover:bg-rose-300/12">
+                  <CircleStop className="h-4 w-4" aria-hidden="true" />
                 </button>
               ) : (
                 <button
                   type="submit"
                   disabled={!prompt.trim()}
-                  className="flex h-9 items-center gap-2 rounded-xl bg-gradient-to-r from-cyan-400 to-emerald-300 px-3.5 text-xs font-semibold text-hive-accent-deep transition hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-40"
+                  aria-label="Send message"
+                  title="Send message"
+                  className="absolute bottom-1 right-1 flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-r from-cyan-400 to-emerald-300 text-hive-accent-deep transition hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-40"
                 >
-                  Send <Send className="h-3.5 w-3.5" />
+                  <Send className="h-4 w-4" aria-hidden="true" />
                 </button>
               )}
             </div>
+            <div className="flex min-w-0 flex-nowrap items-center gap-1 border-t border-white/6 pt-2">
+              <label className="relative shrink-0">
+                <select
+                  value={mode}
+                  aria-label="Chat mode"
+                  title="Chat mode"
+                  onChange={(event) => setMode(event.target.value as ChatMode)}
+                  className="h-9 max-w-[90px] appearance-none rounded-lg border border-white/8 bg-white/[0.035] pl-3 pr-8 text-xs text-slate-300 outline-none hover:bg-white/[0.055] sm:max-w-none"
+                >
+                  {modeOptions.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}
+                </select>
+                <ChevronDown className="pointer-events-none absolute right-2 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-slate-400" />
+              </label>
+              <ModelPicker models={models} value={model} onChange={setModel} loading={modelsLoading} />
+              <Link
+                to="/files"
+                aria-label="Choose files for chat"
+                title="Choose files for chat"
+                className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border border-white/8 bg-white/[0.035] text-slate-400 transition hover:bg-white/[0.055] hover:text-cyan-100"
+              >
+                <Paperclip className="h-4 w-4" aria-hidden="true" />
+              </Link>
+              {!hasAttachedFiles && (
+                <button
+                  type="button"
+                  onClick={() => setUseSkillContext((value) => !value)}
+                  className={`inline-flex h-9 shrink-0 items-center justify-center gap-1.5 rounded-lg border px-2.5 text-xs font-medium transition ${useSkillContext ? 'border-cyan-300/30 bg-cyan-300/10 text-cyan-100' : 'border-white/8 bg-white/[0.035] text-slate-400 hover:bg-white/[0.055] hover:text-slate-200'}`}
+                  aria-pressed={useSkillContext}
+                  aria-label={useSkillContext ? 'Disable shared skills' : 'Enable shared skills'}
+                  title="Use retrieved HIVE skills for this message. Off keeps ordinary chat fast."
+                >
+                  <Sparkles className="h-4 w-4" aria-hidden="true" />
+                  <span className="hidden sm:inline">Skills {useSkillContext ? 'on' : 'off'}</span>
+                </button>
+              )}
+              {hasAttachedFiles && workflowPresets.length > 0 && (
+                <label className="relative w-[190px] shrink-0 sm:w-[210px]">
+                  <select
+                    value={workflowPreset}
+                    aria-label="Workflow preset"
+                    onChange={(event) => setWorkflowPreset(event.target.value)}
+                    className="h-9 w-full appearance-none truncate rounded-lg border border-white/8 bg-white/[0.035] pl-3 pr-8 text-xs text-slate-300 outline-none hover:bg-white/[0.055]"
+                  >
+                    <option value="">No workflow preset</option>
+                    {workflowPresets.map((item) => <option key={String(item.name)} value={String(item.name)}>{item.label || item.name}</option>)}
+                  </select>
+                  <ChevronDown className="pointer-events-none absolute right-2 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-slate-400" />
+                </label>
+              )}
+            </div>
           </div>
-          <p className="mt-2 text-center text-xs text-slate-400">
+          <p className="mt-2 hidden text-center text-xs text-slate-400 sm:block">
             Enter sends · Shift + Enter adds a line
             {conversationUsage.tokens > 0 && <> · {conversationUsage.tokens.toLocaleString()} tokens · {formatCost(conversationUsage.cost)}</>}
           </p>
