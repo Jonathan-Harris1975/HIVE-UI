@@ -707,15 +707,54 @@ export interface RepositorySummary {
   created_at: number
   updated_at: number
   indexed_version: number
-  /** True if this repository was rehydrated from an R2 manifest after a backend
-   * restart and has no local working copy. Reindex/diff will fail until the
-   * repository is re-uploaded. */
+  /** True if this repository has manifest metadata but no restorable source snapshot. */
   rehydrated?: boolean
+  /** Repository Memory readiness derived from persisted D1 rows. */
+  memory_status?: 'ready' | 'partial' | 'empty' | 'unavailable' | string
+  profile_ready?: boolean
+  intelligence_ready?: boolean
+  memory_ready?: boolean
+  memory_populated_fields?: string[]
+}
+
+export interface RepositoryPipelineStage {
+  ok?: boolean
+  skipped?: boolean
+  error?: string
+  reason?: string
+  [key: string]: unknown
+}
+
+export interface RepositoryPipelineResult {
+  repository_id: string
+  r2_persisted?: boolean
+  status?: 'ready' | 'ready_with_warnings' | 'setup_incomplete' | string
+  required_stages_ready?: boolean
+  failed_stages?: string[]
+  memory_seed?: RepositoryPipelineStage
+  qa?: RepositoryPipelineStage
+  council?: RepositoryPipelineStage
+  learning?: RepositoryPipelineStage
+  ai_search?: RepositoryPipelineStage
+  elapsed_ms?: number
+  [key: string]: unknown
 }
 
 export interface RepositoryManifest extends RepositorySummary {
   languages: Record<string, number>
   dependencies: RepositoryDependencyFinding[]
+}
+
+export interface RepositoryUploadResponse extends RepositoryManifest {
+  r2_persisted?: boolean
+  snapshot_persisted?: boolean
+  pipeline?: RepositoryPipelineResult
+}
+
+export interface RepositorySetupResponse {
+  repository_id: string
+  ready: boolean
+  pipeline: RepositoryPipelineResult
 }
 
 export interface RepositoryListResponse {
