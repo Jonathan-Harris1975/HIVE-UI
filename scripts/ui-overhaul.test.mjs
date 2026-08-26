@@ -22,6 +22,7 @@ test('shell keeps keyboard and mobile viewport affordances', () => {
   assert.match(shell, /role="dialog"/)
   assert.match(shell, /aria-controls="hive-mobile-navigation"/)
   assert.match(shell, /aria-label="Inspector"/)
+  assert.match(shell, /min-h-0 min-w-0 flex-1 overflow-hidden/)
 })
 
 test('core HIVE palette is expressed through theme tokens rather than repeated hex utilities', () => {
@@ -135,4 +136,29 @@ test('repository memory and intelligence are one durable workspace', () => {
   assert.match(intelligence, /Run Repository Intelligence/)
   assert.doesNotMatch(intelligence, />Run QA</)
   assert.doesNotMatch(intelligence, />Run review</)
+})
+
+test('repository workspace can safely apply and download snapshot-specific improvements', () => {
+  const intelligence = source('src/pages/RepositoryIntelligencePage.tsx')
+  const types = source('src/types/api.ts')
+
+  assert.match(intelligence, /Carry out improvements/)
+  assert.match(intelligence, /\/improvements\/run/)
+  assert.match(intelligence, /\/improvements\/latest/)
+  assert.match(intelligence, /download\/\$\{kind\}/)
+  assert.match(intelligence, /Download changed files/)
+  assert.match(intelligence, /Download updated repository/)
+  assert.match(intelligence, /repository_context\.fingerprint === selectedRepository\.fingerprint/)
+  assert.match(types, /export interface RepositoryImprovementJob/)
+})
+
+test('repository workspace prevents mobile intrinsic-width overflow', () => {
+  const intelligence = source('src/pages/RepositoryIntelligencePage.tsx')
+  const memory = source('src/pages/RepositoryMemoryPage.tsx')
+
+  assert.match(intelligence, /overflow-x-hidden/)
+  assert.match(intelligence, /sm:grid-cols-\[minmax\(0,1fr\)_auto\]/)
+  assert.match(intelligence, /w-full min-w-0 max-w-full/)
+  assert.match(memory, /overflow-x-hidden/)
+  assert.match(memory, /sm:grid-cols-\[minmax\(0,1fr\)_auto\]/)
 })
