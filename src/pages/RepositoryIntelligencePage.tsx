@@ -4,6 +4,7 @@ import {
   Brain,
   CheckCircle2,
   Copy,
+  Download,
   ChevronDown,
   ChevronUp,
   Gavel,
@@ -14,6 +15,7 @@ import {
   Sparkles,
   Star,
   Wand2,
+  Wrench,
   XCircle,
 } from 'lucide-react'
 import { useCallback, useEffect, useMemo, useState, type FormEvent } from 'react'
@@ -30,6 +32,8 @@ import type {
   RepositoryCouncilReport,
   RepositoryLearningEntryResponse,
   RepositoryIntelligenceReport,
+  RepositoryImprovementJob,
+  RepositoryImprovementLatestResponse,
   RepositoryMemoryResponse,
   RepositoryProjectDnaResponse,
   RepositoryQaReport,
@@ -64,6 +68,7 @@ function asProjectDna(value: unknown): RepositoryProjectDnaResponse | null {
 type PersistedIntelligence = {
   occurred_at?: string
   summary: RepositoryIntelligenceReport['summary']
+  repository_context?: RepositoryIntelligenceReport['repository_context']
   findings: RepositoryIntelligenceReport['findings']
   improvement_prompt: string
 }
@@ -74,6 +79,9 @@ function asPersistedIntelligence(value: unknown): PersistedIntelligence | null {
   return {
     occurred_at: typeof value.occurred_at === 'string' ? value.occurred_at : undefined,
     summary: value.summary as unknown as RepositoryIntelligenceReport['summary'],
+    repository_context: isRecord(value.repository_context)
+      ? (value.repository_context as unknown as RepositoryIntelligenceReport['repository_context'])
+      : undefined,
     findings: value.findings as RepositoryIntelligenceReport['findings'],
     improvement_prompt: value.improvement_prompt,
   }
@@ -92,6 +100,8 @@ export function RepositoryIntelligencePage() {
   const [intelligence, setIntelligence] = useState<PersistedIntelligence | null>(null)
   const [intelligenceRunning, setIntelligenceRunning] = useState(false)
   const [promptCopied, setPromptCopied] = useState(false)
+  const [improvementJob, setImprovementJob] = useState<RepositoryImprovementJob | null>(null)
+  const [improvementStarting, setImprovementStarting] = useState(false)
 
   // Raw QA/Council evidence remains visible below the consolidated report.
   const [qaReport, setQaReport] = useState<RepositoryQaReport | null>(null)
@@ -166,6 +176,17 @@ export function RepositoryIntelligencePage() {
     }
   }, [])
 
+  const loadLatestImprovement = useCallback(async (repo: string) => {
+    try {
+      const response = await apiFetch<RepositoryImprovementLatestResponse>(
+        `/v1/repositories/${encodeURIComponent(repo)}/improvements/latest`,
+      )
+      setImprovementJob(response.job ?? null)
+    } catch {
+      setImprovementJob(null)
+    }
+  }, [])
+
   useEffect(() => {
     if (!repositoryId || catalog.loading) return
     if (!catalog.repositories.some((repo) => repo.repository_id === repositoryId)) return
@@ -173,8 +194,10 @@ export function RepositoryIntelligencePage() {
     setCouncilReport(null)
     setIntelligence(null)
     setDna(null)
+    setImprovementJob(null)
     void loadCouncilHistory(repositoryId)
     void loadPersistentIntelligence(repositoryId)
+    void loadLatestImprovement(repositoryId)
     setSearchParams(
       (previous) => {
         const next = new URLSearchParams(previous)
@@ -189,8 +212,35 @@ export function RepositoryIntelligencePage() {
     catalog.repositories,
     loadCouncilHistory,
     loadPersistentIntelligence,
+    loadLatestImprovement,
     setSearchParams,
   ])
+
+
+  useEffect(() => {
+    if (!repositoryId || !improvementJob || !['accepted', 'running'].includes(improvementJob.status)) return undefined
+    let cancelled = false
+    const timer = window.setInterval(() => {
+      void apiFetch<RepositoryImprovementJob>(
+        `/v1/repositories/${encodeURIComponent(repositoryId)}/improvements/jobs/${encodeURIComponent(improvementJob.job_id)}`,
+      ).then((job) => {
+        if (cancelled) return
+        setImprovementJob(job)
+        if (job.status === 'completed') {
+          void loadPersistentIntelligence(repositoryId)
+          setNotice(`Automatic improvements completed for ${repositoryId}: ${job.change_count ?? 0} file change(s) ready to download.`)
+        } else if (job.status === 'failed') {
+          setError(job.error || 'Automatic repository improvements failed.')
+        }
+      }).catch((caught) => {
+        if (!cancelled) setError(caught instanceof Error ? caught.message : 'Improvement status could not be refreshed.')
+      })
+    }, 2500)
+    return () => {
+      cancelled = true
+      window.clearInterval(timer)
+    }
+  }, [improvementJob, repositoryId, loadPersistentIntelligence])
 
   function switchRepository(event: FormEvent) {
     event.preventDefault()
@@ -220,6 +270,7 @@ export function RepositoryIntelligencePage() {
       setIntelligence({
         occurred_at: report.occurred_at,
         summary: report.summary,
+        repository_context: report.repository_context,
         findings: report.findings,
         improvement_prompt: report.improvement_prompt,
       })
@@ -244,6 +295,29 @@ export function RepositoryIntelligencePage() {
     } catch {
       setError('The improvement prompt could not be copied to the clipboard.')
     }
+  }
+
+  async function startImprovements() {
+    setImprovementStarting(true)
+    setError(null)
+    setNotice(null)
+    try {
+      const job = await apiFetch<RepositoryImprovementJob>(
+        `/v1/repositories/${encodeURIComponent(repositoryId)}/improvements/run`,
+        { method: 'POST' },
+      )
+      setImprovementJob(job)
+      setNotice(`Automatic improvements queued for ${repositoryId}. HIVE is working on an isolated copy.`)
+    } catch (caught) {
+      setError(caught instanceof Error ? caught.message : 'Automatic repository improvements could not be started.')
+    } finally {
+      setImprovementStarting(false)
+    }
+  }
+
+  function improvementDownloadUrl(kind: 'changed_files' | 'updated_repository'): string | null {
+    if (!improvementJob || improvementJob.status !== 'completed') return null
+    return `/api/v1/repositories/${encodeURIComponent(repositoryId)}/improvements/jobs/${encodeURIComponent(improvementJob.job_id)}/download/${kind}`
   }
 
   async function refreshDna() {
@@ -351,44 +425,63 @@ export function RepositoryIntelligencePage() {
     selectedRepository && !selectedRepository.rehydrated && selectedRepository.memory_ready,
   )
   const repositoryUnavailable = Boolean(repositoryId) && !catalog.loading && !selectedRepository
+  const intelligenceCurrent = Boolean(
+    intelligence?.repository_context?.fingerprint
+      && selectedRepository?.fingerprint
+      && intelligence.repository_context.fingerprint === selectedRepository.fingerprint,
+  )
+  const hasImprovementFindings = Boolean((intelligence?.summary.finding_count ?? 0) > 0)
 
   const recentHistory = useMemo(() => councilHistory.slice(-5).reverse(), [councilHistory])
 
   return (
-    <div className="h-full overflow-y-auto p-4 sm:p-6 lg:p-8">
-      <div className="mx-auto max-w-6xl">
-        <section className="rounded-3xl border border-white/8 bg-hive-panel/75 p-5 sm:p-7">
+    <div className="h-full overflow-x-hidden overflow-y-auto p-3 sm:p-6 lg:p-8">
+      <div className="mx-auto w-full min-w-0 max-w-6xl">
+        <section className="min-w-0 overflow-hidden rounded-3xl border border-white/8 bg-hive-panel/75 p-4 sm:p-7">
           <p className="text-xs font-semibold uppercase tracking-[0.2em] text-cyan-300/70">Repository workspace</p>
-          <h2 className="mt-2 text-2xl font-semibold text-white">Memory &amp; Repository Intelligence</h2>
+          <h2 className="mt-2 break-words text-xl font-semibold text-white sm:text-2xl">Memory &amp; Repository Intelligence</h2>
           <p className="mt-2 max-w-2xl text-sm leading-6 text-slate-400">
             One governed workspace for persistent Repository Memory, QA evidence, Council scoring, consolidated findings and code-improvement instructions.
           </p>
 
-          <form onSubmit={switchRepository} className="mt-6 grid gap-2 border-t border-white/8 pt-5 sm:grid-cols-[1fr_auto]">
+          <form onSubmit={switchRepository} className="mt-6 grid min-w-0 gap-2 border-t border-white/8 pt-5 sm:grid-cols-[minmax(0,1fr)_auto]">
             <select
               value={repoInput}
               aria-label="Choose registered repository"
               onChange={(event) => setRepoInput(event.target.value)}
-              className="h-10 rounded-xl border border-white/8 bg-hive-surface px-3 text-sm text-slate-300 outline-none"
+              className="h-10 w-full min-w-0 max-w-full rounded-xl border border-white/8 bg-hive-surface px-3 text-sm text-slate-300 outline-none"
             >
               <option value="">{catalog.loading ? 'Loading repositories…' : 'Choose a registered repository…'}</option>
               {catalog.repositories.map((repo) => (
                 <option key={repo.repository_id} value={repo.repository_id}>{repo.repository_id} · {repo.source_filename}</option>
               ))}
             </select>
-            <button type="submit" disabled={!repoInput} className="flex h-10 items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-cyan-400 to-emerald-300 px-4 text-xs font-semibold text-hive-accent-deep disabled:opacity-50">
+            <button type="submit" disabled={!repoInput} className="flex h-10 w-full items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-cyan-400 to-emerald-300 px-4 text-xs font-semibold text-hive-accent-deep disabled:opacity-50 sm:w-auto">
               Load
             </button>
           </form>
-          <div className="mt-4 flex justify-end">
+          <div className="mt-4 flex flex-col gap-2 sm:flex-row sm:justify-end">
             <button
               type="button"
               onClick={() => void runIntelligence()}
               disabled={intelligenceRunning || !repositoryReady}
-              className="flex h-10 items-center gap-2 rounded-xl border border-cyan-300/20 bg-cyan-300/10 px-4 text-xs font-semibold text-cyan-100 disabled:cursor-not-allowed disabled:opacity-50"
+              className="flex min-h-10 w-full items-center justify-center gap-2 rounded-xl border border-cyan-300/20 bg-cyan-300/10 px-4 py-2 text-xs font-semibold text-cyan-100 disabled:cursor-not-allowed disabled:opacity-50 sm:w-auto"
             >
               {intelligenceRunning ? <LoaderCircle className="h-4 w-4 animate-spin" /> : <Sparkles className="h-4 w-4" />}
               Run Repository Intelligence
+            </button>
+            <button
+              type="button"
+              onClick={() => void startImprovements()}
+              disabled={improvementStarting || !repositoryReady || !intelligenceCurrent || !hasImprovementFindings || Boolean(improvementJob && ['accepted', 'running'].includes(improvementJob.status))}
+              className="flex min-h-10 w-full items-center justify-center gap-2 rounded-xl border border-emerald-300/20 bg-emerald-300/10 px-4 py-2 text-xs font-semibold text-emerald-100 disabled:cursor-not-allowed disabled:opacity-50 sm:w-auto"
+            >
+              {improvementStarting || (improvementJob && ['accepted', 'running'].includes(improvementJob.status)) ? <LoaderCircle className="h-4 w-4 animate-spin" /> : <Wrench className="h-4 w-4" />}
+              {improvementJob && ['accepted', 'running'].includes(improvementJob.status)
+                ? 'Improving repository…'
+                : intelligenceCurrent && !hasImprovementFindings
+                  ? 'No improvements required'
+                  : 'Carry out improvements'}
             </button>
           </div>
         </section>
@@ -420,11 +513,17 @@ export function RepositoryIntelligencePage() {
           </div>
         )}
 
+        {intelligence && !intelligenceCurrent && repositoryReady && (
+          <div role="alert" className="mt-4 rounded-xl border border-amber-300/20 bg-amber-300/8 px-4 py-3 text-sm text-amber-100">
+            This Intelligence report predates the repository-specific snapshot contract or belongs to an older snapshot. Run Repository Intelligence again before automatic improvements.
+          </div>
+        )}
+
         {error && <div role="alert" className="mt-4 rounded-xl border border-rose-400/20 bg-rose-400/8 px-4 py-3 text-sm text-rose-200">{error}</div>}
         {notice && <div role="status" aria-live="polite" className="mt-4 rounded-xl border border-emerald-300/20 bg-emerald-300/8 px-4 py-3 text-sm text-emerald-100">{notice}</div>}
 
         {/* Consolidated Intelligence */}
-        <section className="mt-6 rounded-3xl border border-white/8 bg-hive-panel/70 p-5">
+        <section className="mt-6 min-w-0 overflow-hidden rounded-3xl border border-white/8 bg-hive-panel/70 p-4 sm:p-5">
           <div className="flex flex-wrap items-start justify-between gap-3">
             <div>
               <h3 className="flex items-center gap-2 text-sm font-semibold text-white"><Sparkles className="h-4 w-4 text-cyan-300" /> Consolidated improvement report</h3>
@@ -456,6 +555,18 @@ export function RepositoryIntelligencePage() {
                 </div>
                 {intelligence.occurred_at && <p className="mt-1 text-xs text-slate-500">{formatDate(intelligence.occurred_at)}</p>}
               </div>
+              {intelligence.repository_context && (
+                <div className="rounded-xl border border-white/8 bg-white/[0.025] p-3">
+                  <p className="text-xs font-semibold text-slate-200">Repository snapshot used for this report</p>
+                  <div className="mt-2 grid gap-2 text-xs text-slate-400 sm:grid-cols-2">
+                    <p className="break-all"><span className="text-slate-500">Snapshot:</span> {intelligence.repository_context.source_filename}</p>
+                    <p><span className="text-slate-500">Files:</span> {intelligence.repository_context.file_count}</p>
+                    <p className="break-words"><span className="text-slate-500">Languages:</span> {Object.keys(intelligence.repository_context.languages || {}).join(', ') || 'Unknown'}</p>
+                    <p><span className="text-slate-500">Dependency manifests:</span> {intelligence.repository_context.dependency_manifests?.length ?? 0}</p>
+                  </div>
+                  <p className="mt-2 break-all font-mono text-[11px] text-slate-500">{intelligence.repository_context.fingerprint}</p>
+                </div>
+              )}
               {intelligence.findings.length === 0 ? (
                 <p className="rounded-xl border border-emerald-300/15 bg-emerald-300/[0.035] p-3 text-xs text-emerald-100">No QA warnings or sub-target Council dimensions were reported.</p>
               ) : (
@@ -468,21 +579,66 @@ export function RepositoryIntelligencePage() {
                       </div>
                       <p className="mt-1 text-xs leading-5 text-slate-400">{finding.summary}</p>
                       <p className="mt-1 text-[11px] text-slate-500">{finding.source.replace(/_/g, ' ')} · {finding.category.replace(/_/g, ' ')} · {finding.confidence}</p>
-                      {Object.keys(finding.details ?? {}).length > 0 && <pre className="mt-2 max-h-56 overflow-auto rounded-lg bg-hive-canvas p-2 font-mono text-[11px] text-slate-400">{JSON.stringify(finding.details, null, 2)}</pre>}
+                      {Object.keys(finding.details ?? {}).length > 0 && <pre className="mt-2 max-h-56 max-w-full overflow-auto rounded-lg bg-hive-canvas p-2 font-mono text-[11px] text-slate-400">{JSON.stringify(finding.details, null, 2)}</pre>}
                     </article>
                   ))}
                 </div>
               )}
               <div className="rounded-xl border border-cyan-300/15 bg-cyan-300/[0.035] p-3">
                 <p className="text-xs font-semibold text-cyan-100">Code-improvement prompt</p>
-                <pre className="mt-2 max-h-80 overflow-auto whitespace-pre-wrap font-mono text-xs leading-5 text-slate-300">{intelligence.improvement_prompt}</pre>
+                <pre className="mt-2 max-h-80 max-w-full overflow-auto whitespace-pre-wrap break-words font-mono text-xs leading-5 text-slate-300">{intelligence.improvement_prompt}</pre>
               </div>
             </div>
           )}
         </section>
 
+        {improvementJob && (
+          <section className="mt-6 min-w-0 overflow-hidden rounded-3xl border border-white/8 bg-hive-panel/70 p-4 sm:p-5">
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+              <div className="min-w-0">
+                <h3 className="flex items-center gap-2 text-sm font-semibold text-white"><Wrench className="h-4 w-4 text-emerald-300" /> Automatic improvements</h3>
+                <p className="mt-1 break-words text-xs leading-5 text-slate-500">
+                  Job {improvementJob.job_id.slice(0, 10)} · {improvementJob.stage || improvementJob.status}
+                  {improvementJob.model_used ? ` · ${improvementJob.model_used}` : ''}
+                </p>
+              </div>
+              <StatusBadge status={improvementJob.status === 'completed' ? 'ready' : improvementJob.status === 'failed' ? 'error' : 'running'} label={improvementJob.status.replace(/_/g, ' ')} compact />
+            </div>
+            {improvementJob.summary && <p className="mt-3 text-sm leading-6 text-slate-300">{improvementJob.summary}</p>}
+            {improvementJob.error && <p className="mt-3 rounded-xl border border-rose-400/20 bg-rose-400/8 p-3 text-xs leading-5 text-rose-200">{improvementJob.error}</p>}
+            {improvementJob.status === 'completed' && (
+              <div className="mt-4">
+                <div className="flex flex-wrap gap-2 text-xs text-slate-400">
+                  <span className="rounded-full border border-white/10 px-2.5 py-1">{improvementJob.change_count ?? 0} file change(s)</span>
+                  {typeof improvementJob.qa_score_after === 'number' && <span className="rounded-full border border-emerald-300/15 bg-emerald-300/7 px-2.5 py-1 text-emerald-100">Static QA after: {scorePct(improvementJob.qa_score_after)}%</span>}
+                </div>
+                <div className="mt-3 grid gap-2 sm:grid-cols-2">
+                  {improvementDownloadUrl('changed_files') && (
+                    <a href={improvementDownloadUrl('changed_files') ?? undefined} className="flex min-h-11 items-center justify-center gap-2 rounded-xl border border-cyan-300/20 bg-cyan-300/10 px-4 py-2 text-xs font-semibold text-cyan-100">
+                      <Download className="h-4 w-4" /> Download changed files
+                    </a>
+                  )}
+                  {improvementDownloadUrl('updated_repository') && (
+                    <a href={improvementDownloadUrl('updated_repository') ?? undefined} className="flex min-h-11 items-center justify-center gap-2 rounded-xl border border-emerald-300/20 bg-emerald-300/10 px-4 py-2 text-xs font-semibold text-emerald-100">
+                      <Download className="h-4 w-4" /> Download updated repository
+                    </a>
+                  )}
+                </div>
+                {improvementJob.remaining_risks && improvementJob.remaining_risks.length > 0 && (
+                  <div className="mt-3 rounded-xl border border-amber-300/15 bg-amber-300/[0.035] p-3">
+                    <p className="text-xs font-semibold text-amber-100">Remaining verification</p>
+                    <ul className="mt-1.5 list-inside list-disc space-y-1 text-xs leading-5 text-slate-300">
+                      {improvementJob.remaining_risks.map((risk, index) => <li key={index}>{risk}</li>)}
+                    </ul>
+                  </div>
+                )}
+              </div>
+            )}
+          </section>
+        )}
+
         {/* QA */}
-        <section className="mt-6 rounded-3xl border border-white/8 bg-hive-panel/70 p-5">
+        <section className="mt-6 min-w-0 overflow-hidden rounded-3xl border border-white/8 bg-hive-panel/70 p-4 sm:p-5">
           <div className="flex items-center justify-between">
             <h3 className="flex items-center gap-2 text-sm font-semibold text-white"><ShieldAlert className="h-4 w-4 text-cyan-300" /> Repository QA evidence</h3>
           </div>
@@ -546,7 +702,7 @@ export function RepositoryIntelligencePage() {
         </section>
 
         {/* Council */}
-        <section className="mt-6 rounded-3xl border border-white/8 bg-hive-panel/70 p-5">
+        <section className="mt-6 min-w-0 overflow-hidden rounded-3xl border border-white/8 bg-hive-panel/70 p-4 sm:p-5">
           <div className="flex items-center justify-between">
             <h3 className="flex items-center gap-2 text-sm font-semibold text-white"><Gavel className="h-4 w-4 text-cyan-300" /> Repository Council evidence</h3>
           </div>
@@ -615,7 +771,7 @@ export function RepositoryIntelligencePage() {
         </section>
 
         {/* Learning */}
-        <section className="mt-6 rounded-3xl border border-white/8 bg-hive-panel/70 p-5">
+        <section className="mt-6 min-w-0 overflow-hidden rounded-3xl border border-white/8 bg-hive-panel/70 p-4 sm:p-5">
           <div className="flex items-center justify-between">
             <h3 className="flex items-center gap-2 text-sm font-semibold text-white"><Brain className="h-4 w-4 text-cyan-300" /> Learning</h3>
             <button

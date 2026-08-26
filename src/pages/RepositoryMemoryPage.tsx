@@ -293,9 +293,9 @@ export function RepositoryMemoryPage({ embedded = false }: { embedded?: boolean 
   const memoryWritable = Boolean(selectedRepository && persistenceReady)
 
   return (
-    <div className={embedded ? "mt-6" : "h-full overflow-y-auto p-4 sm:p-6 lg:p-8"}>
-      <div className="mx-auto max-w-6xl">
-        <section className="rounded-3xl border border-white/8 bg-hive-panel/75 p-5 sm:p-7">
+    <div className={embedded ? "mt-6 min-w-0" : "h-full overflow-x-hidden overflow-y-auto p-3 sm:p-6 lg:p-8"}>
+      <div className="mx-auto w-full min-w-0 max-w-6xl">
+        <section className="min-w-0 overflow-hidden rounded-3xl border border-white/8 bg-hive-panel/75 p-4 sm:p-7">
           <div className="flex flex-col gap-5 lg:flex-row lg:items-end lg:justify-between">
             <div>
               <p className="text-xs font-semibold uppercase tracking-[0.2em] text-cyan-300/70">Repository memory</p>
@@ -317,12 +317,12 @@ export function RepositoryMemoryPage({ embedded = false }: { embedded?: boolean 
 
           {!embedded && (
             <>
-              <form onSubmit={switchRepository} className="mt-6 grid gap-2 border-t border-white/8 pt-5 sm:grid-cols-[1fr_auto]">
+              <form onSubmit={switchRepository} className="mt-6 grid min-w-0 gap-2 border-t border-white/8 pt-5 sm:grid-cols-[minmax(0,1fr)_auto]">
                 <select
                   value={repoInput}
                   aria-label="Choose registered repository"
                   onChange={(event) => setRepoInput(event.target.value)}
-                  className="h-10 rounded-xl border border-white/8 bg-hive-surface px-3 text-sm text-slate-300 outline-none"
+                  className="h-10 w-full min-w-0 max-w-full rounded-xl border border-white/8 bg-hive-surface px-3 text-sm text-slate-300 outline-none"
                 >
                   <option value="">{catalog.loading ? 'Loading repositories…' : 'Choose a registered repository…'}</option>
                   {catalog.repositories.map((repo) => (
@@ -415,7 +415,7 @@ export function RepositoryMemoryPage({ embedded = false }: { embedded?: boolean 
 
           {searchError && <p className="mt-3 text-xs text-rose-300">{searchError}</p>}
           {searchResults && (
-            <div className="mt-3 max-h-56 space-y-2 overflow-y-auto rounded-xl border border-white/8 bg-hive-surface/60 p-3">
+            <div className="mt-3 max-h-56 max-w-full space-y-2 overflow-auto rounded-xl border border-white/8 bg-hive-surface/60 p-3">
               {(searchResults.items ?? []).length === 0 ? (
                 <p className="text-xs text-slate-400">No matches for that query in {repositoryId}.</p>
               ) : (
