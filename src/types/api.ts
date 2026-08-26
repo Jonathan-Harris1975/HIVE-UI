@@ -838,15 +838,65 @@ export interface RepositoryIntelligenceSummary {
   headline: string
 }
 
+export interface RepositoryIntelligenceContext {
+  repository_id: string
+  source_filename: string
+  fingerprint: string
+  indexed_version: number
+  file_count: number
+  total_bytes: number
+  languages: Record<string, number>
+  dependency_manifests: Array<{ path: string; ecosystem: string; declared_count: number }>
+  top_level_entries: string[]
+  implicated_files: string[]
+}
+
 export interface RepositoryIntelligenceReport {
   repository_id: string
   occurred_at: string
   summary: RepositoryIntelligenceSummary
+  repository_context: RepositoryIntelligenceContext
   findings: RepositoryIntelligenceFinding[]
   improvement_prompt: string
   qa: RepositoryQaReport
   council: RepositoryCouncilReport
   project_dna: RepositoryProjectDnaResponse
+}
+
+
+export interface RepositoryImprovementArtifact {
+  filename: string
+  r2_key?: string | null
+  durable?: boolean
+}
+
+export interface RepositoryImprovementJob {
+  job_id: string
+  repository_id: string
+  status: 'accepted' | 'running' | 'completed' | 'failed' | string
+  stage?: string
+  ok?: boolean | null
+  created_at?: string
+  started_at?: string
+  finished_at?: string
+  source_fingerprint?: string
+  model_used?: string
+  summary?: string
+  change_count?: number
+  changed_files?: string[]
+  deleted_files?: string[]
+  remaining_risks?: string[]
+  qa_score_after?: number
+  error?: string
+  artifacts?: {
+    changed_files?: RepositoryImprovementArtifact
+    updated_repository?: RepositoryImprovementArtifact
+  }
+}
+
+export interface RepositoryImprovementLatestResponse {
+  repository_id: string
+  job: RepositoryImprovementJob | null
 }
 
 export interface RepositoryRefreshConfiguration {
