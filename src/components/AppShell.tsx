@@ -67,7 +67,7 @@ const navigation = navigationGroups.flatMap((group) => group.items)
 
 const sectionTabs = [
   { routes: ['/files', '/skills'], items: [{ to: '/files', label: 'Files' }, { to: '/skills', label: 'Skills' }] },
-  { routes: ['/repositories', '/memory', '/intelligence'], items: [{ to: '/repositories', label: 'Overview' }, { to: '/memory', label: 'Memory' }, { to: '/intelligence', label: 'Intelligence' }] },
+  { routes: ['/repositories', '/memory', '/intelligence'], items: [{ to: '/repositories', label: 'Overview' }, { to: '/intelligence', label: 'Memory & Intelligence' }] },
   { routes: ['/models', '/council'], items: [{ to: '/models', label: 'Registry' }, { to: '/council', label: 'AI Council' }] },
   { routes: ['/optimisation', '/execution-reviews', '/execution-simulation'], items: [{ to: '/optimisation', label: 'Overview' }, { to: '/execution-reviews', label: 'Reviews' }, { to: '/execution-simulation', label: 'Simulation' }] },
   { routes: ['/ops', '/integrations'], items: [{ to: '/ops', label: 'System' }, { to: '/integrations', label: 'Integrations' }] },
@@ -78,8 +78,8 @@ const pageMeta: Record<string, { title: string; subtitle: string }> = {
   '/files': { title: 'Files', subtitle: 'Authenticated files, storage and reusable skills' },
   '/skills': { title: 'Files', subtitle: 'Authenticated files, storage and reusable skills' },
   '/repositories': { title: 'Repositories', subtitle: 'Snapshots, memory, QA and repository intelligence' },
-  '/memory': { title: 'Repositories', subtitle: 'Snapshots, memory, QA and repository intelligence' },
-  '/intelligence': { title: 'Repositories', subtitle: 'Snapshots, memory, QA and repository intelligence' },
+  '/memory': { title: 'Repositories', subtitle: 'Persistent memory and consolidated repository intelligence' },
+  '/intelligence': { title: 'Repositories', subtitle: 'Persistent memory and consolidated repository intelligence' },
   '/models': { title: 'Models', subtitle: 'Ranked models, providers and evidence-based model review' },
   '/council': { title: 'Models', subtitle: 'Ranked models, providers and evidence-based model review' },
   '/optimisation': { title: 'Optimisation', subtitle: 'Decisions, reviews, simulations and reversible changes' },
