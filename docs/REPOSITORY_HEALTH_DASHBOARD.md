@@ -11,6 +11,8 @@ The Ops overview now presents two compact two-column card groups:
 
 Each repository card shows the service category, aggregate status, liveness latency, and operational status where available. The badge uses the aggregate repository status returned in `item.status`, so a degraded readiness result cannot be masked by a healthy inner operational probe. Full details remain in the existing right-hand inspector.
 
+HIVE-UI and AIMS-UI are labelled as front-end services and are probed through their public `/health` endpoints. AIMS-UI is monitored at `https://chat.jonathan-harris.online/health`.
+
 AIMS and RAMS are labelled as background APIs. HIVE reports liveness plus deeper operational/readiness results for them because a green process alone does not prove that external dependencies are usable.
 
 The repository-health request is optional within the overview load. A temporary remote health failure does not prevent the rest of Ops from rendering.
