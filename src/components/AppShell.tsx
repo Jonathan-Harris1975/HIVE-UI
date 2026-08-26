@@ -587,7 +587,7 @@ export function AppShell() {
         </header>
         <ContextTabs pathname={pathname} />
 
-        <main id="hive-main-content" className="min-h-0 flex-1 overflow-hidden" tabIndex={-1}>
+        <main id="hive-main-content" className="min-h-0 min-w-0 flex-1 overflow-hidden" tabIndex={-1}>
           <Outlet />
         </main>
       </div>
