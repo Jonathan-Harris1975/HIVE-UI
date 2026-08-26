@@ -381,7 +381,6 @@ export interface WorkflowTemplate {
   description?: string
   recommended_presets?: string[]
   default_repo?: string
-  free_tier_safe?: boolean
   [key: string]: unknown
 }
 
