@@ -22,23 +22,40 @@ import type {
   RepositoryDiffResponse,
   RepositoryListResponse,
   RepositoryManifest,
+  RepositorySetupResponse,
   RepositorySummary,
+  RepositoryUploadResponse,
 } from '../types/api'
 
 type PendingDelete = { repositoryId: string }
+type NoticeTone = 'success' | 'warning'
 
 function repositoryStatus(repo: RepositorySummary): { status: string; label: string; detail: string } {
   if (repo.rehydrated) {
     return {
       status: 'readonly',
-      label: 'Manifest stored',
-      detail: 'Persistent manifest restored from R2. Re-upload the repository only when a local working copy is needed for diff or reindex.',
+      label: 'Legacy snapshot required',
+      detail: 'The manifest exists, but this older registration has no durable source ZIP. Re-upload it once to make QA and Council restart-safe.',
+    }
+  }
+  if (repo.memory_status === 'unavailable') {
+    return {
+      status: 'error',
+      label: 'Memory unavailable',
+      detail: 'The working copy exists, but Repository Memory readiness cannot be verified in D1. Do not treat this repository as production-ready.',
+    }
+  }
+  if (repo.memory_status && !repo.memory_ready) {
+    return {
+      status: 'warning',
+      label: 'Setup incomplete',
+      detail: 'The source snapshot is available, but automatic Memory, QA or Council setup is incomplete. Use Retry setup after resolving the reported backend issue.',
     }
   }
   return {
     status: 'ready',
     label: 'Ready',
-    detail: 'Working copy is available and the repository can be inspected, diffed and reindexed.',
+    detail: 'Source snapshot, Repository Memory, QA and Council state are available. The ZIP and manifest are persisted in R2 for restart recovery.',
   }
 }
 
@@ -59,6 +76,7 @@ export function RepositoriesPage() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [notice, setNotice] = useState<string | null>(null)
+  const [noticeTone, setNoticeTone] = useState<NoticeTone>('success')
 
   const [uploading, setUploading] = useState(false)
 
@@ -72,6 +90,7 @@ export function RepositoriesPage() {
   const [diffError, setDiffError] = useState<string | null>(null)
 
   const [reindexingId, setReindexingId] = useState<string | null>(null)
+  const [settingUpId, setSettingUpId] = useState<string | null>(null)
   const [pendingDelete, setPendingDelete] = useState<PendingDelete | null>(null)
   const [deleting, setDeleting] = useState(false)
 
@@ -120,11 +139,23 @@ export function RepositoriesPage() {
     setUploading(true)
     setError(null)
     setNotice(null)
+    setNoticeTone('success')
     try {
       const body = new FormData()
       body.append('upload', file)
-      const manifestResponse = await apiFetch<RepositoryManifest>('/v1/repositories', { method: 'POST', body })
-      setNotice(`${manifestResponse.repository_id} registered (${manifestResponse.file_count} files, ${formatBytes(manifestResponse.total_bytes)}).`)
+      const manifestResponse = await apiFetch<RepositoryUploadResponse>('/v1/repositories', { method: 'POST', body })
+      const pipelineStatus = manifestResponse.pipeline?.status
+      if (pipelineStatus === 'setup_incomplete') {
+        const failed = manifestResponse.pipeline?.failed_stages?.join(', ') || 'one or more required stages'
+        setNoticeTone('warning')
+        setNotice(`${manifestResponse.repository_id} snapshot stored, but setup is incomplete (${failed}). Use Retry setup after the backend dependency is restored.`)
+      } else if (pipelineStatus === 'ready_with_warnings') {
+        const failed = manifestResponse.pipeline?.failed_stages?.join(', ') || 'optional services'
+        setNoticeTone('warning')
+        setNotice(`${manifestResponse.repository_id} registered and operational with optional warning(s): ${failed}.`)
+      } else {
+        setNotice(`${manifestResponse.repository_id} registered and ready (${manifestResponse.file_count} files, ${formatBytes(manifestResponse.total_bytes)}).`)
+      }
       await loadRepositories()
       selectRepository(manifestResponse.repository_id)
     } catch (caught) {
@@ -153,6 +184,7 @@ export function RepositoriesPage() {
     setReindexingId(repositoryId)
     setError(null)
     setNotice(null)
+    setNoticeTone('success')
     try {
       const response = await apiFetch<RepositoryManifest>(`/v1/repositories/${encodeURIComponent(repositoryId)}/reindex`, {
         method: 'POST',
@@ -170,9 +202,35 @@ export function RepositoriesPage() {
     }
   }
 
+  async function runSetup(repositoryId: string) {
+    setSettingUpId(repositoryId)
+    setError(null)
+    setNotice(null)
+    setNoticeTone('success')
+    try {
+      const response = await apiFetch<RepositorySetupResponse>(
+        `/v1/repositories/${encodeURIComponent(repositoryId)}/setup`,
+        { method: 'POST' },
+      )
+      if (response.ready) {
+        setNotice(`${repositoryId} Memory, QA, Council and Learning setup completed successfully.`)
+      } else {
+        const failed = response.pipeline.failed_stages?.join(', ') || 'one or more required stages'
+        setNoticeTone('warning')
+        setNotice(`${repositoryId} setup is still incomplete: ${failed}.`)
+      }
+      await loadRepositories()
+    } catch (caught) {
+      setError(caught instanceof Error ? caught.message : `${repositoryId} setup could not be completed.`)
+    } finally {
+      setSettingUpId(null)
+    }
+  }
+
   async function confirmDelete() {
     if (!pendingDelete) return
     setDeleting(true)
+    setNoticeTone('success')
     try {
       await apiFetch(`/v1/repositories/${encodeURIComponent(pendingDelete.repositoryId)}`, { method: 'DELETE' })
       setNotice(`${pendingDelete.repositoryId} removed from the registry.`)
@@ -219,8 +277,9 @@ export function RepositoriesPage() {
               <p className="text-xs font-semibold uppercase tracking-[0.2em] text-cyan-300/70">Repository manager</p>
               <h2 className="mt-2 text-2xl font-semibold text-white">Registered repository snapshots</h2>
               <p className="mt-2 max-w-2xl text-sm leading-6 text-slate-400">
-                Upload a zipped repository to index it for QA, learning and council review. Manifests and Repository
-                Memory persist across backend restarts; re-upload only when a fresh working copy is needed for diff or reindex.
+                Upload a zipped repository to index it for QA, learning and council review. Repository IDs are stable,
+                monthly uploads replace the same governed snapshot, and production stores both the source ZIP and manifest
+                in R2 so the working copy is restored automatically after backend restarts.
               </p>
             </div>
             <div className="flex gap-2">
@@ -256,7 +315,19 @@ export function RepositoriesPage() {
         </section>
 
         {error && <div role="alert" className="mt-4 rounded-xl border border-rose-400/20 bg-rose-400/8 px-4 py-3 text-sm text-rose-200">{error}</div>}
-        {notice && <div role="status" aria-live="polite" className="mt-4 rounded-xl border border-emerald-300/20 bg-emerald-300/8 px-4 py-3 text-sm text-emerald-100">{notice}</div>}
+        {notice && (
+          <div
+            role="status"
+            aria-live="polite"
+            className={`mt-4 rounded-xl border px-4 py-3 text-sm ${
+              noticeTone === 'warning'
+                ? 'border-amber-300/20 bg-amber-300/8 text-amber-100'
+                : 'border-emerald-300/20 bg-emerald-300/8 text-emerald-100'
+            }`}
+          >
+            {notice}
+          </div>
+        )}
 
         <div className="mt-6 grid gap-4 lg:grid-cols-[1.1fr_1fr]">
           <section>
@@ -296,7 +367,7 @@ export function RepositoriesPage() {
                       </button>
                       <StatusBadge status={availability.status} label={availability.label} compact />
                     </div>
-                    <p className={`mt-2 text-xs leading-5 ${repo.rehydrated ? 'text-cyan-200/80' : 'text-slate-500'}`}>
+                    <p className={`mt-2 text-xs leading-5 ${availability.status === 'ready' ? 'text-slate-500' : 'text-amber-200/80'}`}>
                       {availability.detail}
                     </p>
                     <div className="mt-3 flex flex-wrap items-center gap-2 text-xs text-slate-400">
@@ -338,6 +409,21 @@ export function RepositoriesPage() {
                         )}
                         Reindex
                       </button>
+                      {!repo.memory_ready && !repo.rehydrated && (
+                        <button
+                          type="button"
+                          onClick={() => void runSetup(repo.repository_id)}
+                          disabled={settingUpId === repo.repository_id}
+                          className="flex h-8 items-center gap-1.5 rounded-lg border border-amber-300/20 bg-amber-300/10 px-3 text-xs text-amber-100 disabled:cursor-not-allowed disabled:opacity-50"
+                        >
+                          {settingUpId === repo.repository_id ? (
+                            <LoaderCircle className="h-3.5 w-3.5 animate-spin" />
+                          ) : (
+                            <RefreshCcw className="h-3.5 w-3.5" />
+                          )}
+                          Retry setup
+                        </button>
+                      )}
                       <button
                         type="button"
                         onClick={() => setPendingDelete({ repositoryId: repo.repository_id })}
@@ -476,7 +562,7 @@ export function RepositoriesPage() {
       <ConfirmDialog
         open={pendingDelete != null}
         title="Remove repository"
-        summary="This deletes the indexed snapshot and its temporary working copy. The original upload is not affected and can be re-uploaded at any time."
+        summary="This deletes the registered working copy, durable R2 manifest/source snapshot, and Repository Memory for this repository. It can be re-uploaded later as a new governed snapshot."
         objectName={pendingDelete?.repositoryId}
         systems={['Repository Manager', 'Repository QA', 'Repository Council']}
         confirmLabel="Remove repository"

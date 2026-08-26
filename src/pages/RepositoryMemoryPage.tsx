@@ -3,7 +3,6 @@ import {
   BookOpen,
   Check,
   Clock,
-  Database,
   History,
   LoaderCircle,
   Plus,
@@ -16,9 +15,9 @@ import { useSearchParams } from 'react-router'
 import { EmptyState } from '../components/EmptyState'
 import { StatusBadge } from '../components/StatusBadge'
 import { useInspector } from '../context/InspectorContext'
+import { useRepositoryCatalog } from '../hooks/useRepositoryCatalog'
 import { apiFetch } from '../lib/api'
 import { formatDate } from '../lib/format'
-import { MEMORY_REPOSITORIES } from '../lib/repositories'
 import {
   REPOSITORY_MEMORY_HISTORY_FIELDS,
   REPOSITORY_MEMORY_SCALAR_FIELDS,
@@ -27,8 +26,6 @@ import {
   type RepositoryMemoryResponse,
   type RepositoryMemorySearchResponse,
 } from '../types/api'
-
-const KNOWN_REPOS = MEMORY_REPOSITORIES
 
 const FIELD_LABELS: Record<string, string> = {
   project_manifest: 'Project manifest',
@@ -82,11 +79,12 @@ function summariseEntry(entry: Record<string, unknown>): { title: string; detail
 
 export function RepositoryMemoryPage() {
   const { setPayload, setOpen } = useInspector()
+  const catalog = useRepositoryCatalog()
   const [searchParams, setSearchParams] = useSearchParams()
-  const [repositoryId, setRepositoryId] = useState(searchParams.get('repo') ?? 'HIVE')
+  const [repositoryId, setRepositoryId] = useState(searchParams.get('repo') ?? '')
   const [repoInput, setRepoInput] = useState(repositoryId)
   const [memory, setMemory] = useState<Record<string, unknown>>({})
-  const [loading, setLoading] = useState(true)
+  const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [notice, setNotice] = useState<string | null>(null)
 
@@ -105,6 +103,14 @@ export function RepositoryMemoryPage() {
 
   const [diagnostics, setDiagnostics] = useState<RepositoryMemoryDiagnosticsResponse | null>(null)
 
+  useEffect(() => {
+    if (catalog.loading || catalog.repositories.length === 0) return
+    if (repositoryId && catalog.repositories.some((repo) => repo.repository_id === repositoryId)) return
+    const preferred = catalog.repositories.find((repo) => repo.repository_id === 'HIVE') ?? catalog.repositories[0]
+    setRepositoryId(preferred.repository_id)
+    setRepoInput(preferred.repository_id)
+  }, [catalog.loading, catalog.repositories, repositoryId])
+
   const loadMemory = useCallback(async (repo: string) => {
     setLoading(true)
     setError(null)
@@ -120,13 +126,16 @@ export function RepositoryMemoryPage() {
   }, [])
 
   useEffect(() => {
+    if (!repositoryId || catalog.loading) return
+    if (!catalog.repositories.some((repo) => repo.repository_id === repositoryId)) return
     void loadMemory(repositoryId)
     setSearchResults(null)
     setSearchError(null)
     setQuery('')
-  }, [repositoryId, loadMemory])
+  }, [repositoryId, catalog.loading, catalog.repositories, loadMemory])
 
   useEffect(() => {
+    if (!repositoryId) return
     setSearchParams(
       (previous) => {
         const next = new URLSearchParams(previous)
@@ -269,6 +278,9 @@ export function RepositoryMemoryPage() {
   const persistenceDiagnostics = diagnostics?.persistence
   const aiDiagnostics = diagnostics?.ai_search
   const persistenceReady = persistenceDiagnostics?.ok === true && persistenceDiagnostics?.schema_ready === true
+  const selectedRepository = catalog.repositories.find((repo) => repo.repository_id === repositoryId)
+  const repositoryUnavailable = Boolean(repositoryId) && !catalog.loading && !selectedRepository
+  const memoryWritable = Boolean(selectedRepository && persistenceReady)
 
   return (
     <div className="h-full overflow-y-auto p-4 sm:p-6 lg:p-8">
@@ -286,44 +298,41 @@ export function RepositoryMemoryPage() {
             <button
               type="button"
               onClick={() => void loadMemory(repositoryId)}
+              disabled={!selectedRepository || loading}
               className="flex h-10 items-center justify-center gap-2 rounded-xl border border-white/8 bg-white/[0.04] px-4 text-xs font-medium text-slate-300 hover:bg-white/[0.07]"
             >
               <RefreshCcw className="h-4 w-4" /> Refresh
             </button>
           </div>
 
-          <form onSubmit={switchRepository} className="mt-6 grid gap-2 border-t border-white/8 pt-5 sm:grid-cols-[1fr_220px_auto]">
-            <label className="relative">
-              <Database className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
-              <input
-                value={repoInput}
-                onChange={(event) => setRepoInput(event.target.value)}
-                list="known-repos"
-                aria-label="Repository id"
-                placeholder="Repository id (e.g. HIVE)"
-                className="h-10 w-full rounded-xl border border-white/8 bg-hive-surface pl-10 pr-3 text-sm text-slate-200 outline-none placeholder:text-slate-400 focus:border-cyan-300/30"
-              />
-              <datalist id="known-repos">
-                {KNOWN_REPOS.map((repo) => (
-                  <option key={repo} value={repo} />
-                ))}
-              </datalist>
-            </label>
+          <form onSubmit={switchRepository} className="mt-6 grid gap-2 border-t border-white/8 pt-5 sm:grid-cols-[1fr_auto]">
             <select
-              value={KNOWN_REPOS.includes(repoInput) ? repoInput : ''}
-              aria-label="Choose known repository"
-              onChange={(event) => event.target.value && setRepoInput(event.target.value)}
-              className="h-10 rounded-xl border border-white/8 bg-hive-surface px-3 text-xs text-slate-300 outline-none"
+              value={repoInput}
+              aria-label="Choose registered repository"
+              onChange={(event) => setRepoInput(event.target.value)}
+              className="h-10 rounded-xl border border-white/8 bg-hive-surface px-3 text-sm text-slate-300 outline-none"
             >
-              <option value="">Known repositories…</option>
-              {KNOWN_REPOS.map((repo) => (
-                <option key={repo} value={repo}>{repo}</option>
+              <option value="">{catalog.loading ? 'Loading repositories…' : 'Choose a registered repository…'}</option>
+              {catalog.repositories.map((repo) => (
+                <option key={repo.repository_id} value={repo.repository_id}>{repo.repository_id} · {repo.source_filename}</option>
               ))}
             </select>
-            <button type="submit" className="flex h-10 items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-cyan-400 to-emerald-300 px-4 text-xs font-semibold text-hive-accent-deep">
+            <button type="submit" disabled={!repoInput} className="flex h-10 items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-cyan-400 to-emerald-300 px-4 text-xs font-semibold text-hive-accent-deep disabled:opacity-50">
               Load
             </button>
           </form>
+
+          {catalog.error && <div role="alert" className="mt-3 rounded-xl border border-rose-400/20 bg-rose-400/8 px-4 py-3 text-xs text-rose-200">{catalog.error}</div>}
+          {!catalog.loading && catalog.repositories.length === 0 && (
+            <div role="alert" className="mt-3 rounded-xl border border-amber-300/20 bg-amber-300/8 px-4 py-3 text-xs text-amber-100">
+              No repository snapshots are registered. Upload the governed repositories on Overview before using Memory.
+            </div>
+          )}
+          {repositoryUnavailable && (
+            <div role="alert" className="mt-3 rounded-xl border border-amber-300/20 bg-amber-300/8 px-4 py-3 text-xs text-amber-100">
+              {repositoryId} is not registered in HIVE. Choose a registered repository or upload its ZIP on Overview.
+            </div>
+          )}
 
           <div className="mt-5 flex flex-wrap items-center gap-2 text-xs text-slate-400">
             <span className="rounded-full border border-white/10 px-2.5 py-1">Repository: <span className="text-slate-200">{repositoryId}</span></span>
@@ -385,7 +394,7 @@ export function RepositoryMemoryPage() {
                 className="h-10 w-full rounded-xl border border-white/8 bg-hive-surface pl-10 pr-3 text-sm text-slate-200 outline-none placeholder:text-slate-400 focus:border-cyan-300/30"
               />
             </label>
-            <button type="submit" disabled={!query.trim() || searching} className="flex h-10 items-center justify-center gap-2 rounded-xl border border-white/8 bg-white/[0.04] px-4 text-xs text-slate-300 hover:bg-white/[0.07] disabled:opacity-50">
+            <button type="submit" disabled={!query.trim() || searching || !memoryWritable} className="flex h-10 items-center justify-center gap-2 rounded-xl border border-white/8 bg-white/[0.04] px-4 text-xs text-slate-300 hover:bg-white/[0.07] disabled:opacity-50">
               {searching ? <LoaderCircle className="h-4 w-4 animate-spin" /> : <Sparkles className="h-4 w-4" />} Search
             </button>
           </form>
@@ -426,7 +435,7 @@ export function RepositoryMemoryPage() {
                         <button type="button" onClick={() => inspectField(field)} className="text-left">
                           <h4 className="text-sm font-semibold text-white">{fieldLabel(field)}</h4>
                         </button>
-                        <StatusBadge status={blank ? 'not_configured' : 'active'} compact />
+                        <StatusBadge status={blank ? 'unknown' : 'active'} label={blank ? 'Not populated' : 'Populated'} compact />
                       </div>
                       {editingField === field ? (
                         <div className="mt-3">
@@ -443,7 +452,7 @@ export function RepositoryMemoryPage() {
                             <button
                               type="button"
                               onClick={() => void saveField(field)}
-                              disabled={savingField === field}
+                              disabled={savingField === field || !memoryWritable}
                               className="flex h-8 items-center gap-1.5 rounded-lg border border-cyan-300/20 bg-cyan-300/10 px-3 text-xs text-cyan-100 disabled:opacity-50"
                             >
                               {savingField === field ? <LoaderCircle className="h-3.5 w-3.5 animate-spin" /> : <Check className="h-3.5 w-3.5" />} Save
@@ -453,9 +462,9 @@ export function RepositoryMemoryPage() {
                       ) : (
                         <>
                           <p className="mt-2 line-clamp-4 min-h-[40px] whitespace-pre-wrap font-mono text-xs leading-5 text-slate-400">
-                            {blank ? 'Not set yet.' : pretty(content)}
+                            {blank ? 'No repository profile has populated this field yet.' : pretty(content)}
                           </p>
-                          <button type="button" onClick={() => startEdit(field)} className="mt-3 h-8 rounded-lg border border-white/8 bg-white/[0.04] px-3 text-xs text-slate-300 hover:bg-white/[0.07]">
+                          <button type="button" onClick={() => startEdit(field)} disabled={!memoryWritable} className="mt-3 h-8 rounded-lg border border-white/8 bg-white/[0.04] px-3 text-xs text-slate-300 hover:bg-white/[0.07] disabled:cursor-not-allowed disabled:opacity-40">
                             {blank ? 'Set field' : 'Edit'}
                           </button>
                         </>
@@ -514,7 +523,7 @@ export function RepositoryMemoryPage() {
                             <button
                               type="button"
                               onClick={() => void submitAppend(field)}
-                              disabled={appending}
+                              disabled={appending || !memoryWritable}
                               className="flex h-8 items-center gap-1.5 rounded-lg border border-emerald-300/20 bg-emerald-300/10 px-3 text-xs text-emerald-100 disabled:opacity-50"
                             >
                               {appending ? <LoaderCircle className="h-3.5 w-3.5 animate-spin" /> : <Plus className="h-3.5 w-3.5" />} Append
@@ -522,7 +531,7 @@ export function RepositoryMemoryPage() {
                           </div>
                         </div>
                       ) : (
-                        <button type="button" onClick={() => startAppend(field)} className="mt-3 flex h-8 items-center gap-1.5 rounded-lg border border-white/8 bg-white/[0.04] px-3 text-xs text-slate-300 hover:bg-white/[0.07]">
+                        <button type="button" onClick={() => startAppend(field)} disabled={!memoryWritable} className="mt-3 flex h-8 items-center gap-1.5 rounded-lg border border-white/8 bg-white/[0.04] px-3 text-xs text-slate-300 hover:bg-white/[0.07] disabled:cursor-not-allowed disabled:opacity-40">
                           <Plus className="h-3.5 w-3.5" /> Append entry
                         </button>
                       )}
@@ -537,7 +546,7 @@ export function RepositoryMemoryPage() {
                 <EmptyState
                   icon={<AlertTriangle className="h-5 w-5" />}
                   title={`No Repository Memory recorded yet for ${repositoryId}.`}
-                  body="Set a scalar field or append a history entry above to start building this repository's persistent memory."
+                  body="A successful repository upload populates the scalar profile and initial QA/Council history automatically. Use Retry setup on Overview when the source snapshot exists; only legacy snapshotless registrations require one re-upload."
                 />
               </div>
             )}

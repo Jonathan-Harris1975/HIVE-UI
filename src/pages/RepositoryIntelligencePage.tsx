@@ -5,7 +5,6 @@ import {
   CheckCircle2,
   ChevronDown,
   ChevronUp,
-  Database,
   Gavel,
   History,
   LoaderCircle,
@@ -20,19 +19,18 @@ import { useCallback, useEffect, useMemo, useState, type FormEvent } from 'react
 import { useSearchParams } from 'react-router'
 import { EmptyState } from '../components/EmptyState'
 import { StatusBadge } from '../components/StatusBadge'
+import { useRepositoryCatalog } from '../hooks/useRepositoryCatalog'
 import { apiFetch } from '../lib/api'
 import { formatDate } from '../lib/format'
-import { MEMORY_REPOSITORIES } from '../lib/repositories'
 import { MODEL_REGISTRY_CATEGORIES } from '../types/api'
 import type {
   RepositoryCouncilHistoryResponse,
   RepositoryCouncilReport,
   RepositoryLearningEntryResponse,
+  RepositoryMemoryResponse,
   RepositoryProjectDnaResponse,
   RepositoryQaReport,
 } from '../types/api'
-
-const KNOWN_REPOS = MEMORY_REPOSITORIES
 
 function scorePct(score: number): number {
   return Math.round(Math.max(0, Math.min(1, score)) * 100)
@@ -44,9 +42,26 @@ function scoreTone(pct: number): string {
   return 'text-rose-300'
 }
 
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === 'object' && value !== null && !Array.isArray(value)
+}
+
+function asQaReport(value: unknown): RepositoryQaReport | null {
+  if (!isRecord(value)) return null
+  if (typeof value.repository_id !== 'string') return null
+  if (typeof value.score !== 'number' || typeof value.warning_count !== 'number') return null
+  if (!Array.isArray(value.checks)) return null
+  return value as unknown as RepositoryQaReport
+}
+
+function asProjectDna(value: unknown): RepositoryProjectDnaResponse | null {
+  return isRecord(value) ? (value as RepositoryProjectDnaResponse) : null
+}
+
 export function RepositoryIntelligencePage() {
+  const catalog = useRepositoryCatalog()
   const [searchParams, setSearchParams] = useSearchParams()
-  const [repositoryId, setRepositoryId] = useState(searchParams.get('repo') ?? 'HIVE')
+  const [repositoryId, setRepositoryId] = useState(searchParams.get('repo') ?? '')
   const [repoInput, setRepoInput] = useState(repositoryId)
 
   const [error, setError] = useState<string | null>(null)
@@ -78,13 +93,23 @@ export function RepositoryIntelligencePage() {
   const [preferredReason, setPreferredReason] = useState('')
   const [preferredSaving, setPreferredSaving] = useState(false)
 
+  useEffect(() => {
+    if (catalog.loading || catalog.repositories.length === 0) return
+    if (repositoryId && catalog.repositories.some((repo) => repo.repository_id === repositoryId)) return
+    const preferred = catalog.repositories.find((repo) => repo.repository_id === 'HIVE') ?? catalog.repositories[0]
+    setRepositoryId(preferred.repository_id)
+    setRepoInput(preferred.repository_id)
+  }, [catalog.loading, catalog.repositories, repositoryId])
+
   const loadCouncilHistory = useCallback(async (repo: string) => {
     setCouncilHistoryLoading(true)
     try {
       const response = await apiFetch<RepositoryCouncilHistoryResponse>(
         `/v1/repositories/${encodeURIComponent(repo)}/council/history`,
       )
-      setCouncilHistory(response.runs ?? [])
+      const runs = response.runs ?? []
+      setCouncilHistory(runs)
+      setCouncilReport(runs.length > 0 ? runs[runs.length - 1] : null)
     } catch (caught) {
       setCouncilHistory([])
       setError(caught instanceof Error ? caught.message : 'Repository Council history could not be loaded.')
@@ -93,11 +118,30 @@ export function RepositoryIntelligencePage() {
     }
   }, [])
 
+  const loadPersistentIntelligence = useCallback(async (repo: string) => {
+    try {
+      const response = await apiFetch<RepositoryMemoryResponse>(
+        `/v1/repositories/${encodeURIComponent(repo)}/memory`,
+      )
+      const qaHistory = Array.isArray(response.memory?.qa_history) ? response.memory.qa_history : []
+      const latestQa = [...qaHistory].reverse().map(asQaReport).find((entry) => entry !== null) ?? null
+      setQaReport(latestQa)
+      setDna(asProjectDna(response.memory?.project_dna))
+    } catch (caught) {
+      setQaReport(null)
+      setDna(null)
+      setError(caught instanceof Error ? caught.message : 'Persisted Repository Intelligence could not be loaded.')
+    }
+  }, [])
+
   useEffect(() => {
+    if (!repositoryId || catalog.loading) return
+    if (!catalog.repositories.some((repo) => repo.repository_id === repositoryId)) return
     setQaReport(null)
     setCouncilReport(null)
     setDna(null)
     void loadCouncilHistory(repositoryId)
+    void loadPersistentIntelligence(repositoryId)
     setSearchParams(
       (previous) => {
         const next = new URLSearchParams(previous)
@@ -106,7 +150,14 @@ export function RepositoryIntelligencePage() {
       },
       { replace: true },
     )
-  }, [repositoryId, loadCouncilHistory, setSearchParams])
+  }, [
+    repositoryId,
+    catalog.loading,
+    catalog.repositories,
+    loadCouncilHistory,
+    loadPersistentIntelligence,
+    setSearchParams,
+  ])
 
   function switchRepository(event: FormEvent) {
     event.preventDefault()
@@ -132,6 +183,7 @@ export function RepositoryIntelligencePage() {
         method: 'POST',
       })
       setQaReport(report)
+      await loadPersistentIntelligence(repositoryId)
       setNotice(`QA run complete for ${repositoryId}: ${scorePct(report.score)}% (${report.warning_count} warnings).`)
     } catch (caught) {
       setError(caught instanceof Error ? caught.message : 'Repository QA failed.')
@@ -150,8 +202,8 @@ export function RepositoryIntelligencePage() {
         { method: 'POST' },
       )
       setCouncilReport(report)
+      await Promise.all([loadCouncilHistory(repositoryId), loadPersistentIntelligence(repositoryId)])
       setNotice(`Council review complete for ${repositoryId}: ${scorePct(report.overall_score)}% overall.`)
-      await loadCouncilHistory(repositoryId)
     } catch (caught) {
       setError(caught instanceof Error ? caught.message : 'Repository Council review failed.')
     } finally {
@@ -195,7 +247,8 @@ export function RepositoryIntelligencePage() {
           body: JSON.stringify({ summary: patchSummary.trim(), success: patchSuccess, files_changed: files }),
         },
       )
-      setNotice('Patch outcome recorded to Repository Memory.')
+      await loadPersistentIntelligence(repositoryId)
+      setNotice('Patch outcome recorded to Repository Memory and Project DNA refreshed.')
       setPatchSummary('')
       setPatchFiles('')
     } catch (caught) {
@@ -216,7 +269,8 @@ export function RepositoryIntelligencePage() {
         `/v1/repositories/${encodeURIComponent(repositoryId)}/learning/coding-pattern`,
         { method: 'POST', body: JSON.stringify({ pattern: patternText.trim(), context: patternContext.trim() }) },
       )
-      setNotice('Coding pattern recorded to Repository Memory.')
+      await loadPersistentIntelligence(repositoryId)
+      setNotice('Coding pattern recorded to Repository Memory and Project DNA refreshed.')
       setPatternText('')
       setPatternContext('')
     } catch (caught) {
@@ -244,7 +298,8 @@ export function RepositoryIntelligencePage() {
           }),
         },
       )
-      setNotice(`Preferred model recorded for ${repositoryId}: ${preferredModelId.trim()} (${preferredCategory}).`)
+      await loadPersistentIntelligence(repositoryId)
+      setNotice(`Preferred model recorded for ${repositoryId}: ${preferredModelId.trim()} (${preferredCategory}); Project DNA refreshed.`)
       setPreferredModelId('')
       setPreferredReason('')
     } catch (caught) {
@@ -256,6 +311,11 @@ export function RepositoryIntelligencePage() {
 
   const qaOverallPct = qaReport ? scorePct(qaReport.score) : null
   const councilOverallPct = councilReport ? scorePct(councilReport.overall_score) : null
+  const selectedRepository = catalog.repositories.find((repo) => repo.repository_id === repositoryId)
+  const repositoryReady = Boolean(
+    selectedRepository && !selectedRepository.rehydrated && selectedRepository.memory_ready,
+  )
+  const repositoryUnavailable = Boolean(repositoryId) && !catalog.loading && !selectedRepository
 
   const recentHistory = useMemo(() => councilHistory.slice(-5).reverse(), [councilHistory])
 
@@ -270,39 +330,50 @@ export function RepositoryIntelligencePage() {
             all scoped to a single registered repository.
           </p>
 
-          <form onSubmit={switchRepository} className="mt-6 grid gap-2 border-t border-white/8 pt-5 sm:grid-cols-[1fr_220px_auto]">
-            <label className="relative">
-              <Database className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
-              <input
-                value={repoInput}
-                onChange={(event) => setRepoInput(event.target.value)}
-                list="known-repos-intel"
-                aria-label="Repository id"
-                placeholder="Repository id (e.g. HIVE)"
-                className="h-10 w-full rounded-xl border border-white/8 bg-hive-surface pl-10 pr-3 text-sm text-slate-200 outline-none placeholder:text-slate-400 focus:border-cyan-300/30"
-              />
-              <datalist id="known-repos-intel">
-                {KNOWN_REPOS.map((repo) => (
-                  <option key={repo} value={repo} />
-                ))}
-              </datalist>
-            </label>
+          <form onSubmit={switchRepository} className="mt-6 grid gap-2 border-t border-white/8 pt-5 sm:grid-cols-[1fr_auto]">
             <select
-              value={KNOWN_REPOS.includes(repoInput) ? repoInput : ''}
-              aria-label="Choose known repository"
-              onChange={(event) => event.target.value && setRepoInput(event.target.value)}
-              className="h-10 rounded-xl border border-white/8 bg-hive-surface px-3 text-xs text-slate-300 outline-none"
+              value={repoInput}
+              aria-label="Choose registered repository"
+              onChange={(event) => setRepoInput(event.target.value)}
+              className="h-10 rounded-xl border border-white/8 bg-hive-surface px-3 text-sm text-slate-300 outline-none"
             >
-              <option value="">Known repositories…</option>
-              {KNOWN_REPOS.map((repo) => (
-                <option key={repo} value={repo}>{repo}</option>
+              <option value="">{catalog.loading ? 'Loading repositories…' : 'Choose a registered repository…'}</option>
+              {catalog.repositories.map((repo) => (
+                <option key={repo.repository_id} value={repo.repository_id}>{repo.repository_id} · {repo.source_filename}</option>
               ))}
             </select>
-            <button type="submit" className="flex h-10 items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-cyan-400 to-emerald-300 px-4 text-xs font-semibold text-hive-accent-deep">
+            <button type="submit" disabled={!repoInput} className="flex h-10 items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-cyan-400 to-emerald-300 px-4 text-xs font-semibold text-hive-accent-deep disabled:opacity-50">
               Load
             </button>
           </form>
         </section>
+
+        {catalog.error && <div role="alert" className="mt-4 rounded-xl border border-rose-400/20 bg-rose-400/8 px-4 py-3 text-sm text-rose-200">{catalog.error}</div>}
+        {!catalog.loading && catalog.repositories.length === 0 && (
+          <div role="alert" className="mt-4 rounded-xl border border-amber-300/20 bg-amber-300/8 px-4 py-3 text-sm text-amber-100">
+            No repository snapshots are registered. Upload the governed repositories on Overview before running Intelligence.
+          </div>
+        )}
+        {repositoryUnavailable && (
+          <div role="alert" className="mt-4 rounded-xl border border-amber-300/20 bg-amber-300/8 px-4 py-3 text-sm text-amber-100">
+            {repositoryId} is not registered in HIVE. Choose a registered repository or upload its ZIP on Overview.
+          </div>
+        )}
+        {selectedRepository?.rehydrated && (
+          <div role="alert" className="mt-4 rounded-xl border border-amber-300/20 bg-amber-300/8 px-4 py-3 text-sm text-amber-100">
+            {repositoryId} has legacy manifest metadata but no durable source snapshot. Re-upload it once on Overview; future restarts will restore the working copy from R2 automatically.
+          </div>
+        )}
+        {selectedRepository?.memory_status === 'unavailable' && (
+          <div role="alert" className="mt-4 rounded-xl border border-rose-400/20 bg-rose-400/8 px-4 py-3 text-sm text-rose-200">
+            Repository Memory persistence is unavailable for {repositoryId}. Intelligence writes are blocked until D1 is healthy; use Retry setup on Overview after recovery.
+          </div>
+        )}
+        {selectedRepository && !selectedRepository.rehydrated && selectedRepository.memory_status !== 'unavailable' && !selectedRepository.memory_ready && (
+          <div role="alert" className="mt-4 rounded-xl border border-amber-300/20 bg-amber-300/8 px-4 py-3 text-sm text-amber-100">
+            Repository setup is incomplete for {repositoryId}. QA, Council and learning writes are blocked until Memory and Intelligence are ready. Use Retry setup on Overview.
+          </div>
+        )}
 
         {error && <div role="alert" className="mt-4 rounded-xl border border-rose-400/20 bg-rose-400/8 px-4 py-3 text-sm text-rose-200">{error}</div>}
         {notice && <div role="status" aria-live="polite" className="mt-4 rounded-xl border border-emerald-300/20 bg-emerald-300/8 px-4 py-3 text-sm text-emerald-100">{notice}</div>}
@@ -314,7 +385,7 @@ export function RepositoryIntelligencePage() {
             <button
               type="button"
               onClick={() => void runQa()}
-              disabled={qaRunning}
+              disabled={qaRunning || !repositoryReady}
               className="flex h-9 items-center gap-1.5 rounded-lg border border-cyan-300/20 bg-cyan-300/10 px-3 text-xs font-medium text-cyan-100 disabled:opacity-50"
             >
               {qaRunning ? <LoaderCircle className="h-3.5 w-3.5 animate-spin" /> : <Sparkles className="h-3.5 w-3.5" />} Run QA
@@ -386,7 +457,7 @@ export function RepositoryIntelligencePage() {
             <button
               type="button"
               onClick={() => void runCouncil()}
-              disabled={councilRunning}
+              disabled={councilRunning || !repositoryReady}
               className="flex h-9 items-center gap-1.5 rounded-lg border border-cyan-300/20 bg-cyan-300/10 px-3 text-xs font-medium text-cyan-100 disabled:opacity-50"
             >
               {councilRunning ? <LoaderCircle className="h-3.5 w-3.5 animate-spin" /> : <Gavel className="h-3.5 w-3.5" />} Run review
@@ -463,7 +534,7 @@ export function RepositoryIntelligencePage() {
             <button
               type="button"
               onClick={() => void refreshDna()}
-              disabled={dnaRefreshing}
+              disabled={dnaRefreshing || !repositoryReady}
               className="flex h-9 items-center gap-1.5 rounded-lg border border-white/8 bg-white/[0.04] px-3 text-xs text-slate-300 hover:bg-white/[0.07] disabled:opacity-50"
             >
               {dnaRefreshing ? <LoaderCircle className="h-3.5 w-3.5 animate-spin" /> : <RefreshCcw className="h-3.5 w-3.5" />} Refresh project DNA
@@ -510,7 +581,7 @@ export function RepositoryIntelligencePage() {
                 </label>
                 <button
                   type="submit"
-                  disabled={patchSaving || !patchSummary.trim()}
+                  disabled={patchSaving || !patchSummary.trim() || !repositoryReady}
                   className="flex h-8 items-center gap-1.5 rounded-lg border border-cyan-300/20 bg-cyan-300/10 px-3 text-xs text-cyan-100 disabled:opacity-50"
                 >
                   {patchSaving ? <LoaderCircle className="h-3.5 w-3.5 animate-spin" /> : <BadgeCheck className="h-3.5 w-3.5" />} Record
@@ -538,7 +609,7 @@ export function RepositoryIntelligencePage() {
               <div className="mt-2 flex justify-end">
                 <button
                   type="submit"
-                  disabled={patternSaving || !patternText.trim()}
+                  disabled={patternSaving || !patternText.trim() || !repositoryReady}
                   className="flex h-8 items-center gap-1.5 rounded-lg border border-cyan-300/20 bg-cyan-300/10 px-3 text-xs text-cyan-100 disabled:opacity-50"
                 >
                   {patternSaving ? <LoaderCircle className="h-3.5 w-3.5 animate-spin" /> : <BookMarked className="h-3.5 w-3.5" />} Record
@@ -580,7 +651,7 @@ export function RepositoryIntelligencePage() {
               <div className="mt-2 flex justify-end">
                 <button
                   type="submit"
-                  disabled={preferredSaving || !preferredModelId.trim()}
+                  disabled={preferredSaving || !preferredModelId.trim() || !repositoryReady}
                   className="flex h-8 items-center gap-1.5 rounded-lg border border-cyan-300/20 bg-cyan-300/10 px-3 text-xs text-cyan-100 disabled:opacity-50"
                 >
                   {preferredSaving ? <LoaderCircle className="h-3.5 w-3.5 animate-spin" /> : <Star className="h-3.5 w-3.5" />} Record
