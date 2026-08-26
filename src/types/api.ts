@@ -546,6 +546,7 @@ export const REPOSITORY_MEMORY_HISTORY_FIELDS = [
   'optimisation_history',
   'qa_history',
   'repository_council_history',
+  'repository_intelligence_history',
 ] as const
 
 export type RepositoryMemoryScalarField = (typeof REPOSITORY_MEMORY_SCALAR_FIELDS)[number]
@@ -735,6 +736,7 @@ export interface RepositoryPipelineResult {
   qa?: RepositoryPipelineStage
   council?: RepositoryPipelineStage
   learning?: RepositoryPipelineStage
+  intelligence?: RepositoryPipelineStage
   ai_search?: RepositoryPipelineStage
   elapsed_ms?: number
   [key: string]: unknown
@@ -811,6 +813,64 @@ export interface RepositoryCouncilReport {
 export interface RepositoryCouncilHistoryResponse {
   repository_id: string
   runs: RepositoryCouncilReport[]
+}
+
+export interface RepositoryIntelligenceFinding {
+  id: string
+  source: 'repository_qa' | 'repository_council' | string
+  category: string
+  severity: 'critical' | 'high' | 'medium' | 'low' | string
+  confidence: string
+  title: string
+  summary: string
+  details: Record<string, unknown>
+}
+
+export interface RepositoryIntelligenceSummary {
+  repository_id: string
+  status: 'healthy' | 'review_recommended' | 'action_required' | string
+  qa_score: number
+  council_score: number
+  finding_count: number
+  blocking_finding_count: number
+  by_severity: Record<string, number>
+  by_source: Record<string, number>
+  headline: string
+}
+
+export interface RepositoryIntelligenceReport {
+  repository_id: string
+  occurred_at: string
+  summary: RepositoryIntelligenceSummary
+  findings: RepositoryIntelligenceFinding[]
+  improvement_prompt: string
+  qa: RepositoryQaReport
+  council: RepositoryCouncilReport
+  project_dna: RepositoryProjectDnaResponse
+}
+
+export interface RepositoryRefreshConfiguration {
+  enabled: boolean
+  configured: boolean
+  repository_count: number
+  repository_ids: string[]
+  branch: string
+  github_token_configured: boolean
+  source_error?: string | null
+}
+
+export interface RepositoryRefreshJob {
+  job_id: string
+  status: 'accepted' | 'running' | 'completed' | 'completed-with-failures' | 'failed' | string
+  repository_count: number
+  completed_count: number
+  failed_count: number
+  ok?: boolean | null
+  created_at?: string
+  started_at?: string
+  finished_at?: string
+  error?: string
+  results?: Array<Record<string, unknown>>
 }
 
 export interface ProvidersResponse {
