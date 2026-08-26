@@ -105,7 +105,6 @@ function ConversationSection({ closeMobile }: { closeMobile?: () => void }) {
     conversationsError,
     currentConversationId,
     openConversation,
-    newConversation,
     renameConversation,
     deleteConversation,
     refreshConversations,
@@ -125,8 +124,7 @@ function ConversationSection({ closeMobile }: { closeMobile?: () => void }) {
   }, [conversations, query])
 
   function createConversation() {
-    newConversation()
-    navigate('/chat')
+    navigate('/chat?new=1')
     closeMobile?.()
   }
 

@@ -8,8 +8,16 @@ import {
   Video,
   X,
 } from 'lucide-react'
-import { useEffect, useId, useMemo, useRef, useState, type KeyboardEvent } from 'react'
+import { useCallback, useEffect, useId, useMemo, useRef, useState, type KeyboardEvent } from 'react'
+import { createPortal } from 'react-dom'
 import type { ModelSummary } from '../types/api'
+
+interface PopupPosition {
+  left: number
+  width: number
+  bottom: number
+  maxHeight: number
+}
 
 interface ModelPickerProps {
   models: ModelSummary[]
@@ -88,11 +96,13 @@ export function ModelPicker({ models, value, onChange, loading = false }: ModelP
   const [category, setCategory] = useState('all')
   const wrapperRef = useRef<HTMLDivElement | null>(null)
   const triggerRef = useRef<HTMLButtonElement | null>(null)
+  const popupRef = useRef<HTMLDivElement | null>(null)
   const searchRef = useRef<HTMLInputElement | null>(null)
   const listRef = useRef<HTMLDivElement | null>(null)
   const listId = useId()
   const autoOptionId = `${listId}-auto`
   const [activeIndex, setActiveIndex] = useState(0)
+  const [popupPosition, setPopupPosition] = useState<PopupPosition | null>(null)
 
   const visibleModels = useMemo(() => models, [models])
   const selected = useMemo(
@@ -149,10 +159,45 @@ export function ModelPicker({ models, value, onChange, loading = false }: ModelP
     setActiveIndex(0)
   }, [category, query, open])
 
+  const positionPopup = useCallback(() => {
+    const trigger = triggerRef.current
+    if (!trigger) return
+    const rect = trigger.getBoundingClientRect()
+    const viewportWidth = window.visualViewport?.width ?? window.innerWidth
+    const viewportHeight = window.visualViewport?.height ?? window.innerHeight
+    const margin = 12
+    const width = Math.min(460, Math.max(280, viewportWidth - margin * 2))
+    const left = Math.min(
+      Math.max(margin, rect.left),
+      Math.max(margin, viewportWidth - width - margin),
+    )
+    const bottom = Math.max(margin, viewportHeight - rect.top + 8)
+    const maxHeight = Math.max(220, Math.min(560, rect.top - margin * 2))
+    setPopupPosition({ left, width, bottom, maxHeight })
+  }, [])
+
+  useEffect(() => {
+    if (!open) {
+      setPopupPosition(null)
+      return undefined
+    }
+    positionPopup()
+    const viewport = window.visualViewport
+    window.addEventListener('resize', positionPopup)
+    viewport?.addEventListener('resize', positionPopup)
+    viewport?.addEventListener('scroll', positionPopup)
+    return () => {
+      window.removeEventListener('resize', positionPopup)
+      viewport?.removeEventListener('resize', positionPopup)
+      viewport?.removeEventListener('scroll', positionPopup)
+    }
+  }, [open, positionPopup])
+
   useEffect(() => {
     if (!open) return
     const closeOnOutsideClick = (event: MouseEvent) => {
-      if (!wrapperRef.current?.contains(event.target as Node)) {
+      const target = event.target as Node
+      if (!wrapperRef.current?.contains(target) && !popupRef.current?.contains(target)) {
         setOpen(false)
         triggerRef.current?.focus()
       }
@@ -218,17 +263,27 @@ export function ModelPicker({ models, value, onChange, loading = false }: ModelP
         aria-controls={listId}
         aria-haspopup="listbox"
         aria-label="Choose HIVE model"
-        className="flex h-9 max-w-[260px] items-center gap-2 rounded-lg border border-white/8 bg-white/[0.035] px-2.5 text-left text-xs text-slate-300 outline-none transition hover:bg-white/[0.055] focus:ring-1 focus:ring-cyan-300/50"
+        title={selected ? modelLabel(selected) : loading ? 'Loading models' : 'Auto model'}
+        className="flex h-9 w-[98px] shrink-0 items-center gap-2 rounded-lg border border-white/8 bg-white/[0.035] px-2.5 text-left text-xs text-slate-300 outline-none transition hover:bg-white/[0.055] focus:ring-1 focus:ring-cyan-300/50 sm:w-auto sm:max-w-[260px]"
       >
         <BrainCircuit className="h-3.5 w-3.5 shrink-0 text-cyan-300/70" />
-        <span className="min-w-0 flex-1 truncate">{selected ? modelLabel(selected) : loading ? 'Loading models…' : 'Auto route'}</span>
+        <span className="min-w-0 flex-1 truncate">{selected ? modelLabel(selected) : loading ? 'Models…' : 'Auto'}</span>
         {selected?.is_free === true && <span className="hidden rounded bg-emerald-300/10 px-1.5 py-0.5 text-xs font-semibold uppercase tracking-wide text-emerald-200 sm:inline">Free</span>}
         <ChevronDown className={`h-3.5 w-3.5 shrink-0 text-slate-400 transition ${open ? 'rotate-180' : ''}`} />
       </button>
 
-      {open && (
-        <div className="absolute bottom-[calc(100%+8px)] left-0 z-50 w-[min(94vw,460px)] overflow-hidden rounded-2xl border border-white/10 bg-hive-elevated/98 shadow-2xl shadow-black/50 backdrop-blur-xl">
-          <div className="space-y-2 border-b border-white/8 p-3">
+      {open && popupPosition && createPortal(
+        <div
+          ref={popupRef}
+          style={{
+            left: popupPosition.left,
+            width: popupPosition.width,
+            bottom: popupPosition.bottom,
+            maxHeight: popupPosition.maxHeight,
+          }}
+          className="fixed z-[80] flex flex-col overflow-hidden rounded-2xl border border-white/10 bg-hive-elevated/98 shadow-2xl shadow-black/50 backdrop-blur-xl"
+        >
+          <div className="shrink-0 space-y-2 border-b border-white/8 p-3">
             <label className="text-xs font-semibold uppercase tracking-[0.16em] text-slate-400">Model type</label>
             <select
               value={category}
@@ -260,7 +315,7 @@ export function ModelPicker({ models, value, onChange, loading = false }: ModelP
             </div>
           </div>
 
-          <div ref={listRef} id={listId} role="listbox" tabIndex={0} aria-label="HIVE models" aria-activedescendant={optionId(selectableOptions[activeIndex] ?? null)} onKeyDown={handleListKeyDown} className="ui-scroll-region max-h-[min(56vh,460px)] overflow-y-auto p-2 outline-none">
+          <div ref={listRef} id={listId} role="listbox" tabIndex={0} aria-label="HIVE models" aria-activedescendant={optionId(selectableOptions[activeIndex] ?? null)} onKeyDown={handleListKeyDown} className="ui-scroll-region min-h-0 flex-1 overflow-y-auto p-2 outline-none">
             <button
               id={autoOptionId}
               type="button"
@@ -335,7 +390,8 @@ export function ModelPicker({ models, value, onChange, loading = false }: ModelP
               <div role="status" className="px-4 py-10 text-center text-sm text-slate-400">No matching models found.</div>
             )}
           </div>
-        </div>
+        </div>,
+        document.body,
       )}
     </div>
   )
