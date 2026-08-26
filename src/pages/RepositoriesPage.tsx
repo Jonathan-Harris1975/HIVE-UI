@@ -22,6 +22,7 @@ import type {
   RepositoryDiffResponse,
   RepositoryListResponse,
   RepositoryManifest,
+  RepositoryRefreshConfiguration,
   RepositorySetupResponse,
   RepositorySummary,
   RepositoryUploadResponse,
@@ -35,7 +36,7 @@ function repositoryStatus(repo: RepositorySummary): { status: string; label: str
     return {
       status: 'readonly',
       label: 'Legacy snapshot required',
-      detail: 'The manifest exists, but this older registration has no durable source ZIP. Re-upload it once to make QA and Council restart-safe.',
+      detail: 'The manifest exists, but this older registration has no durable source ZIP. Re-upload it once to make Repository Intelligence restart-safe.',
     }
   }
   if (repo.memory_status === 'unavailable') {
@@ -49,13 +50,13 @@ function repositoryStatus(repo: RepositorySummary): { status: string; label: str
     return {
       status: 'warning',
       label: 'Setup incomplete',
-      detail: 'The source snapshot is available, but automatic Memory, QA or Council setup is incomplete. Use Retry setup after resolving the reported backend issue.',
+      detail: 'The source snapshot is available, but automatic Memory or Repository Intelligence setup is incomplete. Use Retry setup after resolving the reported backend issue.',
     }
   }
   return {
     status: 'ready',
     label: 'Ready',
-    detail: 'Source snapshot, Repository Memory, QA and Council state are available. The ZIP and manifest are persisted in R2 for restart recovery.',
+    detail: 'Source snapshot, Repository Memory and consolidated Repository Intelligence state are available. The ZIP and manifest are persisted in R2 for restart recovery.',
   }
 }
 
@@ -79,6 +80,8 @@ export function RepositoriesPage() {
   const [noticeTone, setNoticeTone] = useState<NoticeTone>('success')
 
   const [uploading, setUploading] = useState(false)
+  const [refreshConfig, setRefreshConfig] = useState<RepositoryRefreshConfiguration | null>(null)
+  const [refreshConfigError, setRefreshConfigError] = useState<string | null>(null)
 
   const [selectedId, setSelectedId] = useState<string | null>(null)
   const [manifest, setManifest] = useState<RepositoryManifest | null>(null)
@@ -111,6 +114,24 @@ export function RepositoriesPage() {
   useEffect(() => {
     void loadRepositories()
   }, [loadRepositories])
+
+  useEffect(() => {
+    let cancelled = false
+    void apiFetch<RepositoryRefreshConfiguration>('/v1/repositories/refresh-config')
+      .then((response) => {
+        if (cancelled) return
+        setRefreshConfig(response)
+        setRefreshConfigError(null)
+      })
+      .catch((caught) => {
+        if (cancelled) return
+        setRefreshConfig(null)
+        setRefreshConfigError(caught instanceof Error ? caught.message : 'Monthly refresh configuration could not be loaded.')
+      })
+    return () => {
+      cancelled = true
+    }
+  }, [])
 
   const loadManifest = useCallback(async (repositoryId: string) => {
     setManifestLoading(true)
@@ -213,7 +234,7 @@ export function RepositoriesPage() {
         { method: 'POST' },
       )
       if (response.ready) {
-        setNotice(`${repositoryId} Memory, QA, Council and Learning setup completed successfully.`)
+        setNotice(`${repositoryId} Memory and Repository Intelligence setup completed successfully.`)
       } else {
         const failed = response.pipeline.failed_stages?.join(', ') || 'one or more required stages'
         setNoticeTone('warning')
@@ -277,7 +298,7 @@ export function RepositoriesPage() {
               <p className="text-xs font-semibold uppercase tracking-[0.2em] text-cyan-300/70">Repository manager</p>
               <h2 className="mt-2 text-2xl font-semibold text-white">Registered repository snapshots</h2>
               <p className="mt-2 max-w-2xl text-sm leading-6 text-slate-400">
-                Upload a zipped repository to index it for QA, learning and council review. Repository IDs are stable,
+                Upload a zipped repository to build Repository Memory and consolidated Repository Intelligence. Repository IDs are stable,
                 monthly uploads replace the same governed snapshot, and production stores both the source ZIP and manifest
                 in R2 so the working copy is restored automatically after backend restarts.
               </p>
@@ -314,6 +335,34 @@ export function RepositoriesPage() {
           </div>
         </section>
 
+        <section className="mt-4 rounded-2xl border border-white/8 bg-hive-panel/60 px-4 py-3 sm:px-5">
+          <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+            <div>
+              <p className="text-xs font-semibold uppercase tracking-[0.16em] text-slate-400">Monthly repository automation</p>
+              <p className="mt-1 text-sm text-slate-300">
+                MAST triggers a fresh governed GitHub snapshot after the second-Saturday AIMS/RAMS audit, then HIVE runs Repository Intelligence for every configured repository.
+              </p>
+            </div>
+            {refreshConfig ? (
+              <StatusBadge
+                status={refreshConfig.configured ? 'ready' : 'error'}
+                label={refreshConfig.configured ? `Ready · ${refreshConfig.repository_count} repos · ${refreshConfig.branch}` : 'Not configured'}
+                compact
+              />
+            ) : refreshConfigError ? (
+              <StatusBadge status="error" label="Configuration unavailable" compact />
+            ) : (
+              <StatusBadge status="readonly" label="Checking" compact />
+            )}
+          </div>
+          {refreshConfig && !refreshConfig.configured && (
+            <p className="mt-2 text-xs text-rose-200">
+              Monthly automation is not production-ready. Check HIVE GitHub refresh settings and GITHUB_TOKEN before relying on the scheduled run.
+            </p>
+          )}
+          {refreshConfigError && <p className="mt-2 text-xs text-rose-200">{refreshConfigError}</p>}
+        </section>
+
         {error && <div role="alert" className="mt-4 rounded-xl border border-rose-400/20 bg-rose-400/8 px-4 py-3 text-sm text-rose-200">{error}</div>}
         {notice && (
           <div
@@ -344,7 +393,7 @@ export function RepositoriesPage() {
                 <EmptyState
                   icon={<FolderGit2 className="h-5 w-5" />}
                   title="No repositories registered yet."
-                  body="Upload a zipped repository above to index it for QA, learning history and council review."
+                  body="Upload a zipped repository above to build Repository Memory and run consolidated Repository Intelligence."
                 />
               </div>
             ) : (

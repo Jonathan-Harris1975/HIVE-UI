@@ -3,6 +3,7 @@ import {
   BookMarked,
   Brain,
   CheckCircle2,
+  Copy,
   ChevronDown,
   ChevronUp,
   Gavel,
@@ -18,6 +19,7 @@ import {
 import { useCallback, useEffect, useMemo, useState, type FormEvent } from 'react'
 import { useSearchParams } from 'react-router'
 import { EmptyState } from '../components/EmptyState'
+import { RepositoryMemoryPage } from './RepositoryMemoryPage'
 import { StatusBadge } from '../components/StatusBadge'
 import { useRepositoryCatalog } from '../hooks/useRepositoryCatalog'
 import { apiFetch } from '../lib/api'
@@ -27,6 +29,7 @@ import type {
   RepositoryCouncilHistoryResponse,
   RepositoryCouncilReport,
   RepositoryLearningEntryResponse,
+  RepositoryIntelligenceReport,
   RepositoryMemoryResponse,
   RepositoryProjectDnaResponse,
   RepositoryQaReport,
@@ -58,6 +61,24 @@ function asProjectDna(value: unknown): RepositoryProjectDnaResponse | null {
   return isRecord(value) ? (value as RepositoryProjectDnaResponse) : null
 }
 
+type PersistedIntelligence = {
+  occurred_at?: string
+  summary: RepositoryIntelligenceReport['summary']
+  findings: RepositoryIntelligenceReport['findings']
+  improvement_prompt: string
+}
+
+function asPersistedIntelligence(value: unknown): PersistedIntelligence | null {
+  if (!isRecord(value) || !isRecord(value.summary) || !Array.isArray(value.findings)) return null
+  if (typeof value.improvement_prompt !== 'string') return null
+  return {
+    occurred_at: typeof value.occurred_at === 'string' ? value.occurred_at : undefined,
+    summary: value.summary as unknown as RepositoryIntelligenceReport['summary'],
+    findings: value.findings as RepositoryIntelligenceReport['findings'],
+    improvement_prompt: value.improvement_prompt,
+  }
+}
+
 export function RepositoryIntelligencePage() {
   const catalog = useRepositoryCatalog()
   const [searchParams, setSearchParams] = useSearchParams()
@@ -67,14 +88,16 @@ export function RepositoryIntelligencePage() {
   const [error, setError] = useState<string | null>(null)
   const [notice, setNotice] = useState<string | null>(null)
 
-  // QA
+  // Canonical combined QA + Council Repository Intelligence run.
+  const [intelligence, setIntelligence] = useState<PersistedIntelligence | null>(null)
+  const [intelligenceRunning, setIntelligenceRunning] = useState(false)
+  const [promptCopied, setPromptCopied] = useState(false)
+
+  // Raw QA/Council evidence remains visible below the consolidated report.
   const [qaReport, setQaReport] = useState<RepositoryQaReport | null>(null)
-  const [qaRunning, setQaRunning] = useState(false)
   const [qaOpenChecks, setQaOpenChecks] = useState<Set<string>>(new Set())
 
-  // Council
   const [councilReport, setCouncilReport] = useState<RepositoryCouncilReport | null>(null)
-  const [councilRunning, setCouncilRunning] = useState(false)
   const [councilHistory, setCouncilHistory] = useState<RepositoryCouncilReport[]>([])
   const [councilHistoryLoading, setCouncilHistoryLoading] = useState(true)
 
@@ -125,10 +148,19 @@ export function RepositoryIntelligencePage() {
       )
       const qaHistory = Array.isArray(response.memory?.qa_history) ? response.memory.qa_history : []
       const latestQa = [...qaHistory].reverse().map(asQaReport).find((entry) => entry !== null) ?? null
+      const intelligenceHistory = Array.isArray(response.memory?.repository_intelligence_history)
+        ? response.memory.repository_intelligence_history
+        : []
+      const latestIntelligence = [...intelligenceHistory]
+        .reverse()
+        .map(asPersistedIntelligence)
+        .find((entry) => entry !== null) ?? null
       setQaReport(latestQa)
+      setIntelligence(latestIntelligence)
       setDna(asProjectDna(response.memory?.project_dna))
     } catch (caught) {
       setQaReport(null)
+      setIntelligence(null)
       setDna(null)
       setError(caught instanceof Error ? caught.message : 'Persisted Repository Intelligence could not be loaded.')
     }
@@ -139,6 +171,7 @@ export function RepositoryIntelligencePage() {
     if (!catalog.repositories.some((repo) => repo.repository_id === repositoryId)) return
     setQaReport(null)
     setCouncilReport(null)
+    setIntelligence(null)
     setDna(null)
     void loadCouncilHistory(repositoryId)
     void loadPersistentIntelligence(repositoryId)
@@ -174,40 +207,42 @@ export function RepositoryIntelligencePage() {
     })
   }
 
-  async function runQa() {
-    setQaRunning(true)
+  async function runIntelligence() {
+    setIntelligenceRunning(true)
     setError(null)
     setNotice(null)
+    setPromptCopied(false)
     try {
-      const report = await apiFetch<RepositoryQaReport>(`/v1/repositories/${encodeURIComponent(repositoryId)}/qa`, {
-        method: 'POST',
+      const report = await apiFetch<RepositoryIntelligenceReport>(
+        `/v1/repositories/${encodeURIComponent(repositoryId)}/intelligence/run`,
+        { method: 'POST' },
+      )
+      setIntelligence({
+        occurred_at: report.occurred_at,
+        summary: report.summary,
+        findings: report.findings,
+        improvement_prompt: report.improvement_prompt,
       })
-      setQaReport(report)
-      await loadPersistentIntelligence(repositoryId)
-      setNotice(`QA run complete for ${repositoryId}: ${scorePct(report.score)}% (${report.warning_count} warnings).`)
+      setQaReport(report.qa)
+      setCouncilReport(report.council)
+      setDna(report.project_dna)
+      await Promise.all([loadCouncilHistory(repositoryId), loadPersistentIntelligence(repositoryId)])
+      setNotice(`Repository Intelligence complete for ${repositoryId}: ${report.summary.finding_count} consolidated finding(s).`)
     } catch (caught) {
-      setError(caught instanceof Error ? caught.message : 'Repository QA failed.')
+      setError(caught instanceof Error ? caught.message : 'Repository Intelligence failed.')
     } finally {
-      setQaRunning(false)
+      setIntelligenceRunning(false)
     }
   }
 
-  async function runCouncil() {
-    setCouncilRunning(true)
-    setError(null)
-    setNotice(null)
+  async function copyImprovementPrompt() {
+    if (!intelligence?.improvement_prompt) return
     try {
-      const report = await apiFetch<RepositoryCouncilReport>(
-        `/v1/repositories/${encodeURIComponent(repositoryId)}/council`,
-        { method: 'POST' },
-      )
-      setCouncilReport(report)
-      await Promise.all([loadCouncilHistory(repositoryId), loadPersistentIntelligence(repositoryId)])
-      setNotice(`Council review complete for ${repositoryId}: ${scorePct(report.overall_score)}% overall.`)
-    } catch (caught) {
-      setError(caught instanceof Error ? caught.message : 'Repository Council review failed.')
-    } finally {
-      setCouncilRunning(false)
+      await navigator.clipboard.writeText(intelligence.improvement_prompt)
+      setPromptCopied(true)
+      window.setTimeout(() => setPromptCopied(false), 1800)
+    } catch {
+      setError('The improvement prompt could not be copied to the clipboard.')
     }
   }
 
@@ -323,11 +358,10 @@ export function RepositoryIntelligencePage() {
     <div className="h-full overflow-y-auto p-4 sm:p-6 lg:p-8">
       <div className="mx-auto max-w-6xl">
         <section className="rounded-3xl border border-white/8 bg-hive-panel/75 p-5 sm:p-7">
-          <p className="text-xs font-semibold uppercase tracking-[0.2em] text-cyan-300/70">Repository intelligence</p>
-          <h2 className="mt-2 text-2xl font-semibold text-white">QA, Council review &amp; learned patterns</h2>
+          <p className="text-xs font-semibold uppercase tracking-[0.2em] text-cyan-300/70">Repository workspace</p>
+          <h2 className="mt-2 text-2xl font-semibold text-white">Memory &amp; Repository Intelligence</h2>
           <p className="mt-2 max-w-2xl text-sm leading-6 text-slate-400">
-            Static QA checks, weighted Council scoring, and the learning signals repositories accumulate over time —
-            all scoped to a single registered repository.
+            One governed workspace for persistent Repository Memory, QA evidence, Council scoring, consolidated findings and code-improvement instructions.
           </p>
 
           <form onSubmit={switchRepository} className="mt-6 grid gap-2 border-t border-white/8 pt-5 sm:grid-cols-[1fr_auto]">
@@ -346,6 +380,17 @@ export function RepositoryIntelligencePage() {
               Load
             </button>
           </form>
+          <div className="mt-4 flex justify-end">
+            <button
+              type="button"
+              onClick={() => void runIntelligence()}
+              disabled={intelligenceRunning || !repositoryReady}
+              className="flex h-10 items-center gap-2 rounded-xl border border-cyan-300/20 bg-cyan-300/10 px-4 text-xs font-semibold text-cyan-100 disabled:cursor-not-allowed disabled:opacity-50"
+            >
+              {intelligenceRunning ? <LoaderCircle className="h-4 w-4 animate-spin" /> : <Sparkles className="h-4 w-4" />}
+              Run Repository Intelligence
+            </button>
+          </div>
         </section>
 
         {catalog.error && <div role="alert" className="mt-4 rounded-xl border border-rose-400/20 bg-rose-400/8 px-4 py-3 text-sm text-rose-200">{catalog.error}</div>}
@@ -378,18 +423,68 @@ export function RepositoryIntelligencePage() {
         {error && <div role="alert" className="mt-4 rounded-xl border border-rose-400/20 bg-rose-400/8 px-4 py-3 text-sm text-rose-200">{error}</div>}
         {notice && <div role="status" aria-live="polite" className="mt-4 rounded-xl border border-emerald-300/20 bg-emerald-300/8 px-4 py-3 text-sm text-emerald-100">{notice}</div>}
 
+        {/* Consolidated Intelligence */}
+        <section className="mt-6 rounded-3xl border border-white/8 bg-hive-panel/70 p-5">
+          <div className="flex flex-wrap items-start justify-between gap-3">
+            <div>
+              <h3 className="flex items-center gap-2 text-sm font-semibold text-white"><Sparkles className="h-4 w-4 text-cyan-300" /> Consolidated improvement report</h3>
+              <p className="mt-1 text-xs leading-5 text-slate-500">One evidence set from Repository QA and Repository Council, merged without rerunning QA.</p>
+            </div>
+            {intelligence?.improvement_prompt && (
+              <button type="button" onClick={() => void copyImprovementPrompt()} className="flex h-9 items-center gap-1.5 rounded-lg border border-white/8 bg-white/[0.04] px-3 text-xs text-slate-200 hover:bg-white/[0.07]">
+                <Copy className="h-3.5 w-3.5" /> {promptCopied ? 'Copied' : 'Copy improvement prompt'}
+              </button>
+            )}
+          </div>
+
+          {!intelligence ? (
+            <div className="mt-4">
+              <EmptyState icon={<Sparkles className="h-5 w-5" />} title="No consolidated Intelligence report yet." body="Run Repository Intelligence to combine QA and Council evidence into one prioritised improvement report and coding prompt." />
+            </div>
+          ) : (
+            <div className="mt-4 space-y-4">
+              <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+                <div className="rounded-xl border border-white/8 bg-white/[0.025] p-3"><p className="text-xs text-slate-500">QA score</p><p className={`mt-1 text-xl font-semibold ${scoreTone(scorePct(intelligence.summary.qa_score))}`}>{scorePct(intelligence.summary.qa_score)}%</p></div>
+                <div className="rounded-xl border border-white/8 bg-white/[0.025] p-3"><p className="text-xs text-slate-500">Council score</p><p className={`mt-1 text-xl font-semibold ${scoreTone(scorePct(intelligence.summary.council_score))}`}>{scorePct(intelligence.summary.council_score)}%</p></div>
+                <div className="rounded-xl border border-white/8 bg-white/[0.025] p-3"><p className="text-xs text-slate-500">Findings</p><p className="mt-1 text-xl font-semibold text-white">{intelligence.summary.finding_count}</p></div>
+                <div className="rounded-xl border border-white/8 bg-white/[0.025] p-3"><p className="text-xs text-slate-500">Critical/high</p><p className={`mt-1 text-xl font-semibold ${intelligence.summary.blocking_finding_count ? 'text-rose-300' : 'text-emerald-300'}`}>{intelligence.summary.blocking_finding_count}</p></div>
+              </div>
+              <div className="rounded-xl border border-white/8 bg-hive-surface/60 p-3">
+                <div className="flex flex-wrap items-center justify-between gap-2">
+                  <p className="text-sm font-medium text-slate-100">{intelligence.summary.headline}</p>
+                  <StatusBadge status={intelligence.summary.status === 'healthy' ? 'ready' : intelligence.summary.status === 'action_required' ? 'error' : 'warning'} label={intelligence.summary.status.replace(/_/g, ' ')} compact />
+                </div>
+                {intelligence.occurred_at && <p className="mt-1 text-xs text-slate-500">{formatDate(intelligence.occurred_at)}</p>}
+              </div>
+              {intelligence.findings.length === 0 ? (
+                <p className="rounded-xl border border-emerald-300/15 bg-emerald-300/[0.035] p-3 text-xs text-emerald-100">No QA warnings or sub-target Council dimensions were reported.</p>
+              ) : (
+                <div className="space-y-2">
+                  {intelligence.findings.map((finding) => (
+                    <article key={finding.id} className="rounded-xl border border-white/8 bg-white/[0.025] p-3">
+                      <div className="flex flex-wrap items-center justify-between gap-2">
+                        <p className="text-xs font-semibold text-slate-100">{finding.title}</p>
+                        <span className={`rounded-full border px-2 py-0.5 text-[11px] uppercase tracking-wide ${finding.severity === 'critical' || finding.severity === 'high' ? 'border-rose-300/20 bg-rose-300/8 text-rose-200' : 'border-amber-300/20 bg-amber-300/8 text-amber-100'}`}>{finding.severity}</span>
+                      </div>
+                      <p className="mt-1 text-xs leading-5 text-slate-400">{finding.summary}</p>
+                      <p className="mt-1 text-[11px] text-slate-500">{finding.source.replace(/_/g, ' ')} · {finding.category.replace(/_/g, ' ')} · {finding.confidence}</p>
+                      {Object.keys(finding.details ?? {}).length > 0 && <pre className="mt-2 max-h-56 overflow-auto rounded-lg bg-hive-canvas p-2 font-mono text-[11px] text-slate-400">{JSON.stringify(finding.details, null, 2)}</pre>}
+                    </article>
+                  ))}
+                </div>
+              )}
+              <div className="rounded-xl border border-cyan-300/15 bg-cyan-300/[0.035] p-3">
+                <p className="text-xs font-semibold text-cyan-100">Code-improvement prompt</p>
+                <pre className="mt-2 max-h-80 overflow-auto whitespace-pre-wrap font-mono text-xs leading-5 text-slate-300">{intelligence.improvement_prompt}</pre>
+              </div>
+            </div>
+          )}
+        </section>
+
         {/* QA */}
         <section className="mt-6 rounded-3xl border border-white/8 bg-hive-panel/70 p-5">
           <div className="flex items-center justify-between">
-            <h3 className="flex items-center gap-2 text-sm font-semibold text-white"><ShieldAlert className="h-4 w-4 text-cyan-300" /> Repository QA</h3>
-            <button
-              type="button"
-              onClick={() => void runQa()}
-              disabled={qaRunning || !repositoryReady}
-              className="flex h-9 items-center gap-1.5 rounded-lg border border-cyan-300/20 bg-cyan-300/10 px-3 text-xs font-medium text-cyan-100 disabled:opacity-50"
-            >
-              {qaRunning ? <LoaderCircle className="h-3.5 w-3.5 animate-spin" /> : <Sparkles className="h-3.5 w-3.5" />} Run QA
-            </button>
+            <h3 className="flex items-center gap-2 text-sm font-semibold text-white"><ShieldAlert className="h-4 w-4 text-cyan-300" /> Repository QA evidence</h3>
           </div>
           <p className="mt-2 text-xs leading-5 text-slate-500">
             Static checks only — build compilation, lint heuristics, import validation, dependency scan, dead-code
@@ -399,7 +494,7 @@ export function RepositoryIntelligencePage() {
 
           {!qaReport ? (
             <div className="mt-4">
-              <EmptyState icon={<ShieldAlert className="h-5 w-5" />} title="No QA run yet for this repository." body="Run QA to generate a fresh report." />
+              <EmptyState icon={<ShieldAlert className="h-5 w-5" />} title="No QA evidence recorded for this repository." body="Run Repository Intelligence to generate QA evidence and the consolidated report." />
             </div>
           ) : (
             <div className="mt-4">
@@ -453,20 +548,12 @@ export function RepositoryIntelligencePage() {
         {/* Council */}
         <section className="mt-6 rounded-3xl border border-white/8 bg-hive-panel/70 p-5">
           <div className="flex items-center justify-between">
-            <h3 className="flex items-center gap-2 text-sm font-semibold text-white"><Gavel className="h-4 w-4 text-cyan-300" /> Repository Council</h3>
-            <button
-              type="button"
-              onClick={() => void runCouncil()}
-              disabled={councilRunning || !repositoryReady}
-              className="flex h-9 items-center gap-1.5 rounded-lg border border-cyan-300/20 bg-cyan-300/10 px-3 text-xs font-medium text-cyan-100 disabled:opacity-50"
-            >
-              {councilRunning ? <LoaderCircle className="h-3.5 w-3.5 animate-spin" /> : <Gavel className="h-3.5 w-3.5" />} Run review
-            </button>
+            <h3 className="flex items-center gap-2 text-sm font-semibold text-white"><Gavel className="h-4 w-4 text-cyan-300" /> Repository Council evidence</h3>
           </div>
 
           {!councilReport ? (
             <div className="mt-4">
-              <EmptyState icon={<Gavel className="h-5 w-5" />} title="No Council review recorded for this session." body="Run a review to score architecture, security, maintainability and more." />
+              <EmptyState icon={<Gavel className="h-5 w-5" />} title="No Council evidence recorded for this repository." body="Run Repository Intelligence to score architecture, security, maintainability and the other Council dimensions." />
             </div>
           ) : (
             <div className="mt-4">
@@ -660,6 +747,8 @@ export function RepositoryIntelligencePage() {
             </form>
           </div>
         </section>
+
+        <RepositoryMemoryPage embedded />
       </div>
     </div>
   )

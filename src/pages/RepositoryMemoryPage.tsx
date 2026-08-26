@@ -41,6 +41,7 @@ const FIELD_LABELS: Record<string, string> = {
   optimisation_history: 'Optimisation history',
   qa_history: 'QA history',
   repository_council_history: 'Repository Council history',
+  repository_intelligence_history: 'Repository Intelligence reports',
 }
 
 function fieldLabel(field: string): string {
@@ -77,7 +78,7 @@ function summariseEntry(entry: Record<string, unknown>): { title: string; detail
   return { title, detail, when: when == null ? undefined : String(when) }
 }
 
-export function RepositoryMemoryPage() {
+export function RepositoryMemoryPage({ embedded = false }: { embedded?: boolean } = {}) {
   const { setPayload, setOpen } = useInspector()
   const catalog = useRepositoryCatalog()
   const [searchParams, setSearchParams] = useSearchParams()
@@ -102,6 +103,15 @@ export function RepositoryMemoryPage() {
   const [searchError, setSearchError] = useState<string | null>(null)
 
   const [diagnostics, setDiagnostics] = useState<RepositoryMemoryDiagnosticsResponse | null>(null)
+
+  useEffect(() => {
+    if (!embedded) return
+    const requested = searchParams.get('repo') ?? ''
+    if (requested && requested !== repositoryId) {
+      setRepositoryId(requested)
+      setRepoInput(requested)
+    }
+  }, [embedded, repositoryId, searchParams])
 
   useEffect(() => {
     if (catalog.loading || catalog.repositories.length === 0) return
@@ -283,7 +293,7 @@ export function RepositoryMemoryPage() {
   const memoryWritable = Boolean(selectedRepository && persistenceReady)
 
   return (
-    <div className="h-full overflow-y-auto p-4 sm:p-6 lg:p-8">
+    <div className={embedded ? "mt-6" : "h-full overflow-y-auto p-4 sm:p-6 lg:p-8"}>
       <div className="mx-auto max-w-6xl">
         <section className="rounded-3xl border border-white/8 bg-hive-panel/75 p-5 sm:p-7">
           <div className="flex flex-col gap-5 lg:flex-row lg:items-end lg:justify-between">
@@ -305,33 +315,37 @@ export function RepositoryMemoryPage() {
             </button>
           </div>
 
-          <form onSubmit={switchRepository} className="mt-6 grid gap-2 border-t border-white/8 pt-5 sm:grid-cols-[1fr_auto]">
-            <select
-              value={repoInput}
-              aria-label="Choose registered repository"
-              onChange={(event) => setRepoInput(event.target.value)}
-              className="h-10 rounded-xl border border-white/8 bg-hive-surface px-3 text-sm text-slate-300 outline-none"
-            >
-              <option value="">{catalog.loading ? 'Loading repositories…' : 'Choose a registered repository…'}</option>
-              {catalog.repositories.map((repo) => (
-                <option key={repo.repository_id} value={repo.repository_id}>{repo.repository_id} · {repo.source_filename}</option>
-              ))}
-            </select>
-            <button type="submit" disabled={!repoInput} className="flex h-10 items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-cyan-400 to-emerald-300 px-4 text-xs font-semibold text-hive-accent-deep disabled:opacity-50">
-              Load
-            </button>
-          </form>
+          {!embedded && (
+            <>
+              <form onSubmit={switchRepository} className="mt-6 grid gap-2 border-t border-white/8 pt-5 sm:grid-cols-[1fr_auto]">
+                <select
+                  value={repoInput}
+                  aria-label="Choose registered repository"
+                  onChange={(event) => setRepoInput(event.target.value)}
+                  className="h-10 rounded-xl border border-white/8 bg-hive-surface px-3 text-sm text-slate-300 outline-none"
+                >
+                  <option value="">{catalog.loading ? 'Loading repositories…' : 'Choose a registered repository…'}</option>
+                  {catalog.repositories.map((repo) => (
+                    <option key={repo.repository_id} value={repo.repository_id}>{repo.repository_id} · {repo.source_filename}</option>
+                  ))}
+                </select>
+                <button type="submit" disabled={!repoInput} className="flex h-10 items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-cyan-400 to-emerald-300 px-4 text-xs font-semibold text-hive-accent-deep disabled:opacity-50">
+                  Load
+                </button>
+              </form>
 
-          {catalog.error && <div role="alert" className="mt-3 rounded-xl border border-rose-400/20 bg-rose-400/8 px-4 py-3 text-xs text-rose-200">{catalog.error}</div>}
-          {!catalog.loading && catalog.repositories.length === 0 && (
-            <div role="alert" className="mt-3 rounded-xl border border-amber-300/20 bg-amber-300/8 px-4 py-3 text-xs text-amber-100">
-              No repository snapshots are registered. Upload the governed repositories on Overview before using Memory.
-            </div>
-          )}
-          {repositoryUnavailable && (
-            <div role="alert" className="mt-3 rounded-xl border border-amber-300/20 bg-amber-300/8 px-4 py-3 text-xs text-amber-100">
-              {repositoryId} is not registered in HIVE. Choose a registered repository or upload its ZIP on Overview.
-            </div>
+              {catalog.error && <div role="alert" className="mt-3 rounded-xl border border-rose-400/20 bg-rose-400/8 px-4 py-3 text-xs text-rose-200">{catalog.error}</div>}
+              {!catalog.loading && catalog.repositories.length === 0 && (
+                <div role="alert" className="mt-3 rounded-xl border border-amber-300/20 bg-amber-300/8 px-4 py-3 text-xs text-amber-100">
+                  No repository snapshots are registered. Upload the governed repositories on Overview before using Memory.
+                </div>
+              )}
+              {repositoryUnavailable && (
+                <div role="alert" className="mt-3 rounded-xl border border-amber-300/20 bg-amber-300/8 px-4 py-3 text-xs text-amber-100">
+                  {repositoryId} is not registered in HIVE. Choose a registered repository or upload its ZIP on Overview.
+                </div>
+              )}
+            </>
           )}
 
           <div className="mt-5 flex flex-wrap items-center gap-2 text-xs text-slate-400">
