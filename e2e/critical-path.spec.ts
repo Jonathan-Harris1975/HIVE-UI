@@ -37,6 +37,18 @@ test.describe('HIVE-UI critical path', () => {
     await page.route('**/api/v1/chat/conversations*', (route) =>
       route.fulfill({ status: 200, json: { ok: true, conversations: [] } }),
     )
+    await page.route('**/api/v1/models', (route) =>
+      route.fulfill({
+        status: 200,
+        json: {
+          count: 1,
+          models: [{ id: 'test/model', name: 'Test model', primary_group: 'general', chat_selectable: true }],
+        },
+      }),
+    )
+    await page.route('**/api/v1/workflow-presets', (route) =>
+      route.fulfill({ status: 200, json: { presets: [] } }),
+    )
     await page.route('**/api/v1/chat/stream', (route) =>
       route.fulfill({
         status: 200,
@@ -64,11 +76,22 @@ test.describe('HIVE-UI critical path', () => {
     await page.getByPlaceholder(/enter access key/i).fill('e2e-test-key')
     await page.getByRole('button', { name: /unlock console/i }).click()
 
-    // --- One streamed chat turn ---
+    // --- Chat controls and one streamed turn ---
     const chatInput = page.getByRole('textbox', { name: 'Message HIVE' })
     await expect(chatInput).toBeVisible({ timeout: 15_000 })
+
+    await chatInput.fill('discard this draft')
+    await page.locator('#hive-main-content').getByRole('button', { name: /new (chat|conversation)/i }).click()
+    await expect(chatInput).toHaveValue('')
+
+    await page.getByLabel('Chat mode').selectOption('code')
+    await page.getByRole('button', { name: 'Choose HIVE model' }).click()
+    await page.getByRole('option', { name: /Test model/i }).click()
+    await page.getByRole('button', { name: 'Enable shared skills' }).click()
+    await expect(page.getByRole('button', { name: 'Disable shared skills' })).toBeVisible()
+
     await chatInput.fill('Hello HIVE')
-    await page.keyboard.press('Enter')
+    await page.getByRole('button', { name: 'Send message' }).click()
     await expect(page.getByText('Hi there!')).toBeVisible({ timeout: 15_000 })
 
     // --- One file upload (navigate to Files) ---
