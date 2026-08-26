@@ -91,3 +91,13 @@ test('model picker escapes composer clipping with a viewport-positioned portal',
   assert.match(picker, /className="fixed z-\[80\]/)
   assert.match(picker, /popupRef\.current\?\.contains/)
 })
+
+
+test('operations health cards expose aggregate status and no tier branding', () => {
+  const ops = source('src/pages/OpsPage.tsx')
+  const apiTypes = source('src/types/api.ts')
+  assert.match(ops, /status=\{item\.status \|\| item\.operational\?\.status \|\| item\.readiness\?\.status \|\| item\.liveness\?\.status\}/)
+  const removedTierField = ['free', 'tier', 'safe'].join('_')
+  assert.doesNotMatch(ops, new RegExp(removedTierField, 'i'))
+  assert.doesNotMatch(apiTypes, new RegExp(removedTierField, 'i'))
+})
