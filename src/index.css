@@ -224,6 +224,9 @@ input::placeholder, textarea::placeholder { opacity: 1; }
 [role="alert"] { overflow-wrap: anywhere; }
 
 .ui-scroll-region { scrollbar-gutter: stable; overscroll-behavior: contain; }
+/* `safe center` keeps the welcome state centred when it fits, but falls back to
+   the scroll origin instead of clipping its top edge on short mobile viewports. */
+.chat-empty-state { justify-content: safe center; }
 .ui-panel { border: 1px solid var(--color-hive-border); background: color-mix(in srgb, var(--color-hive-panel) 92%, transparent); }
 .ui-subtle-divider { border-color: var(--color-hive-border); }
 
