@@ -1,6 +1,6 @@
 import { lazy, Suspense } from 'react'
 import { LoaderCircle } from 'lucide-react'
-import { Navigate, Route, Routes } from 'react-router'
+import { Navigate, Route, Routes, useLocation } from 'react-router'
 import { AppShell } from './components/AppShell'
 import { LoginScreen } from './components/LoginScreen'
 import { useAuth } from './context/AuthContext'
@@ -11,9 +11,6 @@ const ChatPage = lazy(() => import('./pages/ChatPage').then((module) => ({ defau
 const FilesPage = lazy(() => import('./pages/FilesPage').then((module) => ({ default: module.FilesPage })))
 const SkillsPage = lazy(() => import('./pages/SkillsPage').then((module) => ({ default: module.SkillsPage })))
 const OpsPage = lazy(() => import('./pages/OpsPage').then((module) => ({ default: module.OpsPage })))
-const RepositoryMemoryPage = lazy(() =>
-  import('./pages/RepositoryMemoryPage').then((module) => ({ default: module.RepositoryMemoryPage })),
-)
 const ModelRegistryPage = lazy(() =>
   import('./pages/ModelRegistryPage').then((module) => ({ default: module.ModelRegistryPage })),
 )
@@ -45,6 +42,11 @@ const CommunicationsPage = lazy(() =>
   import('./pages/CommunicationsPage').then((module) => ({ default: module.CommunicationsPage })),
 )
 
+function LegacyRepositoryMemoryRedirect() {
+  const location = useLocation()
+  return <Navigate to={`/intelligence${location.search}`} replace />
+}
+
 function LoadingScreen({ compact = false }: { compact?: boolean }) {
   return (
     <main role="status" aria-live="polite" aria-busy="true" className={`flex items-center justify-center bg-hive-canvas text-slate-300 ${compact ? 'h-full' : 'min-h-dvh'}`}>
@@ -69,7 +71,7 @@ export default function App() {
               <Route path="chat" element={<ChatPage />} />
               <Route path="files" element={<FilesPage />} />
               <Route path="skills" element={<SkillsPage />} />
-              <Route path="memory" element={<RepositoryMemoryPage />} />
+              <Route path="memory" element={<LegacyRepositoryMemoryRedirect />} />
               <Route path="repositories" element={<RepositoriesPage />} />
               <Route path="intelligence" element={<RepositoryIntelligencePage />} />
               <Route path="integrations" element={<IntegrationsPage />} />
