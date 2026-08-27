@@ -908,9 +908,14 @@ export interface RepositoryRefreshConfiguration {
   enabled: boolean
   configured: boolean
   repository_count: number
+  expected_repository_count: number
   repository_ids: string[]
+  complete_catalogue: boolean
+  missing_repository_ids: string[]
+  unexpected_repository_ids: string[]
   branch: string
   github_token_configured: boolean
+  trigger: string
   source_error?: string | null
 }
 
