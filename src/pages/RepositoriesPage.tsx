@@ -346,7 +346,7 @@ export function RepositoriesPage() {
             {refreshConfig ? (
               <StatusBadge
                 status={refreshConfig.configured ? 'ready' : 'error'}
-                label={refreshConfig.configured ? `Ready · ${refreshConfig.repository_count} repos · ${refreshConfig.branch}` : 'Not configured'}
+                label={refreshConfig.configured ? `Ready · ${refreshConfig.repository_count}/${refreshConfig.expected_repository_count} repos · ${refreshConfig.branch}` : 'Not configured'}
                 compact
               />
             ) : refreshConfigError ? (
@@ -355,9 +355,14 @@ export function RepositoriesPage() {
               <StatusBadge status="readonly" label="Checking" compact />
             )}
           </div>
+          {refreshConfig?.configured && (
+            <p className="mt-2 text-xs text-emerald-200/80">
+              Trigger: {refreshConfig.trigger}. HIVE replaces all governed snapshots and runs Repository Intelligence automatically.
+            </p>
+          )}
           {refreshConfig && !refreshConfig.configured && (
             <p className="mt-2 text-xs text-rose-200">
-              Monthly automation is not production-ready. Check HIVE GitHub refresh settings and GITHUB_TOKEN before relying on the scheduled run.
+              Monthly automation is not production-ready. {refreshConfig.missing_repository_ids.length ? `Missing repositories: ${refreshConfig.missing_repository_ids.join(', ')}. ` : ''}{!refreshConfig.github_token_configured ? 'GitHub access is not configured. ' : ''}Check HIVE repository refresh configuration before relying on the scheduled run.
             </p>
           )}
           {refreshConfigError && <p className="mt-2 text-xs text-rose-200">{refreshConfigError}</p>}

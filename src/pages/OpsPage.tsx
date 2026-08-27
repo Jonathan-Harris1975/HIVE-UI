@@ -196,6 +196,8 @@ function ServiceWakeControl({ repo, onWoken }: { repo: 'RAMS'; onWoken: () => vo
 
 function RepoHealthCard({ item, onInspect, onRefresh }: { item: RepoHealthItem; onInspect: () => void; onRefresh: () => void }) {
   const latency = item.liveness?.latency_ms
+  const livenessStatus = item.liveness?.status || item.status
+  const readinessStatus = item.readiness?.status || item.operational?.status || item.status
   const operationalStatus = item.operational?.status
   const category = item.category === 'background_worker'
     ? 'Background Worker'
@@ -226,12 +228,9 @@ function RepoHealthCard({ item, onInspect, onRefresh }: { item: RepoHealthItem; 
             </span>
             <span className="mt-0.5 block truncate text-xs text-slate-400" title={item.detail || item.description}>{item.detail || item.description || 'No health detail returned.'}</span>
           </span>
-          <span className="flex items-center">
-            <StatusBadge
-              status={item.status || item.operational?.status || item.readiness?.status || item.liveness?.status}
-              variant="operational"
-              compact
-            />
+          <span className="flex shrink-0 flex-col items-end gap-0.5 sm:flex-row sm:items-center sm:gap-2">
+            <StatusBadge status={livenessStatus} variant="liveness" compact />
+            <StatusBadge status={readinessStatus} variant="readiness" compact />
           </span>
         </div>
         <span className="mt-2 flex items-center gap-2 text-xs text-slate-400">
@@ -550,12 +549,12 @@ export function OpsPage() {
               <div className="flex items-center justify-between gap-3">
                 <div>
                   <h3 className="text-sm font-semibold text-white">Repository and service health</h3>
-                  <p className="mt-0.5 text-xs text-slate-400">Online is process liveness; Ready is configuration readiness; Degraded means the repo responds with partial capability.</p>
+                  <p className="mt-0.5 text-xs text-slate-400">Each service reports liveness and readiness separately. Online means the service answers; Ready means its production dependencies and configuration are available.</p>
                 </div>
                 <div className="flex items-center gap-1.5"><StatusBadge status={repoHealth?.overall_status || 'not_configured'} variant="operational" compact />{repoHealth?.error && <button type="button" onClick={() => void loadOps(true)} className="inline-flex h-8 items-center gap-1.5 rounded-lg border border-amber-300/15 bg-amber-300/7 px-2.5 text-xs text-amber-100"><RefreshCw className="h-3.5 w-3.5" /> Retry</button>}</div>
               </div>
               {repoHealth?.repos?.length ? (
-                <div className="mt-3 grid grid-cols-2 gap-2">
+                <div className="mt-3 grid grid-cols-1 gap-2 sm:grid-cols-2">
                   {repoHealth.repos.map((item) => (
                     <RepoHealthCard key={item.repo} item={item} onInspect={() => inspect(`${item.repo} health`, item, item.description)} onRefresh={() => void loadOps(true)} />
                   ))}
