@@ -847,6 +847,11 @@ export interface RepositoryIntelligenceContext {
   total_bytes: number
   languages: Record<string, number>
   dependency_manifests: Array<{ path: string; ecosystem: string; declared_count: number }>
+  architecture?: Record<string, unknown>
+  coding_standards?: Record<string, unknown>
+  build_profile?: Record<string, unknown>
+  deployment_profile?: Record<string, unknown>
+  environment_schema?: Record<string, unknown>
   top_level_entries: string[]
   implicated_files: string[]
 }
