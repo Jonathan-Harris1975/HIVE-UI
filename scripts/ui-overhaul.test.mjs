@@ -160,7 +160,7 @@ test('repository workspace prevents mobile intrinsic-width overflow', () => {
 
   assert.match(intelligence, /overflow-x-hidden/)
   assert.match(intelligence, /repository-workspace-selector/)
-  assert.match(intelligence, /onChange=\{\(event\) => setRepositoryId\(event\.target\.value\)\}/)
+  assert.match(intelligence, /onChange=\{\(event\) => selectRepository\(event\.target\.value\)\}/)
   assert.match(intelligence, /w-full min-w-0 max-w-full/)
   assert.match(memory, /overflow-x-hidden/)
   assert.match(memory, /sm:grid-cols-\[minmax\(0,1fr\)_auto\]/)
