@@ -10,7 +10,7 @@ import {
   Search,
   Sparkles,
 } from 'lucide-react'
-import { useCallback, useEffect, useMemo, useState, type FormEvent } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState, type FormEvent } from 'react'
 import { useSearchParams } from 'react-router'
 import { EmptyState } from '../components/EmptyState'
 import { StatusBadge } from '../components/StatusBadge'
@@ -78,12 +78,19 @@ function summariseEntry(entry: Record<string, unknown>): { title: string; detail
   return { title, detail, when: when == null ? undefined : String(when) }
 }
 
-export function RepositoryMemoryPage({ embedded = false }: { embedded?: boolean } = {}) {
+interface RepositoryMemoryPageProps {
+  embedded?: boolean
+  repositoryId?: string
+}
+
+export function RepositoryMemoryPage({ embedded = false, repositoryId: controlledRepositoryId }: RepositoryMemoryPageProps = {}) {
   const { setPayload, setOpen } = useInspector()
   const catalog = useRepositoryCatalog()
   const [searchParams, setSearchParams] = useSearchParams()
-  const [repositoryId, setRepositoryId] = useState(searchParams.get('repo') ?? '')
+  const [repositoryId, setRepositoryId] = useState(controlledRepositoryId ?? searchParams.get('repo') ?? '')
   const [repoInput, setRepoInput] = useState(repositoryId)
+  const activeRepositoryRef = useRef(controlledRepositoryId ?? repositoryId)
+  activeRepositoryRef.current = controlledRepositoryId ?? repositoryId
   const [memory, setMemory] = useState<Record<string, unknown>>({})
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -105,13 +112,20 @@ export function RepositoryMemoryPage({ embedded = false }: { embedded?: boolean 
   const [diagnostics, setDiagnostics] = useState<RepositoryMemoryDiagnosticsResponse | null>(null)
 
   useEffect(() => {
+    if (controlledRepositoryId) {
+      if (controlledRepositoryId !== repositoryId) {
+        setRepositoryId(controlledRepositoryId)
+        setRepoInput(controlledRepositoryId)
+      }
+      return
+    }
     if (!embedded) return
     const requested = searchParams.get('repo') ?? ''
     if (requested && requested !== repositoryId) {
       setRepositoryId(requested)
       setRepoInput(requested)
     }
-  }, [embedded, repositoryId, searchParams])
+  }, [controlledRepositoryId, embedded, repositoryId, searchParams])
 
   useEffect(() => {
     if (catalog.loading || catalog.repositories.length === 0) return
@@ -122,16 +136,21 @@ export function RepositoryMemoryPage({ embedded = false }: { embedded?: boolean 
   }, [catalog.loading, catalog.repositories, repositoryId])
 
   const loadMemory = useCallback(async (repo: string) => {
-    setLoading(true)
-    setError(null)
+    if (activeRepositoryRef.current === repo) {
+      setLoading(true)
+      setError(null)
+    }
     try {
       const response = await apiFetch<RepositoryMemoryResponse>(`/v1/repositories/${encodeURIComponent(repo)}/memory`)
+      if (activeRepositoryRef.current !== repo) return
+      if (response.repository_id !== repo) throw new Error(`Repository Memory returned data for ${response.repository_id}, not ${repo}.`)
       setMemory(response.memory ?? {})
     } catch (caught) {
+      if (activeRepositoryRef.current !== repo) return
       setError(caught instanceof Error ? caught.message : 'Repository Memory could not be loaded.')
       setMemory({})
     } finally {
-      setLoading(false)
+      if (activeRepositoryRef.current === repo) setLoading(false)
     }
   }, [])
 
@@ -145,7 +164,7 @@ export function RepositoryMemoryPage({ embedded = false }: { embedded?: boolean 
   }, [repositoryId, catalog.loading, catalog.repositories, loadMemory])
 
   useEffect(() => {
-    if (!repositoryId) return
+    if (!repositoryId || controlledRepositoryId) return
     setSearchParams(
       (previous) => {
         const next = new URLSearchParams(previous)
@@ -154,7 +173,7 @@ export function RepositoryMemoryPage({ embedded = false }: { embedded?: boolean 
       },
       { replace: true },
     )
-  }, [repositoryId, setSearchParams])
+  }, [controlledRepositoryId, repositoryId, setSearchParams])
 
   useEffect(() => {
     apiFetch<RepositoryMemoryDiagnosticsResponse>('/v1/repository-memory/diagnostics')
@@ -180,6 +199,7 @@ export function RepositoryMemoryPage({ embedded = false }: { embedded?: boolean 
   }
 
   async function saveField(field: string) {
+    const repo = repositoryId
     setSavingField(field)
     setError(null)
     setNotice(null)
@@ -196,17 +216,19 @@ export function RepositoryMemoryPage({ embedded = false }: { embedded?: boolean 
       content = null
     }
     try {
-      await apiFetch<RepositoryMemoryFieldResponse>(
-        `/v1/repositories/${encodeURIComponent(repositoryId)}/memory/${encodeURIComponent(field)}`,
+      const response = await apiFetch<RepositoryMemoryFieldResponse>(
+        `/v1/repositories/${encodeURIComponent(repo)}/memory/${encodeURIComponent(field)}`,
         { method: 'PUT', body: JSON.stringify({ content }) },
       )
-      setMemory((current) => ({ ...current, [field]: content }))
+      if (activeRepositoryRef.current !== repo) return
+      if (response.repository_id !== repo) throw new Error(`Repository Memory saved data for ${response.repository_id}, not ${repo}.`)
+      setMemory((current) => ({ ...current, [field]: response.content }))
       setEditingField(null)
-      setNotice(`${fieldLabel(field)} saved.`)
+      setNotice(`${fieldLabel(field)} saved for ${repo}.`)
     } catch (caught) {
-      setError(caught instanceof Error ? caught.message : `${fieldLabel(field)} could not be saved.`)
+      if (activeRepositoryRef.current === repo) setError(caught instanceof Error ? caught.message : `${fieldLabel(field)} could not be saved.`)
     } finally {
-      setSavingField(null)
+      if (activeRepositoryRef.current === repo) setSavingField(null)
     }
   }
 
@@ -217,6 +239,7 @@ export function RepositoryMemoryPage({ embedded = false }: { embedded?: boolean 
   }
 
   async function submitAppend(field: string) {
+    const repo = repositoryId
     setAppending(true)
     setError(null)
     setNotice(null)
@@ -235,34 +258,40 @@ export function RepositoryMemoryPage({ embedded = false }: { embedded?: boolean 
     if (!('occurred_at' in entry)) entry.occurred_at = new Date().toISOString()
     try {
       await apiFetch(
-        `/v1/repositories/${encodeURIComponent(repositoryId)}/memory/${encodeURIComponent(field)}/append`,
+        `/v1/repositories/${encodeURIComponent(repo)}/memory/${encodeURIComponent(field)}/append`,
         { method: 'POST', body: JSON.stringify({ entry }) },
       )
-      await loadMemory(repositoryId)
+      if (activeRepositoryRef.current !== repo) return
+      await loadMemory(repo)
+      if (activeRepositoryRef.current !== repo) return
       setAppendField(null)
-      setNotice(`Entry appended to ${fieldLabel(field)}.`)
+      setNotice(`Entry appended to ${fieldLabel(field)} for ${repo}.`)
     } catch (caught) {
-      setError(caught instanceof Error ? caught.message : 'Entry could not be appended.')
+      if (activeRepositoryRef.current === repo) setError(caught instanceof Error ? caught.message : 'Entry could not be appended.')
     } finally {
-      setAppending(false)
+      if (activeRepositoryRef.current === repo) setAppending(false)
     }
   }
 
   async function runSearch(event: FormEvent) {
     event.preventDefault()
     if (!query.trim()) return
+    const repo = repositoryId
+    const searchQuery = query.trim()
     setSearching(true)
     setSearchError(null)
     try {
       const response = await apiFetch<RepositoryMemorySearchResponse>(
-        `/v1/repositories/${encodeURIComponent(repositoryId)}/memory-search?q=${encodeURIComponent(query.trim())}&limit=20`,
+        `/v1/repositories/${encodeURIComponent(repo)}/memory-search?q=${encodeURIComponent(searchQuery)}&limit=20`,
       )
+      if (activeRepositoryRef.current !== repo) return
       setSearchResults(response)
     } catch (caught) {
+      if (activeRepositoryRef.current !== repo) return
       setSearchError(caught instanceof Error ? caught.message : 'Memory search failed.')
       setSearchResults(null)
     } finally {
-      setSearching(false)
+      if (activeRepositoryRef.current === repo) setSearching(false)
     }
   }
 

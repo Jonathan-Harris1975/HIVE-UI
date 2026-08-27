@@ -18,7 +18,7 @@ import {
   Wrench,
   XCircle,
 } from 'lucide-react'
-import { useCallback, useEffect, useMemo, useState, type FormEvent } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState, type FormEvent } from 'react'
 import { useSearchParams } from 'react-router'
 import { EmptyState } from '../components/EmptyState'
 import { RepositoryMemoryPage } from './RepositoryMemoryPage'
@@ -66,6 +66,7 @@ function asProjectDna(value: unknown): RepositoryProjectDnaResponse | null {
 }
 
 type PersistedIntelligence = {
+  repository_id: string
   occurred_at?: string
   summary: RepositoryIntelligenceReport['summary']
   repository_context?: RepositoryIntelligenceReport['repository_context']
@@ -73,14 +74,18 @@ type PersistedIntelligence = {
   improvement_prompt: string
 }
 
-function asPersistedIntelligence(value: unknown): PersistedIntelligence | null {
+function asPersistedIntelligence(value: unknown, expectedRepositoryId: string): PersistedIntelligence | null {
   if (!isRecord(value) || !isRecord(value.summary) || !Array.isArray(value.findings)) return null
+  if (value.repository_id !== expectedRepositoryId || value.summary.repository_id !== expectedRepositoryId) return null
   if (typeof value.improvement_prompt !== 'string') return null
+  const context = isRecord(value.repository_context) ? value.repository_context : null
+  if (context && context.repository_id !== expectedRepositoryId) return null
   return {
+    repository_id: expectedRepositoryId,
     occurred_at: typeof value.occurred_at === 'string' ? value.occurred_at : undefined,
     summary: value.summary as unknown as RepositoryIntelligenceReport['summary'],
-    repository_context: isRecord(value.repository_context)
-      ? (value.repository_context as unknown as RepositoryIntelligenceReport['repository_context'])
+    repository_context: context
+      ? (context as unknown as RepositoryIntelligenceReport['repository_context'])
       : undefined,
     findings: value.findings as RepositoryIntelligenceReport['findings'],
     improvement_prompt: value.improvement_prompt,
@@ -91,7 +96,8 @@ export function RepositoryIntelligencePage() {
   const catalog = useRepositoryCatalog()
   const [searchParams, setSearchParams] = useSearchParams()
   const [repositoryId, setRepositoryId] = useState(searchParams.get('repo') ?? '')
-  const [repoInput, setRepoInput] = useState(repositoryId)
+  const activeRepositoryRef = useRef(repositoryId)
+  activeRepositoryRef.current = repositoryId
 
   const [error, setError] = useState<string | null>(null)
   const [notice, setNotice] = useState<string | null>(null)
@@ -102,6 +108,7 @@ export function RepositoryIntelligencePage() {
   const [promptCopied, setPromptCopied] = useState(false)
   const [improvementJob, setImprovementJob] = useState<RepositoryImprovementJob | null>(null)
   const [improvementStarting, setImprovementStarting] = useState(false)
+  const [setupRepairing, setSetupRepairing] = useState(false)
 
   // Raw QA/Council evidence remains visible below the consolidated report.
   const [qaReport, setQaReport] = useState<RepositoryQaReport | null>(null)
@@ -131,23 +138,25 @@ export function RepositoryIntelligencePage() {
     if (repositoryId && catalog.repositories.some((repo) => repo.repository_id === repositoryId)) return
     const preferred = catalog.repositories.find((repo) => repo.repository_id === 'HIVE') ?? catalog.repositories[0]
     setRepositoryId(preferred.repository_id)
-    setRepoInput(preferred.repository_id)
   }, [catalog.loading, catalog.repositories, repositoryId])
 
   const loadCouncilHistory = useCallback(async (repo: string) => {
-    setCouncilHistoryLoading(true)
+    if (activeRepositoryRef.current === repo) setCouncilHistoryLoading(true)
     try {
       const response = await apiFetch<RepositoryCouncilHistoryResponse>(
         `/v1/repositories/${encodeURIComponent(repo)}/council/history`,
       )
-      const runs = response.runs ?? []
+      if (activeRepositoryRef.current !== repo) return
+      if (response.repository_id !== repo) throw new Error(`Repository Council returned data for ${response.repository_id}, not ${repo}.`)
+      const runs = (response.runs ?? []).filter((run) => run.repository_id === repo)
       setCouncilHistory(runs)
       setCouncilReport(runs.length > 0 ? runs[runs.length - 1] : null)
     } catch (caught) {
+      if (activeRepositoryRef.current !== repo) return
       setCouncilHistory([])
       setError(caught instanceof Error ? caught.message : 'Repository Council history could not be loaded.')
     } finally {
-      setCouncilHistoryLoading(false)
+      if (activeRepositoryRef.current === repo) setCouncilHistoryLoading(false)
     }
   }, [])
 
@@ -156,19 +165,25 @@ export function RepositoryIntelligencePage() {
       const response = await apiFetch<RepositoryMemoryResponse>(
         `/v1/repositories/${encodeURIComponent(repo)}/memory`,
       )
+      if (activeRepositoryRef.current !== repo) return
+      if (response.repository_id !== repo) throw new Error(`Repository Memory returned data for ${response.repository_id}, not ${repo}.`)
       const qaHistory = Array.isArray(response.memory?.qa_history) ? response.memory.qa_history : []
-      const latestQa = [...qaHistory].reverse().map(asQaReport).find((entry) => entry !== null) ?? null
+      const latestQa = [...qaHistory]
+        .reverse()
+        .map(asQaReport)
+        .find((entry) => entry?.repository_id === repo) ?? null
       const intelligenceHistory = Array.isArray(response.memory?.repository_intelligence_history)
         ? response.memory.repository_intelligence_history
         : []
       const latestIntelligence = [...intelligenceHistory]
         .reverse()
-        .map(asPersistedIntelligence)
+        .map((entry) => asPersistedIntelligence(entry, repo))
         .find((entry) => entry !== null) ?? null
       setQaReport(latestQa)
       setIntelligence(latestIntelligence)
       setDna(asProjectDna(response.memory?.project_dna))
     } catch (caught) {
+      if (activeRepositoryRef.current !== repo) return
       setQaReport(null)
       setIntelligence(null)
       setDna(null)
@@ -181,9 +196,14 @@ export function RepositoryIntelligencePage() {
       const response = await apiFetch<RepositoryImprovementLatestResponse>(
         `/v1/repositories/${encodeURIComponent(repo)}/improvements/latest`,
       )
+      if (activeRepositoryRef.current !== repo) return
+      if (response.repository_id !== repo) throw new Error(`Repository improvements returned data for ${response.repository_id}, not ${repo}.`)
+      if (response.job && response.job.repository_id !== repo) throw new Error(`Repository improvement job belongs to ${response.job.repository_id}, not ${repo}.`)
       setImprovementJob(response.job ?? null)
-    } catch {
+    } catch (caught) {
+      if (activeRepositoryRef.current !== repo) return
       setImprovementJob(null)
+      if (caught instanceof Error) setError(caught.message)
     }
   }, [])
 
@@ -242,12 +262,6 @@ export function RepositoryIntelligencePage() {
     }
   }, [improvementJob, repositoryId, loadPersistentIntelligence])
 
-  function switchRepository(event: FormEvent) {
-    event.preventDefault()
-    const next = repoInput.trim()
-    if (next) setRepositoryId(next)
-  }
-
   function toggleCheck(name: string) {
     setQaOpenChecks((current) => {
       const next = new Set(current)
@@ -258,31 +272,39 @@ export function RepositoryIntelligencePage() {
   }
 
   async function runIntelligence() {
+    const repo = repositoryId
     setIntelligenceRunning(true)
     setError(null)
     setNotice(null)
     setPromptCopied(false)
     try {
       const report = await apiFetch<RepositoryIntelligenceReport>(
-        `/v1/repositories/${encodeURIComponent(repositoryId)}/intelligence/run`,
+        `/v1/repositories/${encodeURIComponent(repo)}/intelligence/run`,
         { method: 'POST' },
       )
+      if (activeRepositoryRef.current !== repo) return
+      if (report.repository_id !== repo || report.summary.repository_id !== repo || report.repository_context.repository_id !== repo) {
+        throw new Error(`Repository Intelligence returned mismatched repository data while ${repo} was selected.`)
+      }
       setIntelligence({
+        repository_id: repo,
         occurred_at: report.occurred_at,
         summary: report.summary,
         repository_context: report.repository_context,
         findings: report.findings,
         improvement_prompt: report.improvement_prompt,
       })
-      setQaReport(report.qa)
-      setCouncilReport(report.council)
+      setQaReport(report.qa.repository_id === repo ? report.qa : null)
+      setCouncilReport(report.council.repository_id === repo ? report.council : null)
       setDna(report.project_dna)
-      await Promise.all([loadCouncilHistory(repositoryId), loadPersistentIntelligence(repositoryId)])
-      setNotice(`Repository Intelligence complete for ${repositoryId}: ${report.summary.finding_count} consolidated finding(s).`)
+      await Promise.all([loadCouncilHistory(repo), loadPersistentIntelligence(repo)])
+      if (activeRepositoryRef.current === repo) {
+        setNotice(`Repository Intelligence complete for ${repo}: ${report.summary.finding_count} consolidated finding(s).`)
+      }
     } catch (caught) {
-      setError(caught instanceof Error ? caught.message : 'Repository Intelligence failed.')
+      if (activeRepositoryRef.current === repo) setError(caught instanceof Error ? caught.message : 'Repository Intelligence failed.')
     } finally {
-      setIntelligenceRunning(false)
+      if (activeRepositoryRef.current === repo) setIntelligenceRunning(false)
     }
   }
 
@@ -298,49 +320,86 @@ export function RepositoryIntelligencePage() {
   }
 
   async function startImprovements() {
+    const repo = repositoryId
     setImprovementStarting(true)
     setError(null)
     setNotice(null)
     try {
       const job = await apiFetch<RepositoryImprovementJob>(
-        `/v1/repositories/${encodeURIComponent(repositoryId)}/improvements/run`,
+        `/v1/repositories/${encodeURIComponent(repo)}/improvements/run`,
         { method: 'POST' },
       )
+      if (activeRepositoryRef.current !== repo) return
+      if (job.repository_id !== repo) throw new Error(`Repository improvements returned a job for ${job.repository_id}, not ${repo}.`)
       setImprovementJob(job)
-      setNotice(`Automatic improvements queued for ${repositoryId}. HIVE is working on an isolated copy.`)
+      setNotice(`Automatic improvements queued for ${repo}. HIVE is working on an isolated copy.`)
     } catch (caught) {
-      setError(caught instanceof Error ? caught.message : 'Automatic repository improvements could not be started.')
+      if (activeRepositoryRef.current === repo) {
+        setError(caught instanceof Error ? caught.message : 'Automatic repository improvements could not be started.')
+      }
     } finally {
-      setImprovementStarting(false)
+      if (activeRepositoryRef.current === repo) setImprovementStarting(false)
+    }
+  }
+
+  async function repairRepositorySetup() {
+    const repo = repositoryId
+    setSetupRepairing(true)
+    setError(null)
+    setNotice(null)
+    try {
+      const response = await apiFetch<{ repository_id: string; ready: boolean }>(
+        `/v1/repositories/${encodeURIComponent(repo)}/setup`,
+        { method: 'POST' },
+      )
+      if (activeRepositoryRef.current !== repo) return
+      if (response.repository_id !== repo) throw new Error(`Repository setup returned data for ${response.repository_id}, not ${repo}.`)
+      await catalog.refresh()
+      if (activeRepositoryRef.current !== repo) return
+      await Promise.all([loadCouncilHistory(repo), loadPersistentIntelligence(repo), loadLatestImprovement(repo)])
+      if (activeRepositoryRef.current === repo) {
+        setNotice(response.ready
+          ? `${repo} setup repaired and Repository Intelligence regenerated.`
+          : `${repo} setup reran but still reports an incomplete required stage. Review the status below.`)
+      }
+    } catch (caught) {
+      if (activeRepositoryRef.current === repo) {
+        setError(caught instanceof Error ? caught.message : 'Repository setup repair failed.')
+      }
+    } finally {
+      if (activeRepositoryRef.current === repo) setSetupRepairing(false)
     }
   }
 
   function improvementDownloadUrl(kind: 'changed_files' | 'updated_repository'): string | null {
-    if (!improvementJob || improvementJob.status !== 'completed') return null
+    if (!improvementJob || improvementJob.status !== 'completed' || improvementJob.repository_id !== repositoryId) return null
     return `/api/v1/repositories/${encodeURIComponent(repositoryId)}/improvements/jobs/${encodeURIComponent(improvementJob.job_id)}/download/${kind}`
   }
 
   async function refreshDna() {
+    const repo = repositoryId
     setDnaRefreshing(true)
     setError(null)
     setNotice(null)
     try {
       const response = await apiFetch<RepositoryProjectDnaResponse>(
-        `/v1/repositories/${encodeURIComponent(repositoryId)}/learning/refresh-project-dna`,
+        `/v1/repositories/${encodeURIComponent(repo)}/learning/refresh-project-dna`,
         { method: 'POST' },
       )
+      if (activeRepositoryRef.current !== repo) return
       setDna(response)
-      setNotice(`Project DNA refreshed for ${repositoryId}.`)
+      setNotice(`Project DNA refreshed for ${repo}.`)
     } catch (caught) {
-      setError(caught instanceof Error ? caught.message : 'Project DNA refresh failed.')
+      if (activeRepositoryRef.current === repo) setError(caught instanceof Error ? caught.message : 'Project DNA refresh failed.')
     } finally {
-      setDnaRefreshing(false)
+      if (activeRepositoryRef.current === repo) setDnaRefreshing(false)
     }
   }
 
   async function submitPatchOutcome(event: FormEvent) {
     event.preventDefault()
     if (!patchSummary.trim()) return
+    const repo = repositoryId
     setPatchSaving(true)
     setError(null)
     setNotice(null)
@@ -350,71 +409,81 @@ export function RepositoryIntelligencePage() {
         .map((entry) => entry.trim())
         .filter(Boolean)
       await apiFetch<RepositoryLearningEntryResponse>(
-        `/v1/repositories/${encodeURIComponent(repositoryId)}/learning/patch-outcome`,
+        `/v1/repositories/${encodeURIComponent(repo)}/learning/patch-outcome`,
         {
           method: 'POST',
           body: JSON.stringify({ summary: patchSummary.trim(), success: patchSuccess, files_changed: files }),
         },
       )
-      await loadPersistentIntelligence(repositoryId)
+      if (activeRepositoryRef.current !== repo) return
+      await loadPersistentIntelligence(repo)
+      if (activeRepositoryRef.current !== repo) return
       setNotice('Patch outcome recorded to Repository Memory and Project DNA refreshed.')
       setPatchSummary('')
       setPatchFiles('')
     } catch (caught) {
-      setError(caught instanceof Error ? caught.message : 'Patch outcome could not be recorded.')
+      if (activeRepositoryRef.current === repo) setError(caught instanceof Error ? caught.message : 'Patch outcome could not be recorded.')
     } finally {
-      setPatchSaving(false)
+      if (activeRepositoryRef.current === repo) setPatchSaving(false)
     }
   }
 
   async function submitPattern(event: FormEvent) {
     event.preventDefault()
     if (!patternText.trim()) return
+    const repo = repositoryId
     setPatternSaving(true)
     setError(null)
     setNotice(null)
     try {
       await apiFetch<RepositoryLearningEntryResponse>(
-        `/v1/repositories/${encodeURIComponent(repositoryId)}/learning/coding-pattern`,
+        `/v1/repositories/${encodeURIComponent(repo)}/learning/coding-pattern`,
         { method: 'POST', body: JSON.stringify({ pattern: patternText.trim(), context: patternContext.trim() }) },
       )
-      await loadPersistentIntelligence(repositoryId)
+      if (activeRepositoryRef.current !== repo) return
+      await loadPersistentIntelligence(repo)
+      if (activeRepositoryRef.current !== repo) return
       setNotice('Coding pattern recorded to Repository Memory and Project DNA refreshed.')
       setPatternText('')
       setPatternContext('')
     } catch (caught) {
-      setError(caught instanceof Error ? caught.message : 'Coding pattern could not be recorded.')
+      if (activeRepositoryRef.current === repo) setError(caught instanceof Error ? caught.message : 'Coding pattern could not be recorded.')
     } finally {
-      setPatternSaving(false)
+      if (activeRepositoryRef.current === repo) setPatternSaving(false)
     }
   }
 
   async function submitPreferredModel(event: FormEvent) {
     event.preventDefault()
     if (!preferredModelId.trim()) return
+    const repo = repositoryId
+    const modelId = preferredModelId.trim()
+    const category = preferredCategory
     setPreferredSaving(true)
     setError(null)
     setNotice(null)
     try {
       await apiFetch<RepositoryLearningEntryResponse>(
-        `/v1/repositories/${encodeURIComponent(repositoryId)}/learning/preferred-model`,
+        `/v1/repositories/${encodeURIComponent(repo)}/learning/preferred-model`,
         {
           method: 'POST',
           body: JSON.stringify({
-            category: preferredCategory,
-            model_id: preferredModelId.trim(),
+            category,
+            model_id: modelId,
             reason: preferredReason.trim(),
           }),
         },
       )
-      await loadPersistentIntelligence(repositoryId)
-      setNotice(`Preferred model recorded for ${repositoryId}: ${preferredModelId.trim()} (${preferredCategory}); Project DNA refreshed.`)
+      if (activeRepositoryRef.current !== repo) return
+      await loadPersistentIntelligence(repo)
+      if (activeRepositoryRef.current !== repo) return
+      setNotice(`Preferred model recorded for ${repo}: ${modelId} (${category}); Project DNA refreshed.`)
       setPreferredModelId('')
       setPreferredReason('')
     } catch (caught) {
-      setError(caught instanceof Error ? caught.message : 'Preferred model could not be recorded.')
+      if (activeRepositoryRef.current === repo) setError(caught instanceof Error ? caught.message : 'Preferred model could not be recorded.')
     } finally {
-      setPreferredSaving(false)
+      if (activeRepositoryRef.current === repo) setPreferredSaving(false)
     }
   }
 
@@ -443,23 +512,36 @@ export function RepositoryIntelligencePage() {
           <p className="mt-2 max-w-2xl text-sm leading-6 text-slate-400">
             One governed workspace for persistent Repository Memory, QA evidence, Council scoring, consolidated findings and code-improvement instructions.
           </p>
+          {selectedRepository && (
+            <div className="mt-4 flex min-w-0 flex-wrap items-center gap-2 text-xs">
+              <span className="rounded-full border border-cyan-300/20 bg-cyan-300/8 px-2.5 py-1 font-semibold text-cyan-100">
+                Selected: {selectedRepository.repository_id}
+              </span>
+              <span className="max-w-full truncate rounded-full border border-white/10 px-2.5 py-1 text-slate-400">
+                {selectedRepository.source_filename}
+              </span>
+              <span className="max-w-full break-all rounded-full border border-white/10 px-2.5 py-1 font-mono text-[11px] text-slate-500">
+                {selectedRepository.fingerprint.slice(0, 12)}
+              </span>
+            </div>
+          )}
 
-          <form onSubmit={switchRepository} className="mt-6 grid min-w-0 gap-2 border-t border-white/8 pt-5 sm:grid-cols-[minmax(0,1fr)_auto]">
+          <div className="mt-6 min-w-0 border-t border-white/8 pt-5">
+            <label htmlFor="repository-workspace-selector" className="mb-2 block text-xs font-semibold uppercase tracking-[0.14em] text-slate-500">Repository</label>
             <select
-              value={repoInput}
+              id="repository-workspace-selector"
+              value={repositoryId}
               aria-label="Choose registered repository"
-              onChange={(event) => setRepoInput(event.target.value)}
-              className="h-10 w-full min-w-0 max-w-full rounded-xl border border-white/8 bg-hive-surface px-3 text-sm text-slate-300 outline-none"
+              onChange={(event) => setRepositoryId(event.target.value)}
+              className="h-11 w-full min-w-0 max-w-full rounded-xl border border-white/8 bg-hive-surface px-3 text-sm text-slate-200 outline-none focus:border-cyan-300/30"
             >
               <option value="">{catalog.loading ? 'Loading repositories…' : 'Choose a registered repository…'}</option>
               {catalog.repositories.map((repo) => (
                 <option key={repo.repository_id} value={repo.repository_id}>{repo.repository_id} · {repo.source_filename}</option>
               ))}
             </select>
-            <button type="submit" disabled={!repoInput} className="flex h-10 w-full items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-cyan-400 to-emerald-300 px-4 text-xs font-semibold text-hive-accent-deep disabled:opacity-50 sm:w-auto">
-              Load
-            </button>
-          </form>
+            <p className="mt-2 text-xs text-slate-500">Changing repository switches Memory, QA, Council, Intelligence and improvement history together.</p>
+          </div>
           <div className="mt-4 flex flex-col gap-2 sm:flex-row sm:justify-end">
             <button
               type="button"
@@ -503,13 +585,19 @@ export function RepositoryIntelligencePage() {
           </div>
         )}
         {selectedRepository?.memory_status === 'unavailable' && (
-          <div role="alert" className="mt-4 rounded-xl border border-rose-400/20 bg-rose-400/8 px-4 py-3 text-sm text-rose-200">
-            Repository Memory persistence is unavailable for {repositoryId}. Intelligence writes are blocked until D1 is healthy; use Retry setup on Overview after recovery.
+          <div role="alert" className="mt-4 flex flex-col gap-3 rounded-xl border border-rose-400/20 bg-rose-400/8 px-4 py-3 text-sm text-rose-200 sm:flex-row sm:items-center sm:justify-between">
+            <span>Repository Memory persistence is unavailable for {repositoryId}. Intelligence writes remain blocked until D1 is healthy.</span>
+            <button type="button" onClick={() => void repairRepositorySetup()} disabled={setupRepairing} className="flex min-h-9 shrink-0 items-center justify-center gap-2 rounded-lg border border-rose-200/20 bg-rose-200/8 px-3 text-xs font-semibold text-rose-100 disabled:opacity-50">
+              {setupRepairing ? <LoaderCircle className="h-3.5 w-3.5 animate-spin" /> : <RefreshCcw className="h-3.5 w-3.5" />} Retry setup
+            </button>
           </div>
         )}
         {selectedRepository && !selectedRepository.rehydrated && selectedRepository.memory_status !== 'unavailable' && !selectedRepository.memory_ready && (
-          <div role="alert" className="mt-4 rounded-xl border border-amber-300/20 bg-amber-300/8 px-4 py-3 text-sm text-amber-100">
-            Repository setup is incomplete for {repositoryId}. QA, Council and learning writes are blocked until Memory and Intelligence are ready. Use Retry setup on Overview.
+          <div role="alert" className="mt-4 flex flex-col gap-3 rounded-xl border border-amber-300/20 bg-amber-300/8 px-4 py-3 text-sm text-amber-100 sm:flex-row sm:items-center sm:justify-between">
+            <span>Repository setup is incomplete for {repositoryId}. HIVE will rebuild Memory, QA, Council and the repository-specific Intelligence report from this snapshot.</span>
+            <button type="button" onClick={() => void repairRepositorySetup()} disabled={setupRepairing} className="flex min-h-9 shrink-0 items-center justify-center gap-2 rounded-lg border border-amber-200/20 bg-amber-200/8 px-3 text-xs font-semibold text-amber-100 disabled:opacity-50">
+              {setupRepairing ? <LoaderCircle className="h-3.5 w-3.5 animate-spin" /> : <RefreshCcw className="h-3.5 w-3.5" />} Retry setup
+            </button>
           </div>
         )}
 
@@ -585,7 +673,7 @@ export function RepositoryIntelligencePage() {
                 </div>
               )}
               <div className="rounded-xl border border-cyan-300/15 bg-cyan-300/[0.035] p-3">
-                <p className="text-xs font-semibold text-cyan-100">Code-improvement prompt</p>
+                <p className="text-xs font-semibold text-cyan-100">{repositoryId} code-improvement prompt</p>
                 <pre className="mt-2 max-h-80 max-w-full overflow-auto whitespace-pre-wrap break-words font-mono text-xs leading-5 text-slate-300">{intelligence.improvement_prompt}</pre>
               </div>
             </div>
@@ -904,7 +992,7 @@ export function RepositoryIntelligencePage() {
           </div>
         </section>
 
-        <RepositoryMemoryPage embedded />
+        <RepositoryMemoryPage embedded repositoryId={repositoryId} />
       </div>
     </div>
   )
