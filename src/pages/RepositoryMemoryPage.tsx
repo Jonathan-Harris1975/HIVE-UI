@@ -90,7 +90,10 @@ export function RepositoryMemoryPage({ embedded = false, repositoryId: controlle
   const [repositoryId, setRepositoryId] = useState(controlledRepositoryId ?? searchParams.get('repo') ?? '')
   const [repoInput, setRepoInput] = useState(repositoryId)
   const activeRepositoryRef = useRef(controlledRepositoryId ?? repositoryId)
-  activeRepositoryRef.current = controlledRepositoryId ?? repositoryId
+  const selectRepository = useCallback((nextRepositoryId: string) => {
+    activeRepositoryRef.current = nextRepositoryId
+    setRepositoryId(nextRepositoryId)
+  }, [])
   const [memory, setMemory] = useState<Record<string, unknown>>({})
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -114,7 +117,7 @@ export function RepositoryMemoryPage({ embedded = false, repositoryId: controlle
   useEffect(() => {
     if (controlledRepositoryId) {
       if (controlledRepositoryId !== repositoryId) {
-        setRepositoryId(controlledRepositoryId)
+        selectRepository(controlledRepositoryId)
         setRepoInput(controlledRepositoryId)
       }
       return
@@ -122,18 +125,18 @@ export function RepositoryMemoryPage({ embedded = false, repositoryId: controlle
     if (!embedded) return
     const requested = searchParams.get('repo') ?? ''
     if (requested && requested !== repositoryId) {
-      setRepositoryId(requested)
+      selectRepository(requested)
       setRepoInput(requested)
     }
-  }, [controlledRepositoryId, embedded, repositoryId, searchParams])
+  }, [controlledRepositoryId, embedded, repositoryId, searchParams, selectRepository])
 
   useEffect(() => {
     if (catalog.loading || catalog.repositories.length === 0) return
     if (repositoryId && catalog.repositories.some((repo) => repo.repository_id === repositoryId)) return
     const preferred = catalog.repositories.find((repo) => repo.repository_id === 'HIVE') ?? catalog.repositories[0]
-    setRepositoryId(preferred.repository_id)
+    selectRepository(preferred.repository_id)
     setRepoInput(preferred.repository_id)
-  }, [catalog.loading, catalog.repositories, repositoryId])
+  }, [catalog.loading, catalog.repositories, repositoryId, selectRepository])
 
   const loadMemory = useCallback(async (repo: string) => {
     if (activeRepositoryRef.current === repo) {
@@ -184,7 +187,7 @@ export function RepositoryMemoryPage({ embedded = false, repositoryId: controlle
   function switchRepository(event: FormEvent) {
     event.preventDefault()
     const next = repoInput.trim()
-    if (next) setRepositoryId(next)
+    if (next) selectRepository(next)
   }
 
   function startEdit(field: string) {

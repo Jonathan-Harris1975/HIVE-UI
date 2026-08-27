@@ -97,7 +97,10 @@ export function RepositoryIntelligencePage() {
   const [searchParams, setSearchParams] = useSearchParams()
   const [repositoryId, setRepositoryId] = useState(searchParams.get('repo') ?? '')
   const activeRepositoryRef = useRef(repositoryId)
-  activeRepositoryRef.current = repositoryId
+  const selectRepository = useCallback((nextRepositoryId: string) => {
+    activeRepositoryRef.current = nextRepositoryId
+    setRepositoryId(nextRepositoryId)
+  }, [])
 
   const [error, setError] = useState<string | null>(null)
   const [notice, setNotice] = useState<string | null>(null)
@@ -137,8 +140,8 @@ export function RepositoryIntelligencePage() {
     if (catalog.loading || catalog.repositories.length === 0) return
     if (repositoryId && catalog.repositories.some((repo) => repo.repository_id === repositoryId)) return
     const preferred = catalog.repositories.find((repo) => repo.repository_id === 'HIVE') ?? catalog.repositories[0]
-    setRepositoryId(preferred.repository_id)
-  }, [catalog.loading, catalog.repositories, repositoryId])
+    selectRepository(preferred.repository_id)
+  }, [catalog.loading, catalog.repositories, repositoryId, selectRepository])
 
   const loadCouncilHistory = useCallback(async (repo: string) => {
     if (activeRepositoryRef.current === repo) setCouncilHistoryLoading(true)
@@ -532,7 +535,7 @@ export function RepositoryIntelligencePage() {
               id="repository-workspace-selector"
               value={repositoryId}
               aria-label="Choose registered repository"
-              onChange={(event) => setRepositoryId(event.target.value)}
+              onChange={(event) => selectRepository(event.target.value)}
               className="h-11 w-full min-w-0 max-w-full rounded-xl border border-white/8 bg-hive-surface px-3 text-sm text-slate-200 outline-none focus:border-cyan-300/30"
             >
               <option value="">{catalog.loading ? 'Loading repositories…' : 'Choose a registered repository…'}</option>
