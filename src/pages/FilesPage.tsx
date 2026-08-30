@@ -39,6 +39,7 @@ import { StatusBadge } from "../components/StatusBadge";
 import { useInspector } from "../context/InspectorContext";
 import { apiFetch } from "../lib/api";
 import { formatBytes, formatDate } from "../lib/format";
+import { isHiveManagedR2Source } from "../lib/storagePolicy";
 import { buildSkillApplyChatUrl, uploadSingleFile, uploadTextFile } from "./files/filesApi";
 import {
   canChatWithObject,
@@ -190,7 +191,9 @@ export function FilesPage() {
     setLoadingLanes(true);
     try {
       const response = await apiFetch<R2LanesResponse>("/v1/files/r2-lanes");
-      const nextLanes = response.lanes ?? [];
+      const nextLanes = (response.lanes ?? []).filter((lane) =>
+        isHiveManagedR2Source(lane.lane, lane.bucket),
+      );
       setLanes(nextLanes);
       setSelectedLane((current) => {
         if (
@@ -888,9 +891,9 @@ export function FilesPage() {
                 Browse evidence across the HIVE ecosystem
               </h2>
               <p className="mt-2 max-w-3xl text-sm leading-6 text-slate-500">
-                Every configured R2 lane can be browsed, uploaded to and opened
-                inline when the server-side credentials allow it. Upload keys
-                now keep readable filenames.
+                Governed operational and evidence R2 lanes can be browsed, uploaded
+                to and opened inline when server-side credentials allow it. Static
+                delivery buckets stay outside HIVE.
               </p>
             </div>
             <div className="flex flex-wrap gap-2">
@@ -1924,7 +1927,7 @@ export function FilesPage() {
                   onChange={(event) =>
                     updateSkillForm("tags", event.target.value)
                   }
-                  placeholder="uploaded-file, audits, brand-assets"
+                  placeholder="uploaded-file, audits, repositories"
                   className="mt-2 h-11 w-full rounded-xl border border-white/8 bg-hive-canvas px-3 text-sm text-slate-100 outline-none placeholder:text-slate-400 focus:border-violet-300/40"
                 />
                 <span className="mt-2 block text-xs leading-5 text-slate-400">

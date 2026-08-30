@@ -3,6 +3,7 @@ import { useCallback, useEffect, useState } from 'react'
 import { EmptyState } from '../components/EmptyState'
 import { StatusBadge } from '../components/StatusBadge'
 import { apiFetch } from '../lib/api'
+import { isHiveManagedR2Source } from '../lib/storagePolicy'
 import type { BucketSummary, BucketsResponse, ConnectorReport, ConnectorsResponse } from '../types/api'
 
 function connectorLabel(name: string): string {
@@ -48,11 +49,13 @@ export function IntegrationsPage() {
     setBucketsError(null)
     try {
       const response = await apiFetch<BucketsResponse>('/v1/buckets')
-      const normalised = (response.buckets ?? []).map((item) =>
-        typeof item === 'string'
-          ? { bucket: item, configured: true, readable: true, writable: false, access_mode: 'read_only' }
-          : item,
-      )
+      const normalised = (response.buckets ?? [])
+        .map((item) =>
+          typeof item === 'string'
+            ? { bucket: item, configured: true, readable: true, writable: false, access_mode: 'read_only' }
+            : item,
+        )
+        .filter((item) => isHiveManagedR2Source(item.lane, item.bucket))
       setBuckets(normalised)
     } catch (caught) {
       setBucketsError(caught instanceof Error ? caught.message : 'Bucket list could not be loaded.')
@@ -78,8 +81,7 @@ export function IntegrationsPage() {
               <p className="text-xs font-semibold uppercase tracking-[0.2em] text-cyan-300/70">Integrations</p>
               <h2 className="mt-2 text-2xl font-semibold text-white">External connector &amp; storage health</h2>
               <p className="mt-2 max-w-2xl text-sm leading-6 text-slate-400">
-                Live status for every external connector HIVE talks to, plus the R2 buckets currently accessible to
-                this deployment.
+                Live status for every external connector HIVE talks to, plus the governed R2 buckets HIVE is allowed to access.
               </p>
             </div>
             <button
