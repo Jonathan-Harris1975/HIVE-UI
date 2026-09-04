@@ -362,7 +362,14 @@ export function RepositoriesPage() {
           )}
           {refreshConfig && !refreshConfig.configured && (
             <p className="mt-2 text-xs text-rose-200">
-              Monthly automation is not production-ready. {refreshConfig.missing_repository_ids.length ? `Missing repositories: ${refreshConfig.missing_repository_ids.join(', ')}. ` : ''}{!refreshConfig.github_token_configured ? 'GitHub access is not configured. ' : ''}Check HIVE repository refresh configuration before relying on the scheduled run.
+              {[
+                'Monthly automation is not production-ready. ',
+                refreshConfig.missing_repository_ids.length
+                  ? `Missing repositories: ${refreshConfig.missing_repository_ids.join(', ')}. `
+                  : '',
+                !refreshConfig.github_token_configured ? 'GitHub access is not configured. ' : '',
+                'Check HIVE repository refresh configuration before relying on the scheduled run.',
+              ].join('')}
             </p>
           )}
           {refreshConfigError && <p className="mt-2 text-xs text-rose-200">{refreshConfigError}</p>}
@@ -445,7 +452,11 @@ export function RepositoriesPage() {
                         onClick={() => void runDiff(repo.repository_id)}
                         disabled={repo.rehydrated}
                         title={repo.rehydrated ? 'Re-upload required: no working copy to diff against.' : undefined}
-                        className="flex h-8 items-center gap-1.5 rounded-lg border border-white/8 bg-white/[0.04] px-3 text-xs text-slate-300 hover:bg-white/[0.07] disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:bg-white/[0.04]"
+                        className={
+                          "flex h-8 items-center gap-1.5 rounded-lg border border-white/8 bg-white/[0.04] px-3 text-xs " +
+                          "text-slate-300 hover:bg-white/[0.07] disabled:cursor-not-allowed disabled:opacity-40 " +
+                          "disabled:hover:bg-white/[0.04]"
+                        }
                       >
                         <ArrowRightLeft className="h-3.5 w-3.5" /> Diff
                       </button>

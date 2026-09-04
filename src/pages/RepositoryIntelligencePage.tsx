@@ -550,7 +550,11 @@ export function RepositoryIntelligencePage() {
               type="button"
               onClick={() => void runIntelligence()}
               disabled={intelligenceRunning || !repositoryReady}
-              className="flex min-h-10 w-full items-center justify-center gap-2 rounded-xl border border-cyan-300/20 bg-cyan-300/10 px-4 py-2 text-xs font-semibold text-cyan-100 disabled:cursor-not-allowed disabled:opacity-50 sm:w-auto"
+              className={
+                "flex min-h-10 w-full items-center justify-center gap-2 rounded-xl border border-cyan-300/20 " +
+                "bg-cyan-300/10 px-4 py-2 text-xs font-semibold text-cyan-100 disabled:cursor-not-allowed " +
+                "disabled:opacity-50 sm:w-auto"
+              }
             >
               {intelligenceRunning ? <LoaderCircle className="h-4 w-4 animate-spin" /> : <Sparkles className="h-4 w-4" />}
               Run Repository Intelligence
@@ -558,8 +562,18 @@ export function RepositoryIntelligencePage() {
             <button
               type="button"
               onClick={() => void startImprovements()}
-              disabled={improvementStarting || !repositoryReady || !intelligenceCurrent || !hasImprovementFindings || Boolean(improvementJob && ['accepted', 'running'].includes(improvementJob.status))}
-              className="flex min-h-10 w-full items-center justify-center gap-2 rounded-xl border border-emerald-300/20 bg-emerald-300/10 px-4 py-2 text-xs font-semibold text-emerald-100 disabled:cursor-not-allowed disabled:opacity-50 sm:w-auto"
+              disabled={
+                improvementStarting
+                || !repositoryReady
+                || !intelligenceCurrent
+                || !hasImprovementFindings
+                || Boolean(improvementJob && ['accepted', 'running'].includes(improvementJob.status))
+              }
+              className={
+                "flex min-h-10 w-full items-center justify-center gap-2 rounded-xl border " +
+                "border-emerald-300/20 bg-emerald-300/10 px-4 py-2 text-xs font-semibold text-emerald-100 " +
+                "disabled:cursor-not-allowed disabled:opacity-50 sm:w-auto"
+              }
             >
               {improvementStarting || (improvementJob && ['accepted', 'running'].includes(improvementJob.status)) ? <LoaderCircle className="h-4 w-4 animate-spin" /> : <Wrench className="h-4 w-4" />}
               {improvementJob && ['accepted', 'running'].includes(improvementJob.status)
@@ -590,7 +604,12 @@ export function RepositoryIntelligencePage() {
         {selectedRepository?.memory_status === 'unavailable' && (
           <div role="alert" className="mt-4 flex flex-col gap-3 rounded-xl border border-rose-400/20 bg-rose-400/8 px-4 py-3 text-sm text-rose-200 sm:flex-row sm:items-center sm:justify-between">
             <span>Repository Memory persistence is unavailable for {repositoryId}. Intelligence writes remain blocked until D1 is healthy.</span>
-            <button type="button" onClick={() => void repairRepositorySetup()} disabled={setupRepairing} className="flex min-h-9 shrink-0 items-center justify-center gap-2 rounded-lg border border-rose-200/20 bg-rose-200/8 px-3 text-xs font-semibold text-rose-100 disabled:opacity-50">
+            <button
+              type="button"
+              onClick={() => void repairRepositorySetup()}
+              disabled={setupRepairing}
+              className="flex min-h-9 shrink-0 items-center justify-center gap-2 rounded-lg border border-rose-200/20 bg-rose-200/8 px-3 text-xs font-semibold text-rose-100 disabled:opacity-50"
+            >
               {setupRepairing ? <LoaderCircle className="h-3.5 w-3.5 animate-spin" /> : <RefreshCcw className="h-3.5 w-3.5" />} Retry setup
             </button>
           </div>
@@ -598,7 +617,12 @@ export function RepositoryIntelligencePage() {
         {selectedRepository && !selectedRepository.rehydrated && selectedRepository.memory_status !== 'unavailable' && !selectedRepository.memory_ready && (
           <div role="alert" className="mt-4 flex flex-col gap-3 rounded-xl border border-amber-300/20 bg-amber-300/8 px-4 py-3 text-sm text-amber-100 sm:flex-row sm:items-center sm:justify-between">
             <span>Repository setup is incomplete for {repositoryId}. HIVE will rebuild Memory, QA, Council and the repository-specific Intelligence report from this snapshot.</span>
-            <button type="button" onClick={() => void repairRepositorySetup()} disabled={setupRepairing} className="flex min-h-9 shrink-0 items-center justify-center gap-2 rounded-lg border border-amber-200/20 bg-amber-200/8 px-3 text-xs font-semibold text-amber-100 disabled:opacity-50">
+            <button
+              type="button"
+              onClick={() => void repairRepositorySetup()}
+              disabled={setupRepairing}
+              className="flex min-h-9 shrink-0 items-center justify-center gap-2 rounded-lg border border-amber-200/20 bg-amber-200/8 px-3 text-xs font-semibold text-amber-100 disabled:opacity-50"
+            >
               {setupRepairing ? <LoaderCircle className="h-3.5 w-3.5 animate-spin" /> : <RefreshCcw className="h-3.5 w-3.5" />} Retry setup
             </button>
           </div>
@@ -621,7 +645,11 @@ export function RepositoryIntelligencePage() {
               <p className="mt-1 text-xs leading-5 text-slate-500">One evidence set from Repository QA and Repository Council, merged without rerunning QA.</p>
             </div>
             {intelligence?.improvement_prompt && (
-              <button type="button" onClick={() => void copyImprovementPrompt()} className="flex h-9 items-center gap-1.5 rounded-lg border border-white/8 bg-white/[0.04] px-3 text-xs text-slate-200 hover:bg-white/[0.07]">
+              <button
+                type="button"
+                onClick={() => void copyImprovementPrompt()}
+                className="flex h-9 items-center gap-1.5 rounded-lg border border-white/8 bg-white/[0.04] px-3 text-xs text-slate-200 hover:bg-white/[0.07]"
+              >
                 <Copy className="h-3.5 w-3.5" /> {promptCopied ? 'Copied' : 'Copy improvement prompt'}
               </button>
             )}
@@ -629,20 +657,52 @@ export function RepositoryIntelligencePage() {
 
           {!intelligence ? (
             <div className="mt-4">
-              <EmptyState icon={<Sparkles className="h-5 w-5" />} title="No consolidated Intelligence report yet." body="Run Repository Intelligence to combine QA and Council evidence into one prioritised improvement report and coding prompt." />
+              <EmptyState
+                icon={<Sparkles className="h-5 w-5" />}
+                title="No consolidated Intelligence report yet."
+                body="Run Repository Intelligence to combine QA and Council evidence into one prioritised improvement report and coding prompt."
+              />
             </div>
           ) : (
             <div className="mt-4 space-y-4">
               <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-                <div className="rounded-xl border border-white/8 bg-white/[0.025] p-3"><p className="text-xs text-slate-500">QA score</p><p className={`mt-1 text-xl font-semibold ${scoreTone(scorePct(intelligence.summary.qa_score))}`}>{scorePct(intelligence.summary.qa_score)}%</p></div>
-                <div className="rounded-xl border border-white/8 bg-white/[0.025] p-3"><p className="text-xs text-slate-500">Council score</p><p className={`mt-1 text-xl font-semibold ${scoreTone(scorePct(intelligence.summary.council_score))}`}>{scorePct(intelligence.summary.council_score)}%</p></div>
-                <div className="rounded-xl border border-white/8 bg-white/[0.025] p-3"><p className="text-xs text-slate-500">Findings</p><p className="mt-1 text-xl font-semibold text-white">{intelligence.summary.finding_count}</p></div>
-                <div className="rounded-xl border border-white/8 bg-white/[0.025] p-3"><p className="text-xs text-slate-500">Critical/high</p><p className={`mt-1 text-xl font-semibold ${intelligence.summary.blocking_finding_count ? 'text-rose-300' : 'text-emerald-300'}`}>{intelligence.summary.blocking_finding_count}</p></div>
+                <div className="rounded-xl border border-white/8 bg-white/[0.025] p-3">
+                  <p className="text-xs text-slate-500">QA score</p>
+                  <p className={`mt-1 text-xl font-semibold ${scoreTone(scorePct(intelligence.summary.qa_score))}`}>
+                    {scorePct(intelligence.summary.qa_score)}%
+                  </p>
+                </div>
+                <div className="rounded-xl border border-white/8 bg-white/[0.025] p-3">
+                  <p className="text-xs text-slate-500">Council score</p>
+                  <p className={`mt-1 text-xl font-semibold ${scoreTone(scorePct(intelligence.summary.council_score))}`}>
+                    {scorePct(intelligence.summary.council_score)}%
+                  </p>
+                </div>
+                <div className="rounded-xl border border-white/8 bg-white/[0.025] p-3">
+                  <p className="text-xs text-slate-500">Findings</p>
+                  <p className="mt-1 text-xl font-semibold text-white">{intelligence.summary.finding_count}</p>
+                </div>
+                <div className="rounded-xl border border-white/8 bg-white/[0.025] p-3">
+                  <p className="text-xs text-slate-500">Critical/high</p>
+                  <p
+                    className={
+                      intelligence.summary.blocking_finding_count
+                        ? 'mt-1 text-xl font-semibold text-rose-300'
+                        : 'mt-1 text-xl font-semibold text-emerald-300'
+                    }
+                  >
+                    {intelligence.summary.blocking_finding_count}
+                  </p>
+                </div>
               </div>
               <div className="rounded-xl border border-white/8 bg-hive-surface/60 p-3">
                 <div className="flex flex-wrap items-center justify-between gap-2">
                   <p className="text-sm font-medium text-slate-100">{intelligence.summary.headline}</p>
-                  <StatusBadge status={intelligence.summary.status === 'healthy' ? 'ready' : intelligence.summary.status === 'action_required' ? 'error' : 'warning'} label={intelligence.summary.status.replace(/_/g, ' ')} compact />
+                  <StatusBadge
+                    status={intelligence.summary.status === 'healthy' ? 'ready' : intelligence.summary.status === 'action_required' ? 'error' : 'warning'}
+                    label={intelligence.summary.status.replace(/_/g, ' ')}
+                    compact
+                  />
                 </div>
                 {intelligence.occurred_at && <p className="mt-1 text-xs text-slate-500">{formatDate(intelligence.occurred_at)}</p>}
               </div>
@@ -666,11 +726,24 @@ export function RepositoryIntelligencePage() {
                     <article key={finding.id} className="rounded-xl border border-white/8 bg-white/[0.025] p-3">
                       <div className="flex flex-wrap items-center justify-between gap-2">
                         <p className="text-xs font-semibold text-slate-100">{finding.title}</p>
-                        <span className={`rounded-full border px-2 py-0.5 text-[11px] uppercase tracking-wide ${finding.severity === 'critical' || finding.severity === 'high' ? 'border-rose-300/20 bg-rose-300/8 text-rose-200' : 'border-amber-300/20 bg-amber-300/8 text-amber-100'}`}>{finding.severity}</span>
+                        <span
+                          className={
+                            [
+                              "rounded-full border px-2 py-0.5 text-[11px] uppercase tracking-wide ",
+                              String(
+                                finding.severity === 'critical' || finding.severity === 'high'
+                                  ? 'border-rose-300/20 bg-rose-300/8 text-rose-200'
+                                  : 'border-amber-300/20 bg-amber-300/8 text-amber-100',
+                              ),
+                            ].join('')
+                          }
+                        >{finding.severity}</span>
                       </div>
                       <p className="mt-1 text-xs leading-5 text-slate-400">{finding.summary}</p>
                       <p className="mt-1 text-[11px] text-slate-500">{finding.source.replace(/_/g, ' ')} · {finding.category.replace(/_/g, ' ')} · {finding.confidence}</p>
-                      {Object.keys(finding.details ?? {}).length > 0 && <pre className="mt-2 max-h-56 max-w-full overflow-auto rounded-lg bg-hive-canvas p-2 font-mono text-[11px] text-slate-400">{JSON.stringify(finding.details, null, 2)}</pre>}
+                      {Object.keys(finding.details ?? {}).length > 0 && <pre
+                        className="mt-2 max-h-56 max-w-full overflow-auto rounded-lg bg-hive-canvas p-2 font-mono text-[11px] text-slate-400"
+                      >{JSON.stringify(finding.details, null, 2)}</pre>}
                     </article>
                   ))}
                 </div>
@@ -693,7 +766,11 @@ export function RepositoryIntelligencePage() {
                   {improvementJob.model_used ? ` · ${improvementJob.model_used}` : ''}
                 </p>
               </div>
-              <StatusBadge status={improvementJob.status === 'completed' ? 'ready' : improvementJob.status === 'failed' ? 'error' : 'running'} label={improvementJob.status.replace(/_/g, ' ')} compact />
+              <StatusBadge
+                status={improvementJob.status === 'completed' ? 'ready' : improvementJob.status === 'failed' ? 'error' : 'running'}
+                label={improvementJob.status.replace(/_/g, ' ')}
+                compact
+              />
             </div>
             {improvementJob.summary && <p className="mt-3 text-sm leading-6 text-slate-300">{improvementJob.summary}</p>}
             {improvementJob.error && <p className="mt-3 rounded-xl border border-rose-400/20 bg-rose-400/8 p-3 text-xs leading-5 text-rose-200">{improvementJob.error}</p>}
@@ -701,16 +778,24 @@ export function RepositoryIntelligencePage() {
               <div className="mt-4">
                 <div className="flex flex-wrap gap-2 text-xs text-slate-400">
                   <span className="rounded-full border border-white/10 px-2.5 py-1">{improvementJob.change_count ?? 0} file change(s)</span>
-                  {typeof improvementJob.qa_score_after === 'number' && <span className="rounded-full border border-emerald-300/15 bg-emerald-300/7 px-2.5 py-1 text-emerald-100">Static QA after: {scorePct(improvementJob.qa_score_after)}%</span>}
+                  {typeof improvementJob.qa_score_after === 'number' && <span
+                    className="rounded-full border border-emerald-300/15 bg-emerald-300/7 px-2.5 py-1 text-emerald-100"
+                  >Static QA after: {scorePct(improvementJob.qa_score_after)}%</span>}
                 </div>
                 <div className="mt-3 grid gap-2 sm:grid-cols-2">
                   {improvementDownloadUrl('changed_files') && (
-                    <a href={improvementDownloadUrl('changed_files') ?? undefined} className="flex min-h-11 items-center justify-center gap-2 rounded-xl border border-cyan-300/20 bg-cyan-300/10 px-4 py-2 text-xs font-semibold text-cyan-100">
+                    <a
+                      href={improvementDownloadUrl('changed_files') ?? undefined}
+                      className="flex min-h-11 items-center justify-center gap-2 rounded-xl border border-cyan-300/20 bg-cyan-300/10 px-4 py-2 text-xs font-semibold text-cyan-100"
+                    >
                       <Download className="h-4 w-4" /> Download changed files
                     </a>
                   )}
                   {improvementDownloadUrl('updated_repository') && (
-                    <a href={improvementDownloadUrl('updated_repository') ?? undefined} className="flex min-h-11 items-center justify-center gap-2 rounded-xl border border-emerald-300/20 bg-emerald-300/10 px-4 py-2 text-xs font-semibold text-emerald-100">
+                    <a
+                      href={improvementDownloadUrl('updated_repository') ?? undefined}
+                      className="flex min-h-11 items-center justify-center gap-2 rounded-xl border border-emerald-300/20 bg-emerald-300/10 px-4 py-2 text-xs font-semibold text-emerald-100"
+                    >
                       <Download className="h-4 w-4" /> Download updated repository
                     </a>
                   )}
@@ -741,7 +826,11 @@ export function RepositoryIntelligencePage() {
 
           {!qaReport ? (
             <div className="mt-4">
-              <EmptyState icon={<ShieldAlert className="h-5 w-5" />} title="No QA evidence recorded for this repository." body="Run Repository Intelligence to generate QA evidence and the consolidated report." />
+              <EmptyState
+                icon={<ShieldAlert className="h-5 w-5" />}
+                title="No QA evidence recorded for this repository."
+                body="Run Repository Intelligence to generate QA evidence and the consolidated report."
+              />
             </div>
           ) : (
             <div className="mt-4">
@@ -800,7 +889,11 @@ export function RepositoryIntelligencePage() {
 
           {!councilReport ? (
             <div className="mt-4">
-              <EmptyState icon={<Gavel className="h-5 w-5" />} title="No Council evidence recorded for this repository." body="Run Repository Intelligence to score architecture, security, maintainability and the other Council dimensions." />
+              <EmptyState
+                icon={<Gavel className="h-5 w-5" />}
+                title="No Council evidence recorded for this repository."
+                body="Run Repository Intelligence to score architecture, security, maintainability and the other Council dimensions."
+              />
             </div>
           ) : (
             <div className="mt-4">

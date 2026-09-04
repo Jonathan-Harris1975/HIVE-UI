@@ -151,10 +151,22 @@ export function CouncilPage() {
 
           {latestRun && (
             <div className="mt-4 grid grid-cols-2 gap-2 text-center text-xs sm:grid-cols-4">
-              <div className="rounded-lg border border-white/8 px-2.5 py-2"><p className="text-sm font-semibold text-white">{latestRun.providers_discovered}</p><p className="text-slate-400">Providers</p></div>
-              <div className="rounded-lg border border-white/8 px-2.5 py-2"><p className="text-sm font-semibold text-white">{latestRun.models_seen}</p><p className="text-slate-400">Models seen</p></div>
-              <div className="rounded-lg border border-emerald-300/15 px-2.5 py-2"><p className="text-sm font-semibold text-emerald-300">{latestRun.new_models.length}</p><p className="text-slate-400">New</p></div>
-              <div className="rounded-lg border border-rose-300/15 px-2.5 py-2"><p className="text-sm font-semibold text-rose-300">{latestRun.retired_models.length}</p><p className="text-slate-400">Retired</p></div>
+              <div className="rounded-lg border border-white/8 px-2.5 py-2">
+                <p className="text-sm font-semibold text-white">{latestRun.providers_discovered}</p>
+                <p className="text-slate-400">Providers</p>
+              </div>
+              <div className="rounded-lg border border-white/8 px-2.5 py-2">
+                <p className="text-sm font-semibold text-white">{latestRun.models_seen}</p>
+                <p className="text-slate-400">Models seen</p>
+              </div>
+              <div className="rounded-lg border border-emerald-300/15 px-2.5 py-2">
+                <p className="text-sm font-semibold text-emerald-300">{latestRun.new_models.length}</p>
+                <p className="text-slate-400">New</p>
+              </div>
+              <div className="rounded-lg border border-rose-300/15 px-2.5 py-2">
+                <p className="text-sm font-semibold text-rose-300">{latestRun.retired_models.length}</p>
+                <p className="text-slate-400">Retired</p>
+              </div>
             </div>
           )}
           {latestRun && latestRun.promotions.length > 0 && (
@@ -219,7 +231,12 @@ export function CouncilPage() {
                     className="h-9 flex-1 rounded-lg border border-white/8 bg-hive-surface px-3 text-xs text-slate-100 outline-none placeholder:text-slate-500 focus:border-cyan-300/30"
                   />
                   {candidates.length > 1 && (
-                    <button type="button" onClick={() => removeCandidate(index)} aria-label={`Remove candidate ${index + 1}`} className="flex h-9 w-9 items-center justify-center rounded-lg border border-rose-300/20 bg-rose-300/8 text-rose-200 hover:bg-rose-300/12">
+                    <button
+                      type="button"
+                      onClick={() => removeCandidate(index)}
+                      aria-label={`Remove candidate ${index + 1}`}
+                      className="flex h-9 w-9 items-center justify-center rounded-lg border border-rose-300/20 bg-rose-300/8 text-rose-200 hover:bg-rose-300/12"
+                    >
                       <X className="h-3.5 w-3.5" />
                     </button>
                   )}

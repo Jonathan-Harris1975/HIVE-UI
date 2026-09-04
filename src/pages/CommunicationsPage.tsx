@@ -114,7 +114,11 @@ export function CommunicationsPage() {
       <button
         type="button"
         onClick={reload}
-        className="absolute bottom-4 right-4 z-30 rounded-xl border border-white/10 bg-hive-panel/95 p-2.5 text-slate-300 shadow-xl backdrop-blur transition hover:border-cyan-300/30 hover:text-cyan-100"
+        className={
+          "absolute bottom-4 right-4 z-30 rounded-xl border border-white/10 bg-hive-panel/95 p-2.5 " +
+          "text-slate-300 shadow-xl backdrop-blur transition hover:border-cyan-300/30 " +
+          "hover:text-cyan-100"
+        }
         aria-label="Reload Communications Interface"
         title="Reload Communications Interface"
       >

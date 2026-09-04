@@ -596,9 +596,12 @@ export function FilesPage() {
         return next;
       });
       setSelectedAction(null);
-      setNotice(
-        `${nextSources.length} file${nextSources.length === 1 ? "" : "s"} selected from ${folderNameFromPrefix(folderPrefix)}${response.truncated ? `; showing the first ${nextSources.length} within the ${MAX_SELECTED_OBJECTS}-file chat limit.` : "."}`,
-      );
+      const fileCountLabel = `${nextSources.length} file${nextSources.length === 1 ? "" : "s"}`;
+      const folderLabel = folderNameFromPrefix(folderPrefix);
+      const truncationSuffix = response.truncated
+        ? `; showing the first ${nextSources.length} within the ${MAX_SELECTED_OBJECTS}-file chat limit.`
+        : ".";
+      setNotice(`${fileCountLabel} selected from ${folderLabel}${truncationSuffix}`);
     } catch (caught) {
       setError(caught instanceof Error ? caught.message : "Folder selection failed.");
     } finally {
@@ -1109,7 +1112,17 @@ export function FilesPage() {
                 <button
                   type="button"
                   onClick={() => setSelectedAction("chat")}
-                  className={`inline-flex h-9 items-center gap-2 rounded-xl px-3 text-xs font-medium transition ${selectedAction === "chat" ? "bg-emerald-300/12 text-emerald-100" : "text-slate-300 hover:bg-white/[0.05]"}`}
+                  className={
+                    [
+                      "inline-flex h-9 items-center gap-2 rounded-xl px-3 text-xs font-medium ",
+                      "transition ",
+                      String(
+                        selectedAction === "chat"
+                          ? "bg-emerald-300/12 text-emerald-100"
+                          : "text-slate-300 hover:bg-white/[0.05]",
+                      ),
+                    ].join('')
+                  }
                 >
                   <MessageSquareText className="h-4 w-4" /> Chat
                 </button>
@@ -1118,7 +1131,17 @@ export function FilesPage() {
                 <button
                   type="button"
                   onClick={() => setSelectedAction("apply_skill")}
-                  className={`inline-flex h-9 items-center gap-2 rounded-xl px-3 text-xs font-medium transition ${selectedAction === "apply_skill" ? "bg-cyan-300/12 text-cyan-100" : "text-slate-300 hover:bg-white/[0.05]"}`}
+                  className={
+                    [
+                      "inline-flex h-9 items-center gap-2 rounded-xl px-3 text-xs font-medium ",
+                      "transition ",
+                      String(
+                        selectedAction === "apply_skill"
+                          ? "bg-cyan-300/12 text-cyan-100"
+                          : "text-slate-300 hover:bg-white/[0.05]",
+                      ),
+                    ].join('')
+                  }
                 >
                   <BrainCircuit className="h-4 w-4" /> Apply skill
                 </button>
@@ -1127,7 +1150,17 @@ export function FilesPage() {
                 <button
                   type="button"
                   onClick={() => setSelectedAction("create_skill")}
-                  className={`inline-flex h-9 items-center gap-2 rounded-xl px-3 text-xs font-medium transition ${selectedAction === "create_skill" ? "bg-violet-300/12 text-violet-100" : "text-slate-300 hover:bg-white/[0.05]"}`}
+                  className={
+                    [
+                      "inline-flex h-9 items-center gap-2 rounded-xl px-3 text-xs font-medium ",
+                      "transition ",
+                      String(
+                        selectedAction === "create_skill"
+                          ? "bg-violet-300/12 text-violet-100"
+                          : "text-slate-300 hover:bg-white/[0.05]",
+                      ),
+                    ].join('')
+                  }
                 >
                   <BrainCircuit className="h-4 w-4" /> Create skill
                 </button>
@@ -1136,7 +1169,17 @@ export function FilesPage() {
                 <button
                   type="button"
                   onClick={() => setSelectedAction("upload")}
-                  className={`inline-flex h-9 items-center gap-2 rounded-xl px-3 text-xs font-medium transition ${selectedAction === "upload" ? "bg-cyan-300/12 text-cyan-100" : "text-slate-300 hover:bg-white/[0.05]"}`}
+                  className={
+                    [
+                      "inline-flex h-9 items-center gap-2 rounded-xl px-3 text-xs font-medium ",
+                      "transition ",
+                      String(
+                        selectedAction === "upload"
+                          ? "bg-cyan-300/12 text-cyan-100"
+                          : "text-slate-300 hover:bg-white/[0.05]",
+                      ),
+                    ].join('')
+                  }
                 >
                   <UploadCloud className="h-4 w-4" /> Upload
                 </button>
@@ -1157,7 +1200,10 @@ export function FilesPage() {
                 <button
                   type="button"
                   onClick={chatWithSelectedObjects}
-                  className="inline-flex h-9 items-center justify-center gap-2 rounded-xl border border-emerald-300/20 bg-emerald-300/10 px-3 text-xs font-medium text-emerald-100 hover:bg-emerald-300/15"
+                  className={
+                    "inline-flex h-9 items-center justify-center gap-2 rounded-xl border border-emerald-300/20 " +
+                    "bg-emerald-300/10 px-3 text-xs font-medium text-emerald-100 hover:bg-emerald-300/15"
+                  }
                 >
                   <MessageSquareText className="h-4 w-4" /> Open chat
                 </button>
@@ -1207,7 +1253,10 @@ export function FilesPage() {
                   <button
                     type="button"
                     onClick={() => openSkillRegistration(selectedCurrentFile)}
-                    className="inline-flex h-9 items-center justify-center gap-2 rounded-xl border border-violet-300/20 bg-violet-300/10 px-3 text-xs font-medium text-violet-100 hover:bg-violet-300/15"
+                    className={
+                      "inline-flex h-9 items-center justify-center gap-2 rounded-xl border border-violet-300/20 " +
+                      "bg-violet-300/10 px-3 text-xs font-medium text-violet-100 hover:bg-violet-300/15"
+                    }
                   >
                     <BrainCircuit className="h-4 w-4" /> Create skill
                   </button>
@@ -1299,7 +1348,10 @@ export function FilesPage() {
                       onChange={(event) => setTextContent(event.target.value)}
                       rows={7}
                       placeholder="Paste notes, logs, transcripts or source text…"
-                      className="mt-2 w-full resize-y rounded-xl border border-white/8 bg-hive-canvas px-3 py-3 text-sm leading-6 text-slate-200 outline-none placeholder:text-slate-400 focus:border-cyan-300/30"
+                      className={
+                        "mt-2 w-full resize-y rounded-xl border border-white/8 bg-hive-canvas px-3 py-3 text-sm " +
+                        "leading-6 text-slate-200 outline-none placeholder:text-slate-400 focus:border-cyan-300/30"
+                      }
                     />
                   </label>
                   <div className="flex justify-end">
@@ -1378,7 +1430,11 @@ export function FilesPage() {
                 type="button"
                 onClick={requestDeleteSelectedObjects}
                 disabled={!selectedWritable || deletingObjects}
-                className="inline-flex h-9 items-center gap-2 rounded-xl border border-rose-300/20 bg-rose-300/8 px-3 text-xs font-medium text-rose-100 hover:bg-rose-300/12 disabled:cursor-not-allowed disabled:opacity-40"
+                className={
+                  "inline-flex h-9 items-center gap-2 rounded-xl border border-rose-300/20 bg-rose-300/8 px-3 " +
+                  "text-xs font-medium text-rose-100 hover:bg-rose-300/12 disabled:cursor-not-allowed " +
+                  "disabled:opacity-40"
+                }
               >
                 {deletingObjects ? (
                   <LoaderCircle className="h-4 w-4 animate-spin" />
@@ -1480,7 +1536,17 @@ export function FilesPage() {
                 return (
                   <article
                     key={folderPrefix}
-                    className={`group rounded-2xl border p-4 transition hover:border-cyan-300/20 hover:bg-hive-panel-hover ${selectedInside ? "border-cyan-300/25 bg-cyan-300/[0.04]" : "border-white/8 bg-hive-panel/70"}`}
+                    className={
+                      [
+                        "group rounded-2xl border p-4 transition hover:border-cyan-300/20 ",
+                        "hover:bg-hive-panel-hover ",
+                        String(
+                          selectedInside
+                            ? "border-cyan-300/25 bg-cyan-300/[0.04]"
+                            : "border-white/8 bg-hive-panel/70",
+                        ),
+                      ].join('')
+                    }
                   >
                     <div className="flex h-10 w-10 items-center justify-center rounded-xl border border-amber-300/15 bg-amber-300/7 text-amber-200">
                       <Folder className="h-5 w-5" />
@@ -1498,7 +1564,11 @@ export function FilesPage() {
                       <button
                         type="button"
                         onClick={() => changePrefix(folderPrefix)}
-                        className="flex h-9 items-center justify-center gap-1.5 rounded-xl border border-white/8 bg-white/[0.025] text-xs font-medium text-cyan-200/75 transition hover:bg-white/[0.05] hover:text-cyan-100"
+                        className={
+                          "flex h-9 items-center justify-center gap-1.5 rounded-xl border border-white/8 " +
+                          "bg-white/[0.025] text-xs font-medium text-cyan-200/75 transition hover:bg-white/[0.05] " +
+                          "hover:text-cyan-100"
+                        }
                       >
                         Open <ChevronRight className="h-3.5 w-3.5" />
                       </button>
@@ -1506,7 +1576,11 @@ export function FilesPage() {
                         type="button"
                         onClick={() => void selectPrefixObjects(folderPrefix)}
                         disabled={prefixBusy || selectedSources.length >= MAX_SELECTED_OBJECTS}
-                        className="flex h-9 items-center justify-center gap-1.5 rounded-xl border border-cyan-300/15 bg-cyan-300/6 text-xs font-medium text-cyan-100 transition hover:bg-cyan-300/10 disabled:cursor-not-allowed disabled:opacity-40"
+                        className={
+                          "flex h-9 items-center justify-center gap-1.5 rounded-xl border border-cyan-300/15 " +
+                          "bg-cyan-300/6 text-xs font-medium text-cyan-100 transition hover:bg-cyan-300/10 " +
+                          "disabled:cursor-not-allowed disabled:opacity-40"
+                        }
                       >
                         {prefixBusy ? <LoaderCircle className="h-3.5 w-3.5 animate-spin" /> : <CheckSquare className="h-3.5 w-3.5" />}
                         Select files
@@ -1528,14 +1602,34 @@ export function FilesPage() {
                 return (
                   <article
                     key={key}
-                    className={`group rounded-2xl border p-4 transition hover:border-cyan-300/20 hover:bg-hive-panel-hover ${selected ? "border-cyan-300/35 bg-cyan-300/[0.055]" : "border-white/8 bg-hive-panel/70"}`}
+                    className={
+                      [
+                        "group rounded-2xl border p-4 transition hover:border-cyan-300/20 ",
+                        "hover:bg-hive-panel-hover ",
+                        String(
+                          selected
+                            ? "border-cyan-300/35 bg-cyan-300/[0.055]"
+                            : "border-white/8 bg-hive-panel/70",
+                        ),
+                      ].join('')
+                    }
                   >
                     <div className="mb-3 flex items-center justify-between gap-2">
                       <button
                         type="button"
                         onClick={() => toggleObjectSelection(file)}
                         aria-pressed={selected}
-                        className={`inline-flex h-8 items-center gap-1.5 rounded-lg border px-2.5 text-xs font-medium transition ${selected ? "border-cyan-300/30 bg-cyan-300/10 text-cyan-100" : "border-white/8 bg-white/[0.025] text-slate-400 hover:text-slate-200"}`}
+                        className={
+                          [
+                            "inline-flex h-8 items-center gap-1.5 rounded-lg border px-2.5 text-xs ",
+                            "font-medium transition ",
+                            String(
+                              selected
+                                ? "border-cyan-300/30 bg-cyan-300/10 text-cyan-100"
+                                : "border-white/8 bg-white/[0.025] text-slate-400 hover:text-slate-200",
+                            ),
+                          ].join('')
+                        }
                       >
                         {selected ? (
                           <CheckSquare className="h-3.5 w-3.5" />
@@ -1582,7 +1676,11 @@ export function FilesPage() {
                         type="button"
                         onClick={() => void preview(file)}
                         disabled={!chatSupported}
-                        className="flex h-9 items-center justify-center gap-1.5 rounded-xl border border-white/8 bg-white/[0.025] text-xs text-slate-400 transition hover:bg-white/[0.05] hover:text-white disabled:cursor-not-allowed disabled:opacity-35"
+                        className={
+                          "flex h-9 items-center justify-center gap-1.5 rounded-xl border border-white/8 " +
+                          "bg-white/[0.025] text-xs text-slate-400 transition hover:bg-white/[0.05] hover:text-white " +
+                          "disabled:cursor-not-allowed disabled:opacity-35"
+                        }
                       >
                         <FileText className="h-3.5 w-3.5" /> Preview
                       </button>
@@ -1590,13 +1688,19 @@ export function FilesPage() {
                         href={viewHref(file)}
                         target="_blank"
                         rel="noreferrer"
-                        className="flex h-9 items-center justify-center gap-1.5 rounded-xl border border-white/8 bg-white/[0.025] text-xs text-slate-400 transition hover:bg-white/[0.05] hover:text-white"
+                        className={
+                          "flex h-9 items-center justify-center gap-1.5 rounded-xl border border-white/8 " +
+                          "bg-white/[0.025] text-xs text-slate-400 transition hover:bg-white/[0.05] hover:text-white"
+                        }
                       >
                         <Eye className="h-3.5 w-3.5" /> View
                       </a>
                       <a
                         href={downloadHref(file)}
-                        className="flex h-9 items-center justify-center gap-1.5 rounded-xl border border-white/8 bg-white/[0.025] text-xs text-slate-400 transition hover:bg-white/[0.05] hover:text-white"
+                        className={
+                          "flex h-9 items-center justify-center gap-1.5 rounded-xl border border-white/8 " +
+                          "bg-white/[0.025] text-xs text-slate-400 transition hover:bg-white/[0.05] hover:text-white"
+                        }
                       >
                         <Download className="h-3.5 w-3.5" /> Download
                       </a>
@@ -1606,7 +1710,11 @@ export function FilesPage() {
                         type="button"
                         disabled={!chatSupported}
                         onClick={() => chatWith(file)}
-                        className="flex h-9 items-center justify-center gap-2 rounded-xl border border-emerald-300/15 bg-emerald-300/6 text-xs font-medium text-emerald-100 transition hover:bg-emerald-300/10 disabled:cursor-not-allowed disabled:opacity-35"
+                        className={
+                          "flex h-9 items-center justify-center gap-2 rounded-xl border border-emerald-300/15 " +
+                          "bg-emerald-300/6 text-xs font-medium text-emerald-100 transition hover:bg-emerald-300/10 " +
+                          "disabled:cursor-not-allowed disabled:opacity-35"
+                        }
                       >
                         <MessageSquareText className="h-4 w-4" />{" "}
                         {chatSupported ? "Chat" : "No chat"}
@@ -1622,7 +1730,11 @@ export function FilesPage() {
                         type="button"
                         onClick={() => deleteOneObject(file)}
                         disabled={!activeLane?.writable || deletingObjects}
-                        className="flex h-9 items-center justify-center gap-2 rounded-xl border border-rose-300/15 bg-rose-300/6 text-xs font-medium text-rose-100 transition hover:bg-rose-300/10 disabled:cursor-not-allowed disabled:opacity-35"
+                        className={
+                          "flex h-9 items-center justify-center gap-2 rounded-xl border border-rose-300/15 " +
+                          "bg-rose-300/6 text-xs font-medium text-rose-100 transition hover:bg-rose-300/10 " +
+                          "disabled:cursor-not-allowed disabled:opacity-35"
+                        }
                       >
                         {deletingObjects ? (
                           <LoaderCircle className="h-4 w-4 animate-spin" />
@@ -1636,7 +1748,11 @@ export function FilesPage() {
                       <button
                         type="button"
                         onClick={() => openSkillRegistration(file)}
-                        className="mt-2 flex h-9 w-full items-center justify-center gap-2 rounded-xl border border-violet-300/15 bg-violet-300/6 text-xs font-medium text-violet-100 transition hover:bg-violet-300/10"
+                        className={
+                          "mt-2 flex h-9 w-full items-center justify-center gap-2 rounded-xl border " +
+                          "border-violet-300/15 bg-violet-300/6 text-xs font-medium text-violet-100 transition " +
+                          "hover:bg-violet-300/10"
+                        }
                       >
                         <BrainCircuit className="h-4 w-4" /> Create skill from
                         file
@@ -1702,7 +1818,10 @@ export function FilesPage() {
                 disabled={loadingSkills}
                 aria-busy={loadingSkills}
                 aria-label={loadingSkills ? "Searching skills" : "Search skills"}
-                className="flex h-11 items-center justify-center rounded-xl border border-cyan-300/20 bg-cyan-300/8 px-4 text-sm font-medium text-cyan-100 transition hover:bg-cyan-300/12 disabled:opacity-50"
+                className={
+                  "flex h-11 items-center justify-center rounded-xl border border-cyan-300/20 bg-cyan-300/8 " +
+                  "px-4 text-sm font-medium text-cyan-100 transition hover:bg-cyan-300/12 disabled:opacity-50"
+                }
               >
                 {loadingSkills ? (
                   <LoaderCircle className="h-4 w-4 animate-spin" />
@@ -1733,7 +1852,16 @@ export function FilesPage() {
                       key={`${id}-${index}`}
                       type="button"
                       onClick={() => setSelectedSkill(skill)}
-                      className={`rounded-2xl border p-3 text-left transition ${selected ? "border-cyan-300/35 bg-cyan-300/[0.07]" : "border-white/8 bg-hive-canvas/75 hover:border-cyan-300/20 hover:bg-hive-panel-hover"}`}
+                      className={
+                        [
+                          "rounded-2xl border p-3 text-left transition ",
+                          String(
+                            selected
+                              ? "border-cyan-300/35 bg-cyan-300/[0.07]"
+                              : "border-white/8 bg-hive-canvas/75 hover:border-cyan-300/20 hover:bg-hive-panel-hover",
+                          ),
+                        ].join('')
+                      }
                     >
                       <div className="flex items-start justify-between gap-3">
                         <div className="min-w-0">
@@ -1784,7 +1912,10 @@ export function FilesPage() {
                 type="button"
                 onClick={useSelectedSkillWithFile}
                 disabled={!selectedSkill}
-                className="flex h-10 items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-cyan-300 to-emerald-300 px-4 text-sm font-semibold text-hive-canvas transition disabled:opacity-50"
+                className={
+                  "flex h-10 items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-cyan-300 " +
+                  "to-emerald-300 px-4 text-sm font-semibold text-hive-canvas transition disabled:opacity-50"
+                }
               >
                 <BrainCircuit className="h-4 w-4" /> Use selected skill
               </button>
@@ -1852,7 +1983,10 @@ export function FilesPage() {
                   }
                   rows={4}
                   placeholder="Explain what this skill should be used for…"
-                  className="mt-2 w-full resize-y rounded-xl border border-white/8 bg-hive-canvas px-3 py-3 text-sm leading-6 text-slate-100 outline-none placeholder:text-slate-400 focus:border-violet-300/40"
+                  className={
+                    "mt-2 w-full resize-y rounded-xl border border-white/8 bg-hive-canvas px-3 py-3 text-sm " +
+                    "leading-6 text-slate-100 outline-none placeholder:text-slate-400 focus:border-violet-300/40"
+                  }
                 />
               </label>
 
@@ -1942,7 +2076,10 @@ export function FilesPage() {
                 type="button"
                 onClick={closeSkillRegistration}
                 disabled={registeringSkill}
-                className="flex h-10 items-center justify-center rounded-xl border border-white/8 bg-white/[0.035] px-4 text-sm font-medium text-slate-200 transition hover:bg-white/[0.06] disabled:opacity-40"
+                className={
+                  "flex h-10 items-center justify-center rounded-xl border border-white/8 bg-white/[0.035] px-4 " +
+                  "text-sm font-medium text-slate-200 transition hover:bg-white/[0.06] disabled:opacity-40"
+                }
               >
                 Cancel
               </button>
@@ -1950,7 +2087,10 @@ export function FilesPage() {
                 type="button"
                 onClick={() => void registerSkillFromSelectedFile()}
                 disabled={registeringSkill || !skillForm.title.trim()}
-                className="flex h-10 items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-violet-300 to-cyan-300 px-4 text-sm font-semibold text-hive-canvas transition disabled:opacity-50"
+                className={
+                  "flex h-10 items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-violet-300 " +
+                  "to-cyan-300 px-4 text-sm font-semibold text-hive-canvas transition disabled:opacity-50"
+                }
               >
                 {registeringSkill ? (
                   <LoaderCircle className="h-4 w-4 animate-spin" />

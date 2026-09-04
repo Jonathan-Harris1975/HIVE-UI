@@ -309,7 +309,11 @@ export function ExecutionReviewsPage() {
             ) : items.length === 0 ? (
               !error && (
                 <div className="mt-3">
-                  <EmptyState icon={<ClipboardList className="h-5 w-5" />} title={`No ${filter === 'all' ? '' : filter} review plans.`} body="Create a review plan to gate a proposed execution behind explicit approval." />
+                  <EmptyState
+                    icon={<ClipboardList className="h-5 w-5" />}
+                    title={`No ${filter === 'all' ? '' : filter} review plans.`}
+                    body="Create a review plan to gate a proposed execution behind explicit approval."
+                  />
                 </div>
               )
             ) : (
@@ -406,16 +410,32 @@ export function ExecutionReviewsPage() {
                 </article>
 
                 <div className="flex flex-wrap gap-2">
-                  <button type="button" onClick={() => void loadAuditTrail()} className="flex h-9 items-center gap-1.5 rounded-lg border border-white/8 bg-white/[0.04] px-3 text-xs text-slate-300 hover:bg-white/[0.07]">
+                  <button
+                    type="button"
+                    onClick={() => void loadAuditTrail()}
+                    className="flex h-9 items-center gap-1.5 rounded-lg border border-white/8 bg-white/[0.04] px-3 text-xs text-slate-300 hover:bg-white/[0.07]"
+                  >
                     {panelLoading === 'audit' ? <LoaderCircle className="h-3.5 w-3.5 animate-spin" /> : <History className="h-3.5 w-3.5" />} Audit trail
                   </button>
-                  <button type="button" onClick={() => void loadEvidencePack()} className="flex h-9 items-center gap-1.5 rounded-lg border border-white/8 bg-white/[0.04] px-3 text-xs text-slate-300 hover:bg-white/[0.07]">
+                  <button
+                    type="button"
+                    onClick={() => void loadEvidencePack()}
+                    className="flex h-9 items-center gap-1.5 rounded-lg border border-white/8 bg-white/[0.04] px-3 text-xs text-slate-300 hover:bg-white/[0.07]"
+                  >
                     {panelLoading === 'evidence' ? <LoaderCircle className="h-3.5 w-3.5 animate-spin" /> : <FileSearch className="h-3.5 w-3.5" />} Evidence pack
                   </button>
-                  <button type="button" onClick={() => void exportPack('json')} className="flex h-9 items-center gap-1.5 rounded-lg border border-white/8 bg-white/[0.04] px-3 text-xs text-slate-300 hover:bg-white/[0.07]">
+                  <button
+                    type="button"
+                    onClick={() => void exportPack('json')}
+                    className="flex h-9 items-center gap-1.5 rounded-lg border border-white/8 bg-white/[0.04] px-3 text-xs text-slate-300 hover:bg-white/[0.07]"
+                  >
                     <Download className="h-3.5 w-3.5" /> Export JSON
                   </button>
-                  <button type="button" onClick={() => void exportPack('markdown')} className="flex h-9 items-center gap-1.5 rounded-lg border border-white/8 bg-white/[0.04] px-3 text-xs text-slate-300 hover:bg-white/[0.07]">
+                  <button
+                    type="button"
+                    onClick={() => void exportPack('markdown')}
+                    className="flex h-9 items-center gap-1.5 rounded-lg border border-white/8 bg-white/[0.04] px-3 text-xs text-slate-300 hover:bg-white/[0.07]"
+                  >
                     <Download className="h-3.5 w-3.5" /> Export Markdown
                   </button>
                 </div>

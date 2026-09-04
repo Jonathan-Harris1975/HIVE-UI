@@ -225,7 +225,11 @@ export function SkillsPage() {
               <h2 className="mt-2 text-2xl font-semibold text-white">Find the right operational capability</h2>
               <p className="mt-2 max-w-2xl text-sm leading-6 text-slate-400">Search and recommendation are metadata-only and review-gated. Nothing is installed or executed from this screen.</p>
             </div>
-            <button type="button" onClick={() => setShowRecommender((value) => !value)} className="flex h-10 items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-cyan-400 to-emerald-300 px-4 text-xs font-semibold text-hive-accent-deep">
+            <button
+              type="button"
+              onClick={() => setShowRecommender((value) => !value)}
+              className="flex h-10 items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-cyan-400 to-emerald-300 px-4 text-xs font-semibold text-hive-accent-deep"
+            >
               <WandSparkles className="h-4 w-4" /> Recommend for task
             </button>
           </div>
@@ -233,9 +237,20 @@ export function SkillsPage() {
           {showRecommender && (
             <form onSubmit={recommend} className="mt-5 rounded-2xl border border-cyan-300/15 bg-cyan-300/[0.035] p-4">
               <label className="text-xs font-medium text-slate-300">Describe the task</label>
-              <textarea value={task} onChange={(event) => setTask(event.target.value)} rows={3} placeholder="For example: review a Koyeb deployment bundle and produce a safe patch plan" aria-label="Task for skill recommendation" className="mt-2 w-full resize-none rounded-xl border border-white/8 bg-hive-surface px-3 py-3 text-sm text-white outline-none placeholder:text-slate-400 focus:border-cyan-300/30" />
+              <textarea
+                value={task}
+                onChange={(event) => setTask(event.target.value)}
+                rows={3}
+                placeholder="For example: review a Koyeb deployment bundle and produce a safe patch plan"
+                aria-label="Task for skill recommendation"
+                className="mt-2 w-full resize-none rounded-xl border border-white/8 bg-hive-surface px-3 py-3 text-sm text-white outline-none placeholder:text-slate-400 focus:border-cyan-300/30"
+              />
               <div className="mt-3 flex justify-end">
-                <button type="submit" disabled={!task.trim() || recommending} className="flex h-9 items-center gap-2 rounded-xl border border-cyan-300/20 bg-cyan-300/10 px-4 text-xs font-medium text-cyan-100 disabled:opacity-50">
+                <button
+                  type="submit"
+                  disabled={!task.trim() || recommending}
+                  className="flex h-9 items-center gap-2 rounded-xl border border-cyan-300/20 bg-cyan-300/10 px-4 text-xs font-medium text-cyan-100 disabled:opacity-50"
+                >
                   {recommending ? <LoaderCircle className="h-4 w-4 animate-spin" /> : <Sparkles className="h-4 w-4" />} Generate recommendations
                 </button>
               </div>
@@ -245,21 +260,47 @@ export function SkillsPage() {
           <form onSubmit={searchSkills} className="mt-6 grid gap-2 border-t border-white/8 pt-5 md:grid-cols-[minmax(220px,1fr)_160px_160px_180px_auto]">
             <label className="relative">
               <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
-              <input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Search skills" aria-label="Search skills" className="h-10 w-full rounded-xl border border-white/8 bg-hive-surface pl-10 pr-3 text-sm text-slate-200 outline-none placeholder:text-slate-400 focus:border-cyan-300/30" />
+              <input
+                value={query}
+                onChange={(event) => setQuery(event.target.value)}
+                placeholder="Search skills"
+                aria-label="Search skills"
+                className="h-10 w-full rounded-xl border border-white/8 bg-hive-surface pl-10 pr-3 text-sm text-slate-200 outline-none placeholder:text-slate-400 focus:border-cyan-300/30"
+              />
             </label>
-            <select value={repo} aria-label="Filter skills by repository" onChange={(event) => setRepo(event.target.value)} className="h-10 rounded-xl border border-white/8 bg-hive-surface px-3 text-xs text-slate-300 outline-none">
+            <select
+              value={repo}
+              aria-label="Filter skills by repository"
+              onChange={(event) => setRepo(event.target.value)}
+              className="h-10 rounded-xl border border-white/8 bg-hive-surface px-3 text-xs text-slate-300 outline-none"
+            >
               <option value="">All repos</option>
               {filters.repos.map((value) => <option key={value}>{value}</option>)}
             </select>
-            <select value={risk} aria-label="Filter skills by risk level" onChange={(event) => setRisk(event.target.value)} className="h-10 rounded-xl border border-white/8 bg-hive-surface px-3 text-xs text-slate-300 outline-none">
+            <select
+              value={risk}
+              aria-label="Filter skills by risk level"
+              onChange={(event) => setRisk(event.target.value)}
+              className="h-10 rounded-xl border border-white/8 bg-hive-surface px-3 text-xs text-slate-300 outline-none"
+            >
               <option value="">All risk levels</option>
               {filters.risks.map((value) => <option key={value}>{value}</option>)}
             </select>
-            <select value={lane} aria-label="Filter skills by lane" onChange={(event) => setLane(event.target.value)} className="h-10 rounded-xl border border-white/8 bg-hive-surface px-3 text-xs text-slate-300 outline-none">
+            <select
+              value={lane}
+              aria-label="Filter skills by lane"
+              onChange={(event) => setLane(event.target.value)}
+              className="h-10 rounded-xl border border-white/8 bg-hive-surface px-3 text-xs text-slate-300 outline-none"
+            >
               <option value="">All lanes</option>
               {filters.lanes.map((value) => <option key={value}>{value}</option>)}
             </select>
-            <button type="submit" className="flex h-10 items-center justify-center gap-2 rounded-xl border border-white/8 bg-white/[0.04] px-4 text-xs text-slate-300 hover:bg-white/[0.07]"><Filter className="h-4 w-4" /> Apply</button>
+            <button
+              type="submit"
+              className="flex h-10 items-center justify-center gap-2 rounded-xl border border-white/8 bg-white/[0.04] px-4 text-xs text-slate-300 hover:bg-white/[0.07]"
+            >
+              <Filter className="h-4 w-4" /> Apply
+            </button>
           </form>
         </section>
 
@@ -272,8 +313,18 @@ export function SkillsPage() {
             <EmptyState
               icon={<BrainCircuit className="h-5 w-5" />}
               title={submittedQuery ? 'No skills found for that search.' : 'No skills found.'}
-              body={submittedQuery || repo || risk || lane ? 'The active filters are hiding every registry entry.' : 'The skill catalogue is empty or unavailable. Open the HIVE skills folder to add governed skill descriptors.'}
-              action={submittedQuery ? { label: 'Clear search', onClick: clearSearch } : (repo || risk || lane) ? { label: 'Clear filters', onClick: clearFilters } : { label: 'Open skills folder in Files', onClick: () => navigate('/files') }}
+              body={
+                submittedQuery || repo || risk || lane
+                  ? 'The active filters are hiding every registry entry.'
+                  : 'The skill catalogue is empty or unavailable. Open the HIVE skills folder to add governed skill descriptors.'
+              }
+              action={
+                submittedQuery
+                  ? { label: 'Clear search', onClick: clearSearch }
+                  : (repo || risk || lane)
+                    ? { label: 'Clear filters', onClick: clearFilters }
+                    : { label: 'Open skills folder in Files', onClick: () => navigate('/files') }
+              }
             />
           ) : (
             <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
@@ -284,7 +335,10 @@ export function SkillsPage() {
                 const status = field(skill, 'status', 'indexed')
                 const score = skill.score == null ? null : Number(skill.score)
                 return (
-                  <article key={String(skill.id || metadata.skill_id || `${title}-${index}`)} className="rounded-2xl border border-white/8 bg-hive-panel/70 p-4 transition hover:border-cyan-300/20 hover:bg-hive-panel-hover">
+                  <article
+                    key={String(skill.id || metadata.skill_id || `${title}-${index}`)}
+                    className="rounded-2xl border border-white/8 bg-hive-panel/70 p-4 transition hover:border-cyan-300/20 hover:bg-hive-panel-hover"
+                  >
                     <button type="button" onClick={() => inspect(skill)} className="block w-full text-left">
                       <div className="flex items-center justify-between gap-3">
                         <div className="flex h-9 w-9 items-center justify-center rounded-xl border border-cyan-300/15 bg-cyan-300/7 text-cyan-200"><BrainCircuit className="h-4.5 w-4.5" /></div>
@@ -300,7 +354,15 @@ export function SkillsPage() {
                         <span>{field(skill, 'repo', 'Shared')}</span><span>·</span><span>{field(skill, 'hive_lane', field(skill, 'lane', 'General'))}</span>
                       </div>
                     </button>
-                    <button type="button" onClick={() => insertIntoChat(skill, index)} className="mt-3 flex h-9 w-full items-center justify-center gap-2 rounded-xl border border-emerald-300/15 bg-emerald-300/6 text-xs font-medium text-emerald-100 transition hover:bg-emerald-300/10">
+                    <button
+                      type="button"
+                      onClick={() => insertIntoChat(skill, index)}
+                      className={
+                        "mt-3 flex h-9 w-full items-center justify-center gap-2 rounded-xl border " +
+                        "border-emerald-300/15 bg-emerald-300/6 text-xs font-medium text-emerald-100 transition " +
+                        "hover:bg-emerald-300/10"
+                      }
+                    >
                       <MessageSquareText className="h-4 w-4" /> Use in chat
                     </button>
                   </article>

@@ -361,7 +361,11 @@ export function RepositoryMemoryPage({ embedded = false, repositoryId: controlle
                     <option key={repo.repository_id} value={repo.repository_id}>{repo.repository_id} · {repo.source_filename}</option>
                   ))}
                 </select>
-                <button type="submit" disabled={!repoInput} className="flex h-10 items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-cyan-400 to-emerald-300 px-4 text-xs font-semibold text-hive-accent-deep disabled:opacity-50">
+                <button
+                  type="submit"
+                  disabled={!repoInput}
+                  className="flex h-10 items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-cyan-400 to-emerald-300 px-4 text-xs font-semibold text-hive-accent-deep disabled:opacity-50"
+                >
                   Load
                 </button>
               </form>
@@ -440,7 +444,11 @@ export function RepositoryMemoryPage({ embedded = false, repositoryId: controlle
                 className="h-10 w-full rounded-xl border border-white/8 bg-hive-surface pl-10 pr-3 text-sm text-slate-200 outline-none placeholder:text-slate-400 focus:border-cyan-300/30"
               />
             </label>
-            <button type="submit" disabled={!query.trim() || searching || !memoryWritable} className="flex h-10 items-center justify-center gap-2 rounded-xl border border-white/8 bg-white/[0.04] px-4 text-xs text-slate-300 hover:bg-white/[0.07] disabled:opacity-50">
+            <button
+              type="submit"
+              disabled={!query.trim() || searching || !memoryWritable}
+              className="flex h-10 items-center justify-center gap-2 rounded-xl border border-white/8 bg-white/[0.04] px-4 text-xs text-slate-300 hover:bg-white/[0.07] disabled:opacity-50"
+            >
               {searching ? <LoaderCircle className="h-4 w-4 animate-spin" /> : <Sparkles className="h-4 w-4" />} Search
             </button>
           </form>
@@ -491,7 +499,10 @@ export function RepositoryMemoryPage({ embedded = false, repositoryId: controlle
                             onChange={(event) => setDraftValue(event.target.value)}
                             rows={6}
                             placeholder="Plain text or JSON"
-                            className="w-full resize-none rounded-xl border border-white/8 bg-hive-surface px-3 py-3 font-mono text-xs text-white outline-none placeholder:text-slate-500 focus:border-cyan-300/30"
+                            className={
+                              "w-full resize-none rounded-xl border border-white/8 bg-hive-surface px-3 py-3 font-mono " +
+                              "text-xs text-white outline-none placeholder:text-slate-500 focus:border-cyan-300/30"
+                            }
                           />
                           <div className="mt-2 flex justify-end gap-2">
                             <button type="button" onClick={cancelEdit} className="h-8 rounded-lg border border-white/8 px-3 text-xs text-slate-300">Cancel</button>
@@ -510,7 +521,12 @@ export function RepositoryMemoryPage({ embedded = false, repositoryId: controlle
                           <p className="mt-2 line-clamp-4 min-h-[40px] whitespace-pre-wrap font-mono text-xs leading-5 text-slate-400">
                             {blank ? 'No repository profile has populated this field yet.' : pretty(content)}
                           </p>
-                          <button type="button" onClick={() => startEdit(field)} disabled={!memoryWritable} className="mt-3 h-8 rounded-lg border border-white/8 bg-white/[0.04] px-3 text-xs text-slate-300 hover:bg-white/[0.07] disabled:cursor-not-allowed disabled:opacity-40">
+                          <button
+                            type="button"
+                            onClick={() => startEdit(field)}
+                            disabled={!memoryWritable}
+                            className="mt-3 h-8 rounded-lg border border-white/8 bg-white/[0.04] px-3 text-xs text-slate-300 hover:bg-white/[0.07] disabled:cursor-not-allowed disabled:opacity-40"
+                          >
                             {blank ? 'Set field' : 'Edit'}
                           </button>
                         </>
@@ -577,7 +593,15 @@ export function RepositoryMemoryPage({ embedded = false, repositoryId: controlle
                           </div>
                         </div>
                       ) : (
-                        <button type="button" onClick={() => startAppend(field)} disabled={!memoryWritable} className="mt-3 flex h-8 items-center gap-1.5 rounded-lg border border-white/8 bg-white/[0.04] px-3 text-xs text-slate-300 hover:bg-white/[0.07] disabled:cursor-not-allowed disabled:opacity-40">
+                        <button
+                          type="button"
+                          onClick={() => startAppend(field)}
+                          disabled={!memoryWritable}
+                          className={
+                            "mt-3 flex h-8 items-center gap-1.5 rounded-lg border border-white/8 bg-white/[0.04] px-3 " +
+                            "text-xs text-slate-300 hover:bg-white/[0.07] disabled:cursor-not-allowed disabled:opacity-40"
+                          }
+                        >
                           <Plus className="h-3.5 w-3.5" /> Append entry
                         </button>
                       )}
@@ -592,7 +616,11 @@ export function RepositoryMemoryPage({ embedded = false, repositoryId: controlle
                 <EmptyState
                   icon={<AlertTriangle className="h-5 w-5" />}
                   title={`No Repository Memory recorded yet for ${repositoryId}.`}
-                  body="A successful repository upload populates the scalar profile and initial QA/Council history automatically. Use Retry setup on Overview when the source snapshot exists; only legacy snapshotless registrations require one re-upload."
+                  body={
+                    "A successful repository upload populates the scalar profile and initial QA/Council history " +
+                    "automatically. Use Retry setup on Overview when the source snapshot exists; only legacy " +
+                    "snapshotless registrations require one re-upload."
+                  }
                 />
               </div>
             )}

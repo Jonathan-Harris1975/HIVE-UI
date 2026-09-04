@@ -244,7 +244,9 @@ export function OptimisationPage() {
 
               {audit.extra_in_env_example.length > 0 && (
                 <div className="mt-3 rounded-xl border border-white/8 bg-white/[0.02] p-3">
-                  <p className="text-xs font-semibold text-slate-300">{audit.extra_in_env_example.length} name{audit.extra_in_env_example.length === 1 ? '' : 's'} in .env.example with no matching setting</p>
+                  <p
+                    className="text-xs font-semibold text-slate-300"
+                  >{audit.extra_in_env_example.length} name{audit.extra_in_env_example.length === 1 ? '' : 's'} in .env.example with no matching setting</p>
                   <div className="mt-2 flex flex-wrap gap-1.5">
                     {audit.extra_in_env_example.map((name) => (
                       <span key={name} className="rounded-full border border-white/10 px-2 py-0.5 text-xs text-slate-400">{name}</span>

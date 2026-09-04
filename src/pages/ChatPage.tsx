@@ -527,21 +527,52 @@ export function ChatPage() {
                     key={starter.category}
                     type="button"
                     onClick={() => void submitMessage(starter.prompt)}
-                    className={`rounded-2xl border border-l-2 border-white/8 ${starter.border} bg-white/[0.025] p-3.5 text-left text-xs leading-5 text-slate-400 transition hover:border-cyan-300/20 hover:bg-cyan-300/[0.04] hover:text-slate-200 focus-visible:border-cyan-300/35`}
+                    className={
+                      [
+                        "rounded-2xl border border-l-2 border-white/8 ",
+                        String(starter.border),
+                        " bg-white/[0.025] p-3.5 text-left text-xs leading-5 text-slate-400 transition ",
+                        "hover:border-cyan-300/20 hover:bg-cyan-300/[0.04] hover:text-slate-200 ",
+                        "focus-visible:border-cyan-300/35",
+                      ].join('')
+                    }
                   >
-                    <span className="mb-2 flex items-center gap-1.5 text-xs font-semibold uppercase tracking-[0.16em] text-slate-300"><Sparkles className="h-3.5 w-3.5 text-cyan-300/70" /> {starter.category}</span>
+                    <span
+                      className="mb-2 flex items-center gap-1.5 text-xs font-semibold uppercase tracking-[0.16em] text-slate-300"
+                    ><Sparkles
+                      className="h-3.5 w-3.5 text-cyan-300/70"
+                    /> {starter.category}</span>
                     {starter.prompt}
                   </button>
                 ))}
               </div>
               <div className="mt-4 grid w-full max-w-sm grid-cols-3 gap-2 sm:mt-5 sm:flex sm:max-w-none sm:flex-wrap sm:justify-center">
-                <button type="button" onClick={startNewConversation} className="inline-flex h-11 items-center justify-center gap-2 rounded-xl border border-white/10 bg-white/[0.035] px-3 text-xs font-medium text-slate-200 transition hover:bg-white/[0.06]">
+                <button
+                  type="button"
+                  onClick={startNewConversation}
+                  className={
+                    "inline-flex h-11 items-center justify-center gap-2 rounded-xl border border-white/10 " +
+                    "bg-white/[0.035] px-3 text-xs font-medium text-slate-200 transition hover:bg-white/[0.06]"
+                  }
+                >
                   <Plus className="h-4 w-4" aria-hidden="true" /> <span className="sm:hidden">New chat</span><span className="hidden sm:inline">New conversation</span>
                 </button>
-                <Link to="/files" className="inline-flex h-11 items-center justify-center gap-2 rounded-xl border border-cyan-300/15 bg-cyan-300/7 px-3 text-xs font-medium text-cyan-100 transition hover:bg-cyan-300/12">
+                <Link
+                  to="/files"
+                  className={
+                    "inline-flex h-11 items-center justify-center gap-2 rounded-xl border border-cyan-300/15 " +
+                    "bg-cyan-300/7 px-3 text-xs font-medium text-cyan-100 transition hover:bg-cyan-300/12"
+                  }
+                >
                   <Files className="h-4 w-4" aria-hidden="true" /> Files
                 </Link>
-                <Link to="/skills" className="inline-flex h-11 items-center justify-center gap-2 rounded-xl border border-violet-300/15 bg-violet-300/7 px-3 text-xs font-medium text-violet-100 transition hover:bg-violet-300/12">
+                <Link
+                  to="/skills"
+                  className={
+                    "inline-flex h-11 items-center justify-center gap-2 rounded-xl border border-violet-300/15 " +
+                    "bg-violet-300/7 px-3 text-xs font-medium text-violet-100 transition hover:bg-violet-300/12"
+                  }
+                >
                   <BrainCircuit className="h-4 w-4" aria-hidden="true" /> Skills
                 </Link>
               </div>
@@ -558,12 +589,27 @@ export function ChatPage() {
       </div>
 
       {showScrollButton && (
-        <button type="button" onClick={scrollToLatest} className="absolute bottom-[112px] left-1/2 z-20 flex sm:bottom-[126px] -translate-x-1/2 items-center gap-2 rounded-full border border-white/10 bg-hive-panel-deep/95 px-3 py-2 text-xs text-slate-300 shadow-xl shadow-black/30 backdrop-blur hover:border-cyan-300/25 hover:text-cyan-100">
+        <button
+          type="button"
+          onClick={scrollToLatest}
+          className={
+            "absolute bottom-[112px] left-1/2 z-20 flex sm:bottom-[126px] -translate-x-1/2 items-center " +
+            "gap-2 rounded-full border border-white/10 bg-hive-panel-deep/95 px-3 py-2 text-xs " +
+            "text-slate-300 shadow-xl shadow-black/30 backdrop-blur hover:border-cyan-300/25 " +
+            "hover:text-cyan-100"
+          }
+        >
           <ArrowDown className="h-3.5 w-3.5" /> Latest message
         </button>
       )}
 
-      <div className="shrink-0 border-t border-white/8 bg-hive-surface/95 px-3 pb-[max(8px,env(safe-area-inset-bottom))] pt-2 backdrop-blur-xl sm:px-6 sm:pb-[max(12px,env(safe-area-inset-bottom))] sm:pt-3">
+      <div
+        className={
+          "shrink-0 border-t border-white/8 bg-hive-surface/95 px-3 " +
+          "pb-[max(8px,env(safe-area-inset-bottom))] pt-2 backdrop-blur-xl sm:px-6 " +
+          "sm:pb-[max(12px,env(safe-area-inset-bottom))] sm:pt-3"
+        }
+      >
         <form onSubmit={handleSubmit} aria-busy={streaming} className="mx-auto max-w-4xl">
           {(hasAttachedFiles || attachedSkillId || error) && (
             <div className="mb-2 flex flex-wrap items-center gap-2">
@@ -580,21 +626,41 @@ export function ChatPage() {
                       ? attachedSources[0].lane.replace(/_/g, ' ')
                       : `${new Set(attachedSources.map((source) => source.lane)).size} lanes`}
                   </span>
-                  <button type="button" onClick={removeAttachment} aria-label="Remove attached files" className="rounded-full p-1.5 text-emerald-100/80 hover:bg-white/10 hover:text-emerald-50"><X className="h-3.5 w-3.5" aria-hidden="true" /></button>
+                  <button
+                    type="button"
+                    onClick={removeAttachment}
+                    aria-label="Remove attached files"
+                    className="rounded-full p-1.5 text-emerald-100/80 hover:bg-white/10 hover:text-emerald-50"
+                  >
+                    <X className="h-3.5 w-3.5" aria-hidden="true" />
+                  </button>
                 </div>
               )}
               {attachedSkillId && (
                 <div className="flex max-w-full items-center gap-2 rounded-full border border-cyan-300/20 bg-cyan-300/8 px-3 py-1.5 text-xs text-cyan-100">
                   <Sparkles className="h-3.5 w-3.5" />
                   <span className="max-w-[260px] truncate">Skill: {attachedSkillTitle || attachedSkillId}</span>
-                  <button type="button" onClick={removeAttachedSkill} aria-label="Remove attached skill" className="rounded-full p-1.5 text-cyan-100/80 hover:bg-white/10 hover:text-cyan-50"><X className="h-3.5 w-3.5" aria-hidden="true" /></button>
+                  <button
+                    type="button"
+                    onClick={removeAttachedSkill}
+                    aria-label="Remove attached skill"
+                    className="rounded-full p-1.5 text-cyan-100/80 hover:bg-white/10 hover:text-cyan-50"
+                  >
+                    <X className="h-3.5 w-3.5" aria-hidden="true" />
+                  </button>
                 </div>
               )}
               {error && <span role="alert" className="text-xs text-rose-300">{error}</span>}
             </div>
           )}
 
-          <div className="rounded-2xl border border-white/10 bg-hive-panel-deep p-2 shadow-2xl shadow-black/20 transition focus-within:border-cyan-300/30 focus-within:ring-4 focus-within:ring-cyan-300/[0.04]">
+          <div
+            className={
+              "rounded-2xl border border-white/10 bg-hive-panel-deep p-2 shadow-2xl shadow-black/20 " +
+              "transition focus-within:border-cyan-300/30 focus-within:ring-4 " +
+              "focus-within:ring-cyan-300/[0.04]"
+            }
+          >
             <div className="relative">
               <textarea
                 ref={textareaRef}
@@ -607,7 +673,13 @@ export function ChatPage() {
                 className="block min-h-11 max-h-[180px] w-full resize-none bg-transparent px-3 py-2.5 pr-14 text-sm leading-6 text-white outline-none placeholder:text-slate-400"
               />
               {streaming ? (
-                <button type="button" onClick={stopGeneration} aria-label="Stop generation" title="Stop generation" className="absolute bottom-1 right-1 flex h-10 w-10 items-center justify-center rounded-xl border border-rose-300/20 bg-rose-300/8 text-rose-200 transition hover:bg-rose-300/12">
+                <button
+                  type="button"
+                  onClick={stopGeneration}
+                  aria-label="Stop generation"
+                  title="Stop generation"
+                  className="absolute bottom-1 right-1 flex h-10 w-10 items-center justify-center rounded-xl border border-rose-300/20 bg-rose-300/8 text-rose-200 transition hover:bg-rose-300/12"
+                >
                   <CircleStop className="h-4 w-4" aria-hidden="true" />
                 </button>
               ) : (
@@ -616,7 +688,11 @@ export function ChatPage() {
                   disabled={!prompt.trim()}
                   aria-label="Send message"
                   title="Send message"
-                  className="absolute bottom-1 right-1 flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-r from-cyan-400 to-emerald-300 text-hive-accent-deep transition hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-40"
+                  className={
+                    "absolute bottom-1 right-1 flex h-10 w-10 items-center justify-center rounded-xl " +
+                    "bg-gradient-to-r from-cyan-400 to-emerald-300 text-hive-accent-deep transition " +
+                    "hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-40"
+                  }
                 >
                   <Send className="h-4 w-4" aria-hidden="true" />
                 </button>
@@ -640,7 +716,10 @@ export function ChatPage() {
                 to="/files"
                 aria-label="Choose files for chat"
                 title="Choose files for chat"
-                className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border border-white/8 bg-white/[0.035] text-slate-400 transition hover:bg-white/[0.055] hover:text-cyan-100"
+                className={
+                  "inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border border-white/8 " +
+                  "bg-white/[0.035] text-slate-400 transition hover:bg-white/[0.055] hover:text-cyan-100"
+                }
               >
                 <Paperclip className="h-4 w-4" aria-hidden="true" />
               </Link>
@@ -648,7 +727,17 @@ export function ChatPage() {
                 <button
                   type="button"
                   onClick={() => setUseSkillContext((value) => !value)}
-                  className={`inline-flex h-9 shrink-0 items-center justify-center gap-1.5 rounded-lg border px-2.5 text-xs font-medium transition ${useSkillContext ? 'border-cyan-300/30 bg-cyan-300/10 text-cyan-100' : 'border-white/8 bg-white/[0.035] text-slate-400 hover:bg-white/[0.055] hover:text-slate-200'}`}
+                  className={
+                    [
+                      "inline-flex h-9 shrink-0 items-center justify-center gap-1.5 rounded-lg border ",
+                      "px-2.5 text-xs font-medium transition ",
+                      String(
+                        useSkillContext
+                          ? 'border-cyan-300/30 bg-cyan-300/10 text-cyan-100'
+                          : 'border-white/8 bg-white/[0.035] text-slate-400 hover:bg-white/[0.055] hover:text-slate-200',
+                      ),
+                    ].join('')
+                  }
                   aria-pressed={useSkillContext}
                   aria-label={useSkillContext ? 'Disable shared skills' : 'Enable shared skills'}
                   title="Use retrieved HIVE skills for this message. Off keeps ordinary chat fast."

@@ -333,7 +333,12 @@ export function ModelRegistryPage() {
           </div>
 
           <details className="group mt-6 border-t border-white/8 pt-5">
-            <summary className="flex cursor-pointer list-none items-center justify-between rounded-xl border border-white/8 bg-white/[0.025] px-3 py-2.5 text-xs font-medium text-slate-300 hover:bg-white/[0.045]">
+            <summary
+              className={
+                "flex cursor-pointer list-none items-center justify-between rounded-xl border border-white/8 " +
+                "bg-white/[0.025] px-3 py-2.5 text-xs font-medium text-slate-300 hover:bg-white/[0.045]"
+              }
+            >
               <span>Category <strong className="ml-1 font-semibold text-cyan-100">{categoryLabel(category)}</strong></span>
               <ChevronDown className="h-4 w-4 text-slate-500 transition-transform group-open:rotate-180" />
             </summary>
@@ -425,7 +430,11 @@ export function ModelRegistryPage() {
                       type="button"
                       onClick={() => void removeModel(model.model_id)}
                       disabled={removing === model.model_id}
-                      className="flex h-9 items-center justify-center gap-2 rounded-xl border border-rose-300/20 bg-rose-300/8 px-3 text-xs font-medium text-rose-200 hover:bg-rose-300/12 disabled:opacity-50"
+                      className={
+                        "flex h-9 items-center justify-center gap-2 rounded-xl border border-rose-300/20 " +
+                        "bg-rose-300/8 px-3 text-xs font-medium text-rose-200 hover:bg-rose-300/12 " +
+                        "disabled:opacity-50"
+                      }
                     >
                       {removing === model.model_id ? (
                         <LoaderCircle className="h-3.5 w-3.5 animate-spin" />
@@ -522,7 +531,10 @@ export function ModelRegistryPage() {
                         <button
                           type="button"
                           onClick={() => selectedProvider && loadCatalogueModel(model, selectedProvider)}
-                          className="flex w-full flex-col gap-1 rounded-xl border border-white/8 bg-white/[0.02] px-3 py-2 text-left hover:bg-white/[0.05] sm:flex-row sm:items-center sm:justify-between"
+                          className={
+                            "flex w-full flex-col gap-1 rounded-xl border border-white/8 bg-white/[0.02] px-3 py-2 " +
+                            "text-left hover:bg-white/[0.05] sm:flex-row sm:items-center sm:justify-between"
+                          }
                         >
                           <span className="min-w-0">
                             <span className="block truncate text-xs font-medium text-slate-100">{model.model_id}</span>
@@ -635,7 +647,11 @@ export function ModelRegistryPage() {
             <button
               type="submit"
               disabled={registering}
-              className="flex h-10 items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-cyan-400 to-emerald-300 px-4 text-xs font-semibold text-hive-accent-deep disabled:opacity-60 sm:col-span-2 sm:w-fit"
+              className={
+                "flex h-10 items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-cyan-400 " +
+                "to-emerald-300 px-4 text-xs font-semibold text-hive-accent-deep disabled:opacity-60 " +
+                "sm:col-span-2 sm:w-fit"
+              }
             >
               {registering ? <LoaderCircle className="h-4 w-4 animate-spin" /> : <Plus className="h-4 w-4" />}
               Register model
