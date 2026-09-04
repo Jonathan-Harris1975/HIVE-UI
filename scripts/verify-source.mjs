@@ -1,3 +1,4 @@
+import { createHash } from 'node:crypto'
 import { readdir, readFile } from 'node:fs/promises'
 import { extname, join } from 'node:path'
 
@@ -76,6 +77,27 @@ if (!/const UI_VERSION\s*=\s*HIVE_UI_VERSION\b/.test(functionSource)) {
 const browserBuildSource = await readFile('src/lib/build.ts', 'utf8')
 if (!browserBuildSource.includes("export { HIVE_UI_VERSION } from '../../shared/version'")) {
   throw new Error('Browser UI version must consume the shared HIVE_UI_VERSION source.')
+}
+
+// Guard against reintroducing dead/duplicate source files (e.g. copy-pasted
+// .d.ts shims) across the app, worker, and shared source trees.
+const dedupExtensions = new Set(['.ts', '.tsx', '.d.ts'])
+const dedupRoots = ['src', 'workers', 'shared']
+const contentByHash = new Map()
+for (const root of dedupRoots) {
+  for (const path of await filesUnder(root)) {
+    if (!dedupExtensions.has(extname(path)) && !path.endsWith('.d.ts')) continue
+    const content = await readFile(path, 'utf8')
+    const hash = createHash('sha1').update(content).digest('hex')
+    const existing = contentByHash.get(hash) ?? []
+    existing.push(path)
+    contentByHash.set(hash, existing)
+  }
+}
+for (const paths of contentByHash.values()) {
+  if (paths.length > 1) {
+    throw new Error(`Duplicate source files with identical content found (keep exactly one): ${paths.join(', ')}`)
+  }
 }
 
 console.log('HIVE-UI source verification passed.')
