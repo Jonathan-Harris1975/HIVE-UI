@@ -705,7 +705,23 @@ function secureAssetResponse(response: Response): Response {
   if (contentType.includes('text/html')) {
     headers.set(
       'content-security-policy',
-      "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; connect-src 'self'; font-src 'self' data:; frame-src https://chat.jonathan-harris.online; child-src https://chat.jonathan-harris.online; object-src 'none'; base-uri 'self'; frame-ancestors 'none'; form-action 'self'; manifest-src 'self'; worker-src 'self' blob:; upgrade-insecure-requests",
+      [
+        "default-src 'self';",
+        "script-src 'self';",
+        "style-src 'self' 'unsafe-inline';",
+        "img-src 'self' data: blob:;",
+        "connect-src 'self';",
+        "font-src 'self' data:;",
+        'frame-src https://chat.jonathan-harris.online;',
+        'child-src https://chat.jonathan-harris.online;',
+        "object-src 'none';",
+        "base-uri 'self';",
+        "frame-ancestors 'none';",
+        "form-action 'self';",
+        "manifest-src 'self';",
+        "worker-src 'self' blob:;",
+        'upgrade-insecure-requests',
+      ].join(' '),
     )
   }
 
