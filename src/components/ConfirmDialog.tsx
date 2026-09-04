@@ -129,7 +129,18 @@ export function ConfirmDialog({
       >
         <div className="flex items-start justify-between gap-4">
           <div className="flex min-w-0 gap-3">
-            <div className={`mt-0.5 flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl border ${tone === 'destructive' ? 'border-rose-300/20 bg-rose-300/10 text-rose-200' : 'border-cyan-300/20 bg-cyan-300/10 text-cyan-200'}`}>
+            <div
+              className={
+                [
+                  "mt-0.5 flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl border ",
+                  String(
+                    tone === 'destructive'
+                      ? 'border-rose-300/20 bg-rose-300/10 text-rose-200'
+                      : 'border-cyan-300/20 bg-cyan-300/10 text-cyan-200',
+                  ),
+                ].join('')
+              }
+            >
               <AlertTriangle className="h-5 w-5" />
             </div>
             <div className="min-w-0">
@@ -137,7 +148,13 @@ export function ConfirmDialog({
               <p id={descriptionId} className="mt-2 text-sm leading-6 text-slate-300">{summary}</p>
             </div>
           </div>
-          <button type="button" onClick={onCancel} disabled={busy} aria-label="Cancel dialog" className="flex min-h-10 min-w-10 items-center justify-center rounded-xl border border-white/8 bg-white/[0.035] p-2 text-slate-400 transition hover:text-white disabled:opacity-40">
+          <button
+            type="button"
+            onClick={onCancel}
+            disabled={busy}
+            aria-label="Cancel dialog"
+            className="flex min-h-10 min-w-10 items-center justify-center rounded-xl border border-white/8 bg-white/[0.035] p-2 text-slate-400 transition hover:text-white disabled:opacity-40"
+          >
             <X className="h-4 w-4" />
           </button>
         </div>
@@ -158,7 +175,10 @@ export function ConfirmDialog({
                 placeholder={textInput.placeholder}
                 required={textInput.required}
                 rows={4}
-                className="mt-2 w-full resize-y rounded-xl border border-white/8 bg-hive-canvas px-3 py-3 text-sm leading-6 text-slate-100 outline-none placeholder:text-slate-500 focus:border-cyan-300/40"
+                className={
+                  "mt-2 w-full resize-y rounded-xl border border-white/8 bg-hive-canvas px-3 py-3 text-sm " +
+                  "leading-6 text-slate-100 outline-none placeholder:text-slate-500 focus:border-cyan-300/40"
+                }
               />
             ) : (
               <input
@@ -177,10 +197,32 @@ export function ConfirmDialog({
         )}
 
         <div className="mt-6 flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
-          <button ref={cancelRef} type="button" onClick={onCancel} disabled={busy} className="flex h-10 items-center justify-center rounded-xl border border-white/8 bg-white/[0.035] px-4 text-sm font-medium text-slate-200 transition hover:bg-white/[0.06] focus:outline-none focus:ring-2 focus:ring-cyan-300/30 disabled:opacity-40">
+          <button
+            ref={cancelRef}
+            type="button"
+            onClick={onCancel}
+            disabled={busy}
+            className={
+              "flex h-10 items-center justify-center rounded-xl border border-white/8 bg-white/[0.035] px-4 " +
+              "text-sm font-medium text-slate-200 transition hover:bg-white/[0.06] focus:outline-none " +
+              "focus:ring-2 focus:ring-cyan-300/30 disabled:opacity-40"
+            }
+          >
             {cancelLabel}
           </button>
-          <button type="button" onClick={onConfirm} disabled={busy || confirmDisabled} className={`flex h-10 items-center justify-center rounded-xl border px-4 text-sm font-semibold transition focus:outline-none focus:ring-2 disabled:cursor-not-allowed disabled:opacity-45 ${confirmClasses}`}>
+          <button
+            type="button"
+            onClick={onConfirm}
+            disabled={busy || confirmDisabled}
+            className={
+              [
+                "flex h-10 items-center justify-center rounded-xl border px-4 text-sm ",
+                "font-semibold transition focus:outline-none focus:ring-2 ",
+                "disabled:cursor-not-allowed disabled:opacity-45 ",
+                String(confirmClasses),
+              ].join('')
+            }
+          >
             {confirmLabel}
           </button>
         </div>

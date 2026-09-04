@@ -14,7 +14,22 @@ function dotTone(status: string, variant?: StatusBadgeProps['variant']): string 
 
   if (['standby', 'maintenance'].includes(value)) return 'bg-violet-300'
   if (['starting', 'checking', 'unknown', 'not_configured', 'not-configured', 'disabled', 'unavailable'].includes(value)) return 'bg-cyan-300'
-  if (['busy', 'warning', 'degraded', 'partial', 'review_required', 'pending_review', 'approved_handoff_pending', 'needs_changes', 'medium', 'blocked', 'auth_blocked', 'forbidden', 'unauthorised', 'unauthorized'].includes(value)) return 'bg-amber-300'
+  if ([
+    'busy',
+    'warning',
+    'degraded',
+    'partial',
+    'review_required',
+    'pending_review',
+    'approved_handoff_pending',
+    'needs_changes',
+    'medium',
+    'blocked',
+    'auth_blocked',
+    'forbidden',
+    'unauthorised',
+    'unauthorized',
+  ].includes(value)) return 'bg-amber-300'
 
   if (variant === 'liveness') {
     if (['healthy', 'online', 'active', 'ok', 'ready'].includes(value)) return 'bg-emerald-300'

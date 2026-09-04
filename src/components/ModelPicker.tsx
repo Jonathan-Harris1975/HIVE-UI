@@ -264,7 +264,11 @@ export function ModelPicker({ models, value, onChange, loading = false }: ModelP
         aria-haspopup="listbox"
         aria-label="Choose HIVE model"
         title={selected ? modelLabel(selected) : loading ? 'Loading models' : 'Auto model'}
-        className="flex h-9 w-[98px] shrink-0 items-center gap-2 rounded-lg border border-white/8 bg-white/[0.035] px-2.5 text-left text-xs text-slate-300 outline-none transition hover:bg-white/[0.055] focus:ring-1 focus:ring-cyan-300/50 sm:w-auto sm:max-w-[260px]"
+        className={
+          "flex h-9 w-[98px] shrink-0 items-center gap-2 rounded-lg border border-white/8 " +
+          "bg-white/[0.035] px-2.5 text-left text-xs text-slate-300 outline-none transition " +
+          "hover:bg-white/[0.055] focus:ring-1 focus:ring-cyan-300/50 sm:w-auto sm:max-w-[260px]"
+        }
       >
         <BrainCircuit className="h-3.5 w-3.5 shrink-0 text-cyan-300/70" />
         <span className="min-w-0 flex-1 truncate">{selected ? modelLabel(selected) : loading ? 'Models…' : 'Auto'}</span>
@@ -308,14 +312,28 @@ export function ModelPicker({ models, value, onChange, loading = false }: ModelP
                 className="h-10 w-full rounded-xl border border-white/8 bg-hive-canvas pl-9 pr-9 text-xs text-slate-200 outline-none placeholder:text-slate-400 focus:border-cyan-300/30"
               />
               {query && (
-                <button type="button" onClick={() => setQuery('')} className="absolute right-2 top-1/2 -translate-y-1/2 rounded-md p-1 text-slate-400 hover:bg-white/5 hover:text-slate-300" aria-label="Clear model search">
+                <button
+                  type="button"
+                  onClick={() => setQuery('')}
+                  className="absolute right-2 top-1/2 -translate-y-1/2 rounded-md p-1 text-slate-400 hover:bg-white/5 hover:text-slate-300"
+                  aria-label="Clear model search"
+                >
                   <X className="h-3.5 w-3.5" />
                 </button>
               )}
             </div>
           </div>
 
-          <div ref={listRef} id={listId} role="listbox" tabIndex={0} aria-label="HIVE models" aria-activedescendant={optionId(selectableOptions[activeIndex] ?? null)} onKeyDown={handleListKeyDown} className="ui-scroll-region min-h-0 flex-1 overflow-y-auto p-2 outline-none">
+          <div
+            ref={listRef}
+            id={listId}
+            role="listbox"
+            tabIndex={0}
+            aria-label="HIVE models"
+            aria-activedescendant={optionId(selectableOptions[activeIndex] ?? null)}
+            onKeyDown={handleListKeyDown}
+            className="ui-scroll-region min-h-0 flex-1 overflow-y-auto p-2 outline-none"
+          >
             <button
               id={autoOptionId}
               type="button"
@@ -357,7 +375,23 @@ export function ModelPicker({ models, value, onChange, loading = false }: ModelP
                         title={advisory || stringValue(item.description) || item.id}
                         onFocus={() => { if (selectableIndex >= 0) setActiveIndex(selectableIndex) }}
                         onClick={() => { if (chatSelectable) selectModel(item) }}
-                        className={`group/model flex w-full items-start gap-3 rounded-xl px-3 py-2.5 text-left transition ${chatSelectable ? 'hover:bg-white/[0.045]' : 'cursor-not-allowed opacity-70'} ${selectableIndex === activeIndex ? 'ring-1 ring-cyan-300/50 bg-cyan-300/[0.045]' : ''}`}
+                        className={
+                          [
+                            "group/model flex w-full items-start gap-3 rounded-xl px-3 py-2.5 text-left ",
+                            "transition ",
+                            String(
+                              chatSelectable
+                                ? 'hover:bg-white/[0.045]'
+                                : 'cursor-not-allowed opacity-70',
+                            ),
+                            " ",
+                            String(
+                              selectableIndex === activeIndex
+                                ? 'ring-1 ring-cyan-300/50 bg-cyan-300/[0.045]'
+                                : '',
+                            ),
+                          ].join('')
+                        }
                       >
                         <div className="mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-lg border border-white/8 bg-white/[0.035] text-slate-400">
                           <BrainCircuit className="h-3.5 w-3.5" />

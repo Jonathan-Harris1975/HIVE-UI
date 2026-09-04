@@ -69,7 +69,14 @@ const sectionTabs = [
   { routes: ['/files', '/skills'], items: [{ to: '/files', label: 'Files' }, { to: '/skills', label: 'Skills' }] },
   { routes: ['/repositories', '/memory', '/intelligence'], items: [{ to: '/repositories', label: 'Overview' }, { to: '/intelligence', label: 'Memory & Intelligence' }] },
   { routes: ['/models', '/council'], items: [{ to: '/models', label: 'Registry' }, { to: '/council', label: 'AI Council' }] },
-  { routes: ['/optimisation', '/execution-reviews', '/execution-simulation'], items: [{ to: '/optimisation', label: 'Overview' }, { to: '/execution-reviews', label: 'Reviews' }, { to: '/execution-simulation', label: 'Simulation' }] },
+  {
+    routes: ['/optimisation', '/execution-reviews', '/execution-simulation'],
+    items: [
+      { to: '/optimisation', label: 'Overview' },
+      { to: '/execution-reviews', label: 'Reviews' },
+      { to: '/execution-simulation', label: 'Simulation' },
+    ],
+  },
   { routes: ['/ops', '/integrations'], items: [{ to: '/ops', label: 'System' }, { to: '/integrations', label: 'Integrations' }] },
 ]
 
@@ -203,7 +210,11 @@ function ConversationSection({ closeMobile }: { closeMobile?: () => void }) {
           />
         )}
         {!conversationsLoading && !conversationsError && !filtered.length && (
-          <EmptyState title={noResultsTitle} body={query.trim() ? 'The sidebar filter is hiding every stored conversation.' : 'Start a clean HIVE thread and it will appear here once persisted.'} action={noResultsAction} />
+          <EmptyState
+            title={noResultsTitle}
+            body={query.trim() ? 'The sidebar filter is hiding every stored conversation.' : 'Start a clean HIVE thread and it will appear here once persisted.'}
+            action={noResultsAction}
+          />
         )}
         {filtered.map((conversation) => {
           const title = conversation.title || 'Untitled conversation'
@@ -225,7 +236,11 @@ function ConversationSection({ closeMobile }: { closeMobile?: () => void }) {
                   <span>{formatDate(conversation.updated_at)}</span>
                 </div>
                 <div className="mt-1 text-xs text-slate-400">
-                  {(conversation.total_tokens ?? conversation.token_total) != null ? Number(conversation.total_tokens ?? conversation.token_total).toLocaleString() : '—'} tokens · {conversation.total_cost_usd != null || conversation.cost_usd != null ? formatCost(conversation.total_cost_usd ?? conversation.cost_usd) : '—'}
+                  {(conversation.total_tokens ?? conversation.token_total) != null
+                    ? Number(conversation.total_tokens ?? conversation.token_total).toLocaleString()
+                    : '—'} tokens · {conversation.total_cost_usd != null || conversation.cost_usd != null
+                    ? formatCost(conversation.total_cost_usd ?? conversation.cost_usd)
+                    : '—'}
                 </div>
               </button>
               {/* Visible by default on touch/small screens (no hover state exists there); fades in on hover/focus for pointer devices at lg+. */}
@@ -309,7 +324,17 @@ function SidebarContent({ closeMobile }: { closeMobile?: () => void }) {
                 to={to}
                 onClick={closeMobile}
                 aria-current={active ? 'page' : undefined}
-                className={`flex min-h-12 items-center gap-2.5 rounded-xl border px-3 py-2.5 text-sm font-medium transition ${active ? 'border-cyan-300/20 bg-cyan-300/10 text-cyan-50' : 'border-white/6 bg-white/[0.02] text-slate-300 hover:border-white/10 hover:bg-white/[0.05] hover:text-white'}`}
+                className={
+                  [
+                    "flex min-h-12 items-center gap-2.5 rounded-xl border px-3 py-2.5 text-sm ",
+                    "font-medium transition ",
+                    String(
+                      active
+                        ? 'border-cyan-300/20 bg-cyan-300/10 text-cyan-50'
+                        : 'border-white/6 bg-white/[0.02] text-slate-300 hover:border-white/10 hover:bg-white/[0.05] hover:text-white',
+                    ),
+                  ].join('')
+                }
               >
                 <Icon className="h-4.5 w-4.5 shrink-0" aria-hidden="true" />
                 <span className="truncate">{label}</span>
@@ -327,7 +352,11 @@ function SidebarContent({ closeMobile }: { closeMobile?: () => void }) {
                   type="button"
                   onClick={() => setOpenGroups((current) => ({ ...current, [group.id]: !expanded }))}
                   aria-expanded={expanded}
-                  className="flex w-full items-center justify-between rounded-lg px-3 py-1.5 text-xs font-semibold uppercase tracking-[0.12em] text-slate-400 transition hover:bg-white/[0.03] hover:text-slate-300"
+                  className={
+                    "flex w-full items-center justify-between rounded-lg px-3 py-1.5 text-xs font-semibold " +
+                    "uppercase tracking-[0.12em] text-slate-400 transition hover:bg-white/[0.03] " +
+                    "hover:text-slate-300"
+                  }
                 >
                   <span>{group.label}</span>
                   <ChevronDown className={`h-3.5 w-3.5 transition-transform ${expanded ? 'rotate-180' : ''}`} />
@@ -342,7 +371,16 @@ function SidebarContent({ closeMobile }: { closeMobile?: () => void }) {
                           to={to}
                           onClick={closeMobile}
                           aria-current={active ? 'page' : undefined}
-                          className={`flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm transition ${active ? 'bg-white/8 text-white' : 'text-slate-400 hover:bg-white/[0.04] hover:text-slate-200'}`}
+                          className={
+                            [
+                              "flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm transition ",
+                              String(
+                                active
+                                  ? 'bg-white/8 text-white'
+                                  : 'text-slate-400 hover:bg-white/[0.04] hover:text-slate-200',
+                              ),
+                            ].join('')
+                          }
                         >
                           <Icon className="h-4.5 w-4.5" />
                           <span>{label}</span>
@@ -389,7 +427,12 @@ function InspectorRowView({ row }: { row: InspectorRow }) {
     <div className="rounded-xl border border-white/8 bg-hive-surface p-3">
       <div className="flex items-center justify-between gap-3">
         <dt className="text-xs font-semibold uppercase tracking-[0.12em] text-slate-300">{row.label}</dt>
-        <button type="button" onClick={() => void copyRow()} className="inline-flex items-center gap-1 rounded-lg px-2 py-1 text-xs text-slate-400 hover:bg-white/5 hover:text-cyan-200" aria-label={`Copy ${row.label}`}>
+        <button
+          type="button"
+          onClick={() => void copyRow()}
+          className="inline-flex items-center gap-1 rounded-lg px-2 py-1 text-xs text-slate-400 hover:bg-white/5 hover:text-cyan-200"
+          aria-label={`Copy ${row.label}`}
+        >
           {copied ? <Check className="h-3 w-3" /> : <Copy className="h-3 w-3" />} {copied ? 'Copied' : 'Copy'}
         </button>
       </div>
@@ -407,7 +450,21 @@ function InspectorPanel() {
   const { open, payload, setOpen } = useInspector()
 
   return (
-    <aside aria-label="Inspector" className={`fixed inset-y-0 right-0 z-40 w-[min(360px,92vw)] border-l border-white/8 bg-hive-panel/98 shadow-2xl shadow-black/40 backdrop-blur-xl transition-transform lg:static lg:z-auto lg:shadow-none ${open ? 'translate-x-0' : 'translate-x-full lg:hidden'}`}>
+    <aside
+      aria-label="Inspector"
+      className={
+        [
+          "fixed inset-y-0 right-0 z-40 w-[min(360px,92vw)] border-l border-white/8 ",
+          "bg-hive-panel/98 shadow-2xl shadow-black/40 backdrop-blur-xl ",
+          "transition-transform lg:static lg:z-auto lg:shadow-none ",
+          String(
+            open
+              ? 'translate-x-0'
+              : 'translate-x-full lg:hidden',
+          ),
+        ].join('')
+      }
+    >
       <div className="flex h-full flex-col">
         <div className="flex h-[73px] items-center justify-between border-b border-white/8 px-5">
           <div className="min-w-0">
@@ -451,7 +508,16 @@ function ContextTabs({ pathname }: { pathname: string }) {
           <NavLink
             key={item.to}
             to={item.to}
-            className={({ isActive }) => `rounded-lg px-3 py-1.5 text-xs font-medium transition ${isActive ? 'bg-cyan-300/10 text-cyan-100' : 'text-slate-400 hover:bg-white/[0.04] hover:text-slate-200'}`}
+            className={
+              ({ isActive }) => [
+                "rounded-lg px-3 py-1.5 text-xs font-medium transition ",
+                String(
+                  isActive
+                    ? 'bg-cyan-300/10 text-cyan-100'
+                    : 'text-slate-400 hover:bg-white/[0.04] hover:text-slate-200',
+                ),
+              ].join('')
+            }
           >
             {item.label}
           </NavLink>
@@ -546,7 +612,10 @@ export function AppShell() {
 
   return (
     <div className="flex h-dvh min-h-[320px] overflow-hidden bg-hive-canvas text-slate-100">
-      <a href="#hive-main-content" className="sr-only z-[100] rounded-lg bg-cyan-300 px-3 py-2 font-semibold text-hive-accent-deep focus:not-sr-only focus:fixed focus:left-3 focus:top-3">Skip to main content</a>
+      <a
+        href="#hive-main-content"
+        className="sr-only z-[100] rounded-lg bg-cyan-300 px-3 py-2 font-semibold text-hive-accent-deep focus:not-sr-only focus:fixed focus:left-3 focus:top-3"
+      >Skip to main content</a>
       <aside className="hidden w-[280px] shrink-0 border-r border-white/8 bg-hive-panel lg:block">
         <SidebarContent />
       </aside>
@@ -575,7 +644,14 @@ export function AppShell() {
         )}
         <header className="flex min-h-[72px] shrink-0 items-center justify-between gap-3 border-b border-white/8 bg-hive-surface/85 px-4 py-3 backdrop-blur-xl sm:px-6">
           <div className="flex min-w-0 items-center gap-3">
-            <button type="button" onClick={() => setMobileMenuOpen(true)} aria-label="Open navigation" aria-expanded={mobileMenuOpen} aria-controls="hive-mobile-navigation" className="rounded-lg p-2 text-slate-400 hover:bg-white/5 hover:text-white lg:hidden">
+            <button
+              type="button"
+              onClick={() => setMobileMenuOpen(true)}
+              aria-label="Open navigation"
+              aria-expanded={mobileMenuOpen}
+              aria-controls="hive-mobile-navigation"
+              className="rounded-lg p-2 text-slate-400 hover:bg-white/5 hover:text-white lg:hidden"
+            >
               <Menu className="h-5 w-5" />
             </button>
             <div className="min-w-0">
