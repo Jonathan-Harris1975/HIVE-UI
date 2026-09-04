@@ -188,3 +188,22 @@ test('repository workspace rejects cross-repository async responses and stale pr
   assert.match(memory, /controlledRepositoryId/)
   assert.match(memory, /response\.repository_id !== repo/)
 })
+
+test('TypeScript source stays within the Repository Intelligence line-length budget', () => {
+  const roots = ['src', 'workers', 'shared', 'e2e']
+
+  for (const root of roots) {
+    const directory = new URL(`../${root}/`, import.meta.url)
+    const files = walk(directory.pathname).filter((path) => /\.tsx?$/.test(path))
+
+    for (const path of files) {
+      const lines = readFileSync(path, 'utf8').split(/\r?\n/)
+      lines.forEach((line, index) => {
+        assert.ok(
+          line.length <= 200,
+          `${path}:${index + 1} exceeds the 200-character Repository Intelligence source limit (${line.length})`,
+        )
+      })
+    }
+  }
+})

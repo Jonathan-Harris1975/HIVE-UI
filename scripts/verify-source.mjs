@@ -15,6 +15,22 @@ async function filesUnder(directory) {
 const browserFiles = (await filesUnder('src')).filter((path) => ['.ts', '.tsx', '.js', '.jsx'].includes(extname(path)))
 const browserSource = (await Promise.all(browserFiles.map((path) => readFile(path, 'utf8')))).join('\n')
 
+const maxTypeScriptLineLength = 200
+const typeScriptSourceRoots = ['src', 'workers', 'shared', 'e2e']
+for (const root of typeScriptSourceRoots) {
+  for (const path of await filesUnder(root)) {
+    if (!['.ts', '.tsx'].includes(extname(path))) continue
+    const lines = (await readFile(path, 'utf8')).split(/\r?\n/)
+    lines.forEach((line, index) => {
+      if (line.length > maxTypeScriptLineLength) {
+        throw new Error(
+          `TypeScript source line exceeds ${maxTypeScriptLineLength} characters: ${path}:${index + 1} (${line.length})`,
+        )
+      }
+    })
+  }
+}
+
 for (const forbidden of [
   'VITE_HIVE_ADMIN_TOKEN',
   'VITE_HIVE_UI_ACCESS_KEY',
