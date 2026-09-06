@@ -127,9 +127,9 @@ export function CouncilPage() {
           </p>
           <div className="mt-4 flex items-start gap-2 rounded-xl border border-amber-300/15 bg-amber-300/[0.04] px-3 py-2.5 text-xs leading-5 text-amber-200">
             <AlertTriangle className="mt-0.5 h-3.5 w-3.5 shrink-0" />
-            Metrics come only from what each provider's own API exposes (pricing, context length, declared
-            capabilities) plus run-over-run history — there is no live coding/reasoning benchmark data source wired
-            in. Treat promotion decisions accordingly.
+            Automatic Council runs use OpenRouter's authenticated Artificial Analysis benchmark feed when available,
+            alongside provider pricing, context and capability metadata. If measured benchmark retrieval fails, the Council
+            deliberately falls below the automatic-promotion confidence gate rather than guessing.
           </div>
         </section>
 
@@ -194,7 +194,10 @@ export function CouncilPage() {
                 {history.slice(-8).reverse().map((run) => (
                   <div key={run.run_id} className="flex flex-wrap items-center justify-between gap-2 rounded-lg border border-white/6 bg-white/[0.02] px-3 py-1.5 text-xs text-slate-400">
                     <span>{formatDate(run.occurred_at)}</span>
-                    <span>{run.providers_discovered} providers · {run.models_seen} models · {run.promotions.length} promoted</span>
+                    <span>
+                      {run.providers_discovered} providers · {run.models_seen} models · {run.promotions.length} promoted
+                      {run.completion_status ? ` · ${run.completion_status}` : ''}
+                    </span>
                   </div>
                 ))}
               </div>

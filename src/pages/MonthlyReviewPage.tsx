@@ -18,6 +18,13 @@ function sectionsLabel(item: MonthlyReviewSummary): string {
   return `${ok}/${total} sections ok`
 }
 
+function reportIsHealthy(item: MonthlyReviewSummary): boolean {
+  if (typeof item.metadata?.ok === 'boolean') return item.metadata.ok
+  const ok = item.metadata?.sections_ok
+  const total = item.metadata?.sections_total
+  return typeof ok === 'number' && typeof total === 'number' && total > 0 && ok === total
+}
+
 export function MonthlyReviewPage() {
   const { setPayload, setOpen } = useInspector()
   const [reports, setReports] = useState<MonthlyReviewSummary[]>([])
@@ -87,8 +94,8 @@ export function MonthlyReviewPage() {
           <h1 className="mt-2 text-xl font-semibold text-white">Monthly Review</h1>
           <p className="mt-1 max-w-2xl text-xs leading-5 text-slate-400">
             Consolidated system health, AI Council/model registry, skills catalogue health, optimisation stats, execution
-            review posture, and token usage/cost for each calendar month. Generated automatically on day 1 by MAST
-            (hive-monthly-review-generate), or on demand below.
+            review posture, and token usage/cost for each calendar month. The day-1 MAST job calls one HIVE endpoint that
+            now runs or reuses the current monthly Council before generating the review; the same full cycle runs on demand below.
           </p>
         </div>
         <button type="button" onClick={() => void load()} className="flex h-9 items-center justify-center gap-2 rounded-xl border border-white/8 bg-white/[0.035] px-3 text-xs text-slate-300">
@@ -144,13 +151,24 @@ export function MonthlyReviewPage() {
                 >
                   <div className="flex items-center justify-between">
                     <span className="text-sm font-semibold text-white">{targetPeriod}</span>
-                    {busy ? <LoaderCircle className="h-4 w-4 animate-spin text-cyan-300" /> : <ShieldCheck className="h-4 w-4 text-emerald-300" />}
+                    {busy ? (
+                      <LoaderCircle className="h-4 w-4 animate-spin text-cyan-300" />
+                    ) : reportIsHealthy(item) ? (
+                      <ShieldCheck className="h-4 w-4 text-emerald-300" />
+                    ) : (
+                      <FileWarning className="h-4 w-4 text-amber-300" />
+                    )}
                   </div>
                   <p className="mt-2 text-xs text-slate-400">Generated {formatDate(item.metadata?.generated_at || item.updated_at)}</p>
                   <div className="mt-3 flex items-center justify-between text-xs text-slate-400">
                     <span className="flex items-center gap-1"><DollarSign className="h-3.5 w-3.5" /> {costLabel(item.metadata?.cost_usd_total)}</span>
                     <span>{sectionsLabel(item)}</span>
                   </div>
+                  {typeof item.metadata?.qualified_model_count === 'number' && (
+                    <p className={`mt-2 text-xs ${item.metadata.qualified_model_count > 0 ? 'text-emerald-200' : 'text-amber-200'}`}>
+                      {item.metadata.qualified_model_count} qualified registry model(s)
+                    </p>
+                  )}
                   {typeof item.metadata?.open_execution_reviews === 'number' && (
                     <p className="mt-2 text-xs text-violet-200">{item.metadata.open_execution_reviews} open execution review(s)</p>
                   )}
