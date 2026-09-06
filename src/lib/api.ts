@@ -48,11 +48,29 @@ async function parseResponsePayload(response: Response): Promise<unknown> {
   }
 }
 
+function detailText(value: unknown): string | null {
+  if (typeof value === 'string' && value.trim()) return value
+  if (!value || typeof value !== 'object') return null
+
+  const record = value as Record<string, unknown>
+  for (const key of ['error', 'reason', 'message', 'detail']) {
+    const nested = detailText(record[key])
+    if (nested) return nested
+  }
+  try {
+    return JSON.stringify(value)
+  } catch {
+    return null
+  }
+}
+
 function responseDetail(response: Response, payload: unknown): string {
   if (typeof payload === 'object' && payload && 'detail' in payload) {
-    return String((payload as { detail: unknown }).detail)
+    const detail = detailText((payload as { detail: unknown }).detail)
+    if (detail) return detail
   }
-  return `Request failed with status ${response.status}`
+  const fallback = detailText(payload)
+  return fallback ?? `Request failed with status ${response.status}`
 }
 
 async function sameOriginFetch(path: string, init: RequestInit = {}): Promise<Response> {
