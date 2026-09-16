@@ -248,8 +248,6 @@ export function chatWithFiles(
       conversation_id: payload.conversation_id,
       history: payload.history ?? [],
       workflow_preset: payload.workflow_preset ?? null,
-      skill_id: payload.skill_id ?? null,
-      skill_title: payload.skill_title ?? null,
       use_chunks: singleUploadsFile,
       use_vectorize: singleUploadsFile,
       vectorize_fallback_sql: true,
