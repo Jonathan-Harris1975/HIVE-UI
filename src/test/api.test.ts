@@ -137,8 +137,6 @@ describe('API helpers', () => {
       conversation_id: 'conversation-1',
       history: [{ role: 'user', content: 'Earlier context' }],
       workflow_preset: null,
-      skill_id: null,
-      skill_title: null,
       use_chunks: true,
       use_vectorize: true,
       vectorize_fallback_sql: true,
@@ -162,8 +160,6 @@ describe('API helpers', () => {
         ...basePayload,
         mode: 'audit',
         workflow_preset: 'repository-review',
-        skill_id: 'skill-7',
-        skill_title: 'Repository Reviewer',
       },
     )
     await chatWithFile('documents', 'docs/single.txt', { ...basePayload, history: undefined })
@@ -172,8 +168,6 @@ describe('API helpers', () => {
     expect(multiBody).toMatchObject({
       mode: 'audit',
       workflow_preset: 'repository-review',
-      skill_id: 'skill-7',
-      skill_title: 'Repository Reviewer',
       use_chunks: false,
       use_vectorize: false,
       auto_chunk: false,

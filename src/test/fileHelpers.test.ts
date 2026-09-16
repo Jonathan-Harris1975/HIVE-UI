@@ -6,12 +6,8 @@ import {
   laneLabel,
   laneStatus,
   rootPrefixForLane,
-  skillField,
-  skillIdentifier,
-  skillItems,
-  skillTitle,
 } from '../pages/files/fileHelpers'
-import type { R2Lane, SkillItem } from '../types/api'
+import type { R2Lane } from '../types/api'
 
 describe('fileHelpers (extracted from FilesPage.tsx)', () => {
   it('fileKey prefers object_key, then key, then empty string', () => {
@@ -64,24 +60,4 @@ describe('fileHelpers (extracted from FilesPage.tsx)', () => {
     expect(rootPrefixForLane(undefined)).toBe('')
   })
 
-  it('skillItems reads from whichever of items/skills/results is populated', () => {
-    const skill: SkillItem = { id: '1', title: 'Example' }
-    expect(skillItems({ items: [skill] })).toEqual([skill])
-    expect(skillItems({ skills: [skill] })).toEqual([skill])
-    expect(skillItems({ results: [skill] })).toEqual([skill])
-    expect(skillItems({})).toEqual([])
-  })
-
-  it('skillTitle and skillIdentifier fall back sensibly for unnamed skills', () => {
-    expect(skillTitle({}, 2)).toBe('Skill 3')
-    expect(skillTitle({ title: 'Named skill' })).toBe('Named skill')
-    expect(skillIdentifier({ id: 'skill-1' })).toBe('skill-1')
-    expect(skillIdentifier({}, 0)).toBe('Skill 1')
-  })
-
-  it('skillField reads top-level fields before metadata-nested fields', () => {
-    expect(skillField({ repo: 'HIVE' }, 'repo')).toBe('HIVE')
-    expect(skillField({ metadata: { repo: 'nested-repo' } }, 'repo')).toBe('nested-repo')
-    expect(skillField({}, 'repo', 'fallback')).toBe('fallback')
-  })
 })
