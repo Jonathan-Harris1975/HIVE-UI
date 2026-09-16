@@ -125,16 +125,9 @@ export interface ChatRequestPayload {
   model?: string | null
   temperature?: number
   max_tokens?: number
-  skill_id?: string | null
-  skill_title?: string | null
   conversation_id?: string | null
   use_persisted_history?: boolean
   db_history_limit?: number
-  use_skills?: boolean
-  skill_repo?: string | null
-  skill_lane?: string | null
-  skill_risk_ceiling?: 'low' | 'medium' | 'high' | null
-  skill_limit?: number | null
 }
 
 export interface StreamEvent {
@@ -251,35 +244,10 @@ export interface FileChatResponse {
   source_citations?: SourceCitation[]
   source_chunks?: Array<Record<string, unknown>>
   retrieval_summary?: Record<string, unknown> | string | null
-  selected_skill?: Record<string, unknown> | null
   db_recorded?: boolean
   db_error?: string | null
   message?: string
   error_code?: string
-}
-
-export interface SkillItem {
-  id?: string
-  name?: string
-  title?: string
-  description?: string
-  repo?: string
-  hive_lane?: string
-  lane?: string
-  risk_level?: string
-  priority_tier?: string
-  score?: number
-  status?: string
-  [key: string]: unknown
-}
-
-export interface SkillListResponse {
-  ok?: boolean
-  count?: number
-  skills?: SkillItem[]
-  items?: SkillItem[]
-  results?: SkillItem[]
-  error?: string
 }
 
 export interface WorkflowPreset {
@@ -398,7 +366,6 @@ export interface WorkflowNode {
   label?: string
   status?: string
   summary?: string
-  skill_ids?: string[]
   [key: string]: unknown
 }
 
@@ -424,7 +391,6 @@ export interface WorkflowGraphResponse {
   nodes?: WorkflowNode[]
   edges?: WorkflowEdge[]
   risk_summary?: Record<string, unknown>
-  candidate_skills?: SkillItem[]
   message?: string
   error_code?: string
   [key: string]: unknown
@@ -1097,7 +1063,6 @@ export interface ExecutionReviewSummary {
   execution_state: string
   execution_mode: string
   risk_level: string | null
-  skill_name: string | null
   description: string | null
   evidence_summary: string | null
   decision_count: number
