@@ -224,7 +224,7 @@ export function ExecutionReviewsPage() {
               <h2 className="mt-2 text-2xl font-semibold text-white">Review-gated execution plans</h2>
               <p className="mt-2 max-w-2xl text-sm leading-6 text-slate-400">
                 Every plan requires an explicit approval decision before an allow-listed adapter handoff unlocks.
-                Nothing here executes a skill, pushes to a repo, or installs packages on its own.
+                Nothing here pushes to a repo or installs packages on its own.
               </p>
             </div>
             <button
@@ -333,7 +333,6 @@ export function ExecutionReviewsPage() {
                     </div>
                     <div className="mt-2 flex flex-wrap items-center gap-2 text-xs text-slate-400">
                       {item.repo && <span className="rounded-full border border-white/10 px-2 py-0.5">{item.repo}</span>}
-                      {item.skill_name && <span className="rounded-full border border-white/10 px-2 py-0.5">{item.skill_name}</span>}
                       {item.risk_level && <span className={`rounded-full border border-white/10 px-2 py-0.5 ${riskTone(item.risk_level)}`}>{item.risk_level} risk</span>}
                       <span className="rounded-full border border-white/10 px-2 py-0.5">{item.decision_count} decision{item.decision_count === 1 ? '' : 's'}</span>
                     </div>

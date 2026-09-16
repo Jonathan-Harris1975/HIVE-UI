@@ -435,7 +435,7 @@ export function OpsPage() {
     {
       label: 'D1 metadata',
       status: d1Status,
-      detail: configuredText(d1Status, 'Skills, previews and execution-review indexes', 'D1 is enabled but missing account, token, or database ID', 'D1 metadata is disabled'),
+      detail: configuredText(d1Status, 'Previews and execution-review indexes', 'D1 is enabled but missing account, token, or database ID', 'D1 metadata is disabled'),
       icon: ShieldCheck,
     },
     { label: 'Execution adapters', status: executionStatus, detail: executionAdapterDetail, icon: PlayCircle },

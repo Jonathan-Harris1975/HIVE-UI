@@ -1,6 +1,5 @@
 import {
   ArrowLeft,
-  BrainCircuit,
   ChevronDown,
   CheckSquare,
   ChevronRight,
@@ -40,7 +39,7 @@ import { useInspector } from "../context/InspectorContext";
 import { apiFetch } from "../lib/api";
 import { formatBytes, formatDate } from "../lib/format";
 import { isHiveManagedR2Source } from "../lib/storagePolicy";
-import { buildSkillApplyChatUrl, uploadSingleFile, uploadTextFile } from "./files/filesApi";
+import { uploadSingleFile, uploadTextFile } from "./files/filesApi";
 import {
   canChatWithObject,
   extension,
@@ -53,11 +52,6 @@ import {
   rootPrefixForLane,
   selectedSourceForFile,
   selectionId,
-  skillField,
-  skillIdentifier,
-  skillItems,
-  skillMetadata,
-  skillTitle,
   type PendingDelete,
   type SelectedAction,
   type UploadMode,
@@ -71,8 +65,6 @@ import type {
   FileSourceSelection,
   R2Lane,
   R2LanesResponse,
-  SkillItem,
-  SkillListResponse,
 } from "../types/api";
 
 function folderNameFromPrefix(folderPrefix: string): string {
@@ -118,13 +110,6 @@ export function FilesPage() {
   const [textContent, setTextContent] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
-  const [skillPickerFile, setSkillPickerFile] = useState<FileObject | null>(
-    null,
-  );
-  const [skillOptions, setSkillOptions] = useState<SkillItem[]>([]);
-  const [skillQuery, setSkillQuery] = useState("");
-  const [selectedSkill, setSelectedSkill] = useState<SkillItem | null>(null);
-  const [loadingSkills, setLoadingSkills] = useState(false);
   const [selectedObjects, setSelectedObjects] = useState<
     Record<string, FileSourceSelection>
   >({});
@@ -708,77 +693,6 @@ export function FilesPage() {
     await performDeleteOneObject(pendingDelete.file);
   }
 
-  async function loadSkillOptions(query = skillQuery) {
-    setLoadingSkills(true);
-    setError(null);
-    try {
-      const trimmed = query.trim();
-      const endpoint = trimmed
-        ? `/v1/skills/search?q=${encodeURIComponent(trimmed)}&limit=50`
-        : "/v1/skills/list?limit=50";
-      const response = await apiFetch<SkillListResponse>(endpoint);
-      const options = skillItems(response);
-      setSkillOptions(options);
-      setSelectedSkill((current) => {
-        if (
-          current &&
-          options.some(
-            (item, index) =>
-              skillIdentifier(item, index) === skillIdentifier(current),
-          )
-        )
-          return current;
-        return options[0] ?? null;
-      });
-    } catch (caught) {
-      setSkillOptions([]);
-      setSelectedSkill(null);
-      setError(
-        caught instanceof Error
-          ? caught.message
-          : "Skills could not be loaded.",
-      );
-    } finally {
-      setLoadingSkills(false);
-    }
-  }
-
-  function openSkillPicker(file: FileObject) {
-    setSkillPickerFile(file);
-    setSkillQuery("");
-    setSelectedSkill(null);
-    setNotice(null);
-    setError(null);
-    void loadSkillOptions("");
-  }
-
-  function closeSkillPicker() {
-    setSkillPickerFile(null);
-    setSkillOptions([]);
-    setSkillQuery("");
-    setSelectedSkill(null);
-  }
-
-  function submitSkillSearch(event: FormEvent) {
-    event.preventDefault();
-    void loadSkillOptions(skillQuery);
-  }
-
-  function useSelectedSkillWithFile() {
-    if (!skillPickerFile || !selectedSkill) return;
-    const key = fileKey(skillPickerFile);
-    const title = skillTitle(selectedSkill);
-    const skillId = skillIdentifier(selectedSkill);
-    const url = buildSkillApplyChatUrl({
-      lane: selectedLane,
-      fileKey: key,
-      fileDisplayName: fileName(skillPickerFile),
-      skillId,
-      skillTitle: title,
-    });
-    navigate(url);
-  }
-
   const downloadHref = (file: FileObject) =>
     `/api/v1/files/r2/${encodeURIComponent(selectedLane)}/download?key=${encodeURIComponent(fileKey(file))}`;
   const viewHref = (file: FileObject) =>
@@ -1030,25 +944,6 @@ export function FilesPage() {
                   <MessageSquareText className="h-4 w-4" /> Chat
                 </button>
               )}
-              {selectedCurrentFile && (
-                <button
-                  type="button"
-                  onClick={() => setSelectedAction("apply_skill")}
-                  className={
-                    [
-                      "inline-flex h-9 items-center gap-2 rounded-xl px-3 text-xs font-medium ",
-                      "transition ",
-                      String(
-                        selectedAction === "apply_skill"
-                          ? "bg-cyan-300/12 text-cyan-100"
-                          : "text-slate-300 hover:bg-white/[0.05]",
-                      ),
-                    ].join('')
-                  }
-                >
-                  <BrainCircuit className="h-4 w-4" /> Apply skill
-                </button>
-              )}
               {activeLane?.writable && (
                 <button
                   type="button"
@@ -1098,27 +993,6 @@ export function FilesPage() {
                   pass the R2 reference.
                 </p>
               )}
-            </div>
-          )}
-
-          {selectedAction === "apply_skill" && selectedCurrentFile && (
-            <div className="mt-4 rounded-2xl border border-cyan-300/15 bg-cyan-300/[0.045] p-4 text-sm text-cyan-50">
-              <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-                <p>
-                  <span className="font-semibold">
-                    Apply an existing skill to {fileName(selectedCurrentFile)}.
-                  </span>{" "}
-                  The file stays in R2; the skill becomes guidance for the
-                  chat/workflow.
-                </p>
-                <button
-                  type="button"
-                  onClick={() => openSkillPicker(selectedCurrentFile)}
-                  className="inline-flex h-9 items-center justify-center gap-2 rounded-xl border border-cyan-300/20 bg-cyan-300/10 px-3 text-xs font-medium text-cyan-100 hover:bg-cyan-300/15"
-                >
-                  <BrainCircuit className="h-4 w-4" /> Select skill
-                </button>
-              </div>
             </div>
           )}
 
@@ -1563,7 +1437,7 @@ export function FilesPage() {
                         <Download className="h-3.5 w-3.5" /> Download
                       </a>
                     </div>
-                    <div className="mt-2 grid grid-cols-3 gap-2">
+                    <div className="mt-2 grid grid-cols-2 gap-2">
                       <button
                         type="button"
                         disabled={!chatSupported}
@@ -1576,13 +1450,6 @@ export function FilesPage() {
                       >
                         <MessageSquareText className="h-4 w-4" />{" "}
                         {chatSupported ? "Chat" : "No chat"}
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => openSkillPicker(file)}
-                        className="flex h-9 items-center justify-center gap-2 rounded-xl border border-cyan-300/15 bg-cyan-300/6 text-xs font-medium text-cyan-100 transition hover:bg-cyan-300/10"
-                      >
-                        <BrainCircuit className="h-4 w-4" /> Use skill
                       </button>
                       <button
                         type="button"
@@ -1610,163 +1477,6 @@ export function FilesPage() {
         </section>
       </div>
 
-      {skillPickerFile && (
-        <div className="fixed inset-0 z-50 flex items-end bg-hive-overlay/80 px-3 py-4 backdrop-blur-sm sm:items-center sm:justify-center">
-          <section className="max-h-[92vh] w-full overflow-y-auto rounded-3xl border border-white/10 bg-hive-dialog p-5 shadow-2xl shadow-black/40 sm:max-w-2xl sm:p-6">
-            <div className="flex items-start justify-between gap-4">
-              <div>
-                <p className="text-xs font-semibold uppercase tracking-[0.18em] text-cyan-200/75">
-                  Apply existing skill
-                </p>
-                <h2 className="mt-2 text-xl font-semibold text-white">
-                  Use a skill with this file
-                </h2>
-                <p className="mt-2 text-sm leading-6 text-slate-300">
-                  Pick a repository-local HIVE capability. The file stays a
-                  file, and the selection becomes guidance for analysis.
-                </p>
-              </div>
-              <button
-                type="button"
-                onClick={closeSkillPicker}
-                className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-white/8 bg-white/[0.035] text-slate-300 transition hover:text-white"
-                aria-label="Close skill picker"
-              >
-                <X className="h-4 w-4" />
-              </button>
-            </div>
-
-            <div className="mt-5 rounded-2xl border border-cyan-300/12 bg-cyan-300/[0.035] px-4 py-3 text-xs leading-5 text-cyan-100/80">
-              <span className="font-semibold text-cyan-100">
-                Selected file:
-              </span>{" "}
-              {fileName(skillPickerFile)}
-              <span className="mx-2 text-cyan-100/35">·</span>
-              <span className="font-semibold text-cyan-100">Lane:</span>{" "}
-              {selectedLane || "uploads"}
-            </div>
-
-            <form onSubmit={submitSkillSearch} className="mt-5 flex gap-2">
-              <div className="relative min-w-0 flex-1">
-                <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
-                <input
-                  value={skillQuery}
-                  onChange={(event) => setSkillQuery(event.target.value)}
-                  placeholder="Search existing skills"
-                  aria-label="Search existing skills"
-                  className="h-11 w-full rounded-xl border border-white/8 bg-hive-canvas pl-10 pr-3 text-sm text-slate-100 outline-none placeholder:text-slate-400 focus:border-cyan-300/40"
-                />
-              </div>
-              <button
-                type="submit"
-                disabled={loadingSkills}
-                aria-busy={loadingSkills}
-                aria-label={loadingSkills ? "Searching skills" : "Search skills"}
-                className={
-                  "flex h-11 items-center justify-center rounded-xl border border-cyan-300/20 bg-cyan-300/8 " +
-                  "px-4 text-sm font-medium text-cyan-100 transition hover:bg-cyan-300/12 disabled:opacity-50"
-                }
-              >
-                {loadingSkills ? (
-                  <LoaderCircle className="h-4 w-4 animate-spin" />
-                ) : (
-                  "Search"
-                )}
-              </button>
-            </form>
-
-            <div className="mt-4 grid max-h-80 gap-2 overflow-y-auto pr-1">
-              {loadingSkills ? (
-                <div role="status" aria-live="polite" className="flex items-center justify-center rounded-2xl border border-white/8 bg-white/[0.025] py-8 text-sm text-slate-300">
-                  <LoaderCircle aria-hidden="true" className="mr-2 h-4 w-4 animate-spin" /> Loading
-                  skills
-                </div>
-              ) : skillOptions.length === 0 ? (
-                <div className="rounded-2xl border border-dashed border-white/10 py-8 text-center text-sm text-slate-400">
-                  No existing skills found for this search.
-                </div>
-              ) : (
-                skillOptions.map((skill, index) => {
-                  const id = skillIdentifier(skill, index);
-                  const selected = selectedSkill
-                    ? skillIdentifier(selectedSkill) === id
-                    : false;
-                  return (
-                    <button
-                      key={`${id}-${index}`}
-                      type="button"
-                      onClick={() => setSelectedSkill(skill)}
-                      className={
-                        [
-                          "rounded-2xl border p-3 text-left transition ",
-                          String(
-                            selected
-                              ? "border-cyan-300/35 bg-cyan-300/[0.07]"
-                              : "border-white/8 bg-hive-canvas/75 hover:border-cyan-300/20 hover:bg-hive-panel-hover",
-                          ),
-                        ].join('')
-                      }
-                    >
-                      <div className="flex items-start justify-between gap-3">
-                        <div className="min-w-0">
-                          <h3 className="truncate text-sm font-semibold text-white">
-                            {skillTitle(skill, index)}
-                          </h3>
-                          <p className="mt-1 line-clamp-2 text-xs leading-5 text-slate-300">
-                            {String(
-                              skill.description ||
-                                skillMetadata(skill).description ||
-                                "No description supplied.",
-                            )}
-                          </p>
-                        </div>
-                        <StatusBadge
-                          status={selected ? "active" : "readonly"}
-                          label={
-                            selected
-                              ? "Selected"
-                              : skillField(skill, "risk_level", "Skill")
-                          }
-                          compact
-                        />
-                      </div>
-                      <p className="mt-2 truncate text-xs text-slate-400">
-                        {skillField(skill, "repo", "HIVE")} ·{" "}
-                        {skillField(
-                          skill,
-                          "hive_lane",
-                          skillField(skill, "lane", "General"),
-                        )}
-                      </p>
-                    </button>
-                  );
-                })
-              )}
-            </div>
-
-            <div className="mt-6 flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
-              <button
-                type="button"
-                onClick={closeSkillPicker}
-                className="flex h-10 items-center justify-center rounded-xl border border-white/8 bg-white/[0.035] px-4 text-sm font-medium text-slate-200 transition hover:bg-white/[0.06]"
-              >
-                Cancel
-              </button>
-              <button
-                type="button"
-                onClick={useSelectedSkillWithFile}
-                disabled={!selectedSkill}
-                className={
-                  "flex h-10 items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-cyan-300 " +
-                  "to-emerald-300 px-4 text-sm font-semibold text-hive-canvas transition disabled:opacity-50"
-                }
-              >
-                <BrainCircuit className="h-4 w-4" /> Use selected skill
-              </button>
-            </div>
-          </section>
-        </div>
-      )}
 
 
       <ConfirmDialog

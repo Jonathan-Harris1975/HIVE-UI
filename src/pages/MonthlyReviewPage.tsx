@@ -93,7 +93,7 @@ export function MonthlyReviewPage() {
           <p className="text-xs font-semibold uppercase tracking-[0.2em] text-cyan-300/70">Governance</p>
           <h1 className="mt-2 text-xl font-semibold text-white">Monthly Review</h1>
           <p className="mt-1 max-w-2xl text-xs leading-5 text-slate-400">
-            Consolidated system health, AI Council/model registry, skills catalogue health, optimisation stats, execution
+            Consolidated system health, AI Council/model registry, optimisation stats, execution
             review posture, and token usage/cost for each calendar month. The day-1 MAST job calls one HIVE endpoint that
             now runs or reuses the current monthly Council before generating the review; the same full cycle runs on demand below.
           </p>

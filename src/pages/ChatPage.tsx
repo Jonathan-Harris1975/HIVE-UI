@@ -1,6 +1,5 @@
 import {
   ArrowDown,
-  BrainCircuit,
   ChevronDown,
   CircleStop,
   LoaderCircle,
@@ -49,7 +48,7 @@ const modeOptions: Array<{ value: ChatMode; label: string }> = [
 const starters = [
   { category: 'Operations', border: 'border-amber-300/40', prompt: 'Review the latest HIVE operational risks and give me a safe action order.' },
   { category: 'Debugging', border: 'border-rose-300/40', prompt: 'Help me trace a deployment failure without guessing.' },
-  { category: 'Skills', border: 'border-cyan-300/40', prompt: 'Recommend the best repository-local HIVE capability for a new AIMS quality-control task.' },
+  { category: 'Workflows', border: 'border-cyan-300/40', prompt: 'Plan a safe, review-gated workflow for a new AIMS quality-control task.' },
 ]
 
 function makeMessage(role: 'user' | 'assistant', content: string, pending = false): UiMessage {
@@ -121,8 +120,6 @@ export function ChatPage() {
     [attachedFile, attachedLane, searchParams],
   )
   const hasAttachedFiles = attachedSources.length > 0
-  const attachedSkillId = searchParams.get('skill_id')
-  const attachedSkillTitle = searchParams.get('skill_title')
   const draft = searchParams.get('draft')
   const newConversationRequested = searchParams.get('new') === '1'
   const [prompt, setPrompt] = useState('')
@@ -132,7 +129,6 @@ export function ChatPage() {
   const [modelsLoading, setModelsLoading] = useState(true)
   const [workflowPresets, setWorkflowPresets] = useState<WorkflowPreset[]>([])
   const [workflowPreset, setWorkflowPreset] = useState('')
-  const [useSkillContext, setUseSkillContext] = useState(false)
   const [streaming, setStreaming] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [showScrollButton, setShowScrollButton] = useState(false)
@@ -178,7 +174,6 @@ export function ChatPage() {
     setMode('auto')
     setModel('')
     setWorkflowPreset('')
-    setUseSkillContext(false)
     setShowScrollButton(false)
     const next = new URLSearchParams(searchParams)
     next.delete('new')
@@ -206,13 +201,6 @@ export function ChatPage() {
     setWorkflowPreset('')
   }
 
-  function removeAttachedSkill() {
-    const next = new URLSearchParams(searchParams)
-    next.delete('skill_id')
-    next.delete('skill_title')
-    setSearchParams(next, { replace: true })
-  }
-
   function startNewConversation() {
     newConversation()
     setPrompt('')
@@ -220,7 +208,6 @@ export function ChatPage() {
     setMode('auto')
     setModel('')
     setWorkflowPreset('')
-    setUseSkillContext(false)
     setShowScrollButton(false)
     setSearchParams(new URLSearchParams(), { replace: true })
     window.setTimeout(() => textareaRef.current?.focus(), 0)
@@ -395,9 +382,6 @@ export function ChatPage() {
       use_persisted_history: true,
       db_history_limit: 12,
       max_tokens: maxTokensForRoute(mode, hasAttachedFiles),
-      skill_id: attachedSkillId,
-      skill_title: attachedSkillTitle,
-      use_skills: useSkillContext && !hasAttachedFiles,
     }
 
     try {
@@ -421,7 +405,6 @@ export function ChatPage() {
                 metadata: {
                   retrieval_summary: response.retrieval_summary,
                   source_chunks: response.source_chunks,
-                  selected_skill: response.selected_skill,
                 },
               }
             : message,
@@ -546,7 +529,7 @@ export function ChatPage() {
                   </button>
                 ))}
               </div>
-              <div className="mt-4 grid w-full max-w-sm grid-cols-3 gap-2 sm:mt-5 sm:flex sm:max-w-none sm:flex-wrap sm:justify-center">
+              <div className="mt-4 grid w-full max-w-sm grid-cols-2 gap-2 sm:mt-5 sm:flex sm:max-w-none sm:flex-wrap sm:justify-center">
                 <button
                   type="button"
                   onClick={startNewConversation}
@@ -565,15 +548,6 @@ export function ChatPage() {
                   }
                 >
                   <Files className="h-4 w-4" aria-hidden="true" /> Files
-                </Link>
-                <Link
-                  to="/skills"
-                  className={
-                    "inline-flex h-11 items-center justify-center gap-2 rounded-xl border border-violet-300/15 " +
-                    "bg-violet-300/7 px-3 text-xs font-medium text-violet-100 transition hover:bg-violet-300/12"
-                  }
-                >
-                  <BrainCircuit className="h-4 w-4" aria-hidden="true" /> Skills
                 </Link>
               </div>
             </div>
@@ -611,7 +585,7 @@ export function ChatPage() {
         }
       >
         <form onSubmit={handleSubmit} aria-busy={streaming} className="mx-auto max-w-4xl">
-          {(hasAttachedFiles || attachedSkillId || error) && (
+          {(hasAttachedFiles || error) && (
             <div className="mb-2 flex flex-wrap items-center gap-2">
               {hasAttachedFiles && (
                 <div className="flex max-w-full items-center gap-2 rounded-full border border-emerald-300/20 bg-emerald-300/8 px-3 py-1.5 text-xs text-emerald-100">
@@ -631,20 +605,6 @@ export function ChatPage() {
                     onClick={removeAttachment}
                     aria-label="Remove attached files"
                     className="rounded-full p-1.5 text-emerald-100/80 hover:bg-white/10 hover:text-emerald-50"
-                  >
-                    <X className="h-3.5 w-3.5" aria-hidden="true" />
-                  </button>
-                </div>
-              )}
-              {attachedSkillId && (
-                <div className="flex max-w-full items-center gap-2 rounded-full border border-cyan-300/20 bg-cyan-300/8 px-3 py-1.5 text-xs text-cyan-100">
-                  <Sparkles className="h-3.5 w-3.5" />
-                  <span className="max-w-[260px] truncate">Skill: {attachedSkillTitle || attachedSkillId}</span>
-                  <button
-                    type="button"
-                    onClick={removeAttachedSkill}
-                    aria-label="Remove attached skill"
-                    className="rounded-full p-1.5 text-cyan-100/80 hover:bg-white/10 hover:text-cyan-50"
                   >
                     <X className="h-3.5 w-3.5" aria-hidden="true" />
                   </button>
@@ -723,29 +683,6 @@ export function ChatPage() {
               >
                 <Paperclip className="h-4 w-4" aria-hidden="true" />
               </Link>
-              {!hasAttachedFiles && (
-                <button
-                  type="button"
-                  onClick={() => setUseSkillContext((value) => !value)}
-                  className={
-                    [
-                      "inline-flex h-9 shrink-0 items-center justify-center gap-1.5 rounded-lg border ",
-                      "px-2.5 text-xs font-medium transition ",
-                      String(
-                        useSkillContext
-                          ? 'border-cyan-300/30 bg-cyan-300/10 text-cyan-100'
-                          : 'border-white/8 bg-white/[0.035] text-slate-400 hover:bg-white/[0.055] hover:text-slate-200',
-                      ),
-                    ].join('')
-                  }
-                  aria-pressed={useSkillContext}
-                  aria-label={useSkillContext ? 'Disable local skills' : 'Enable local skills'}
-                  title="Use retrieved HIVE skills for this message. Off keeps ordinary chat fast."
-                >
-                  <Sparkles className="h-4 w-4" aria-hidden="true" />
-                  <span className="hidden sm:inline">Skills {useSkillContext ? 'on' : 'off'}</span>
-                </button>
-              )}
               {hasAttachedFiles && workflowPresets.length > 0 && (
                 <label className="relative w-[190px] shrink-0 sm:w-[210px]">
                   <select
