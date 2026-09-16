@@ -82,8 +82,8 @@ const sectionTabs = [
 
 const pageMeta: Record<string, { title: string; subtitle: string }> = {
   '/chat': { title: 'Chat', subtitle: 'Private model routing and persistent conversations' },
-  '/files': { title: 'Files', subtitle: 'Authenticated files, storage and reusable skills' },
-  '/skills': { title: 'Files', subtitle: 'Authenticated files, storage and reusable skills' },
+  '/files': { title: 'Files', subtitle: 'Authenticated files, storage and local HIVE skills' },
+  '/skills': { title: 'Files', subtitle: 'Authenticated files, storage and local HIVE skills' },
   '/repositories': { title: 'Repositories', subtitle: 'Snapshots, memory, QA and repository intelligence' },
   '/memory': { title: 'Repositories', subtitle: 'Persistent memory and consolidated repository intelligence' },
   '/intelligence': { title: 'Repositories', subtitle: 'Persistent memory and consolidated repository intelligence' },
