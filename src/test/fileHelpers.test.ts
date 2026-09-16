@@ -5,7 +5,10 @@ import {
   fileName,
   laneLabel,
   laneStatus,
+  responseMessage,
   rootPrefixForLane,
+  selectedSourceForFile,
+  selectionId,
 } from '../pages/files/fileHelpers'
 import type { R2Lane } from '../types/api'
 
@@ -58,6 +61,31 @@ describe('fileHelpers (extracted from FilesPage.tsx)', () => {
     expect(rootPrefixForLane({ primary_upload_lane: true } as R2Lane)).toBe('uploads/')
     expect(rootPrefixForLane({ primary_upload_lane: false } as R2Lane)).toBe('')
     expect(rootPrefixForLane(undefined)).toBe('')
+  })
+
+
+  it('responseMessage prefers structured API errors before falling back to the response message', () => {
+    expect(responseMessage({ ok: false, error: 'Access denied' })).toBe('Access denied')
+    expect(responseMessage({ ok: false, error: { message: 'Lane unavailable' } })).toBe('Lane unavailable')
+    expect(responseMessage({ ok: false, message: 'Unable to list files' })).toBe('Unable to list files')
+    expect(responseMessage({ ok: false })).toBe('File listing failed.')
+  })
+
+  it('selectionId produces a stable lane/object identifier', () => {
+    expect(selectionId('uploads', 'nested/report.pdf')).toBe('uploads::nested/report.pdf')
+  })
+
+  it('selectedSourceForFile normalises the selected file for chat context', () => {
+    expect(
+      selectedSourceForFile('podcast_rss', {
+        object_key: 'episodes/42/transcript.md',
+        filename: 'episode-42.md',
+      }),
+    ).toEqual({
+      lane: 'podcast_rss',
+      object_key: 'episodes/42/transcript.md',
+      name: 'episode-42.md',
+    })
   })
 
 })
