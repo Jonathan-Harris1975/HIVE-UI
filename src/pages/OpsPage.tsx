@@ -812,9 +812,9 @@ export function OpsPage() {
                 to="/execution-reviews"
                 className="text-cyan-300 hover:underline"
               >Execution Reviews</Link> or <Link
-                to="/execution-simulation"
+                to="/execution"
                 className="text-cyan-300 hover:underline"
-              >Execution Simulation</Link>.</p>
+              >Execution Plan</Link>.</p>
             </form>
 
             <div className="space-y-5">

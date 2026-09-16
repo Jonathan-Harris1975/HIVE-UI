@@ -12,6 +12,7 @@ import {
   XCircle,
 } from 'lucide-react'
 import { useCallback, useEffect, useState, type FormEvent } from 'react'
+import { Link } from 'react-router'
 import { EmptyState } from '../components/EmptyState'
 import { StatusBadge } from '../components/StatusBadge'
 import { apiFetch } from '../lib/api'
@@ -20,6 +21,7 @@ import type {
   ExecutionReviewCreateResponse,
   ExecutionReviewDecisionResponse,
   ExecutionReviewDetailResponse,
+  ExecutionReviewExportResponse,
   ExecutionReviewListResponse,
   ExecutionReviewSummary,
 } from '../types/api'
@@ -100,7 +102,17 @@ export function ExecutionReviewsPage() {
         setDetailError(response.error_code === 'execution_plan_not_found' ? 'Plan not found.' : 'Plan could not be loaded.')
         return
       }
-      setDetail(response.review)
+      const review = response.review
+      const metadata = review.metadata
+      if (metadata && typeof metadata === 'object' && !Array.isArray(metadata)) {
+        setDetail({
+          ...(metadata as Record<string, unknown>),
+          created_at: review.created_at ?? (metadata as Record<string, unknown>).created_at,
+          updated_at: review.updated_at ?? (metadata as Record<string, unknown>).updated_at,
+        })
+      } else {
+        setDetail(review)
+      }
     } catch (caught) {
       setDetailError(caught instanceof Error ? caught.message : 'Plan could not be loaded.')
     } finally {
@@ -197,16 +209,21 @@ export function ExecutionReviewsPage() {
   async function exportPack(format: 'json' | 'markdown') {
     if (!selectedId) return
     try {
-      const response = await apiFetch<{ ok: boolean; content?: string; export?: string }>(
+      const response = await apiFetch<ExecutionReviewExportResponse>(
         `/v1/execution-reviews/${encodeURIComponent(selectedId)}/export`,
         { method: 'POST', body: JSON.stringify({ format }) },
       )
-      const text = typeof response.content === 'string' ? response.content : JSON.stringify(response, null, 2)
-      const blob = new Blob([text], { type: format === 'markdown' ? 'text/markdown' : 'application/json' })
+      if (!response.ok || typeof response.export_document !== 'string') {
+        setError('Evidence-pack export did not return a document.')
+        return
+      }
+      const blob = new Blob([response.export_document], {
+        type: response.content_type || (format === 'markdown' ? 'text/markdown' : 'application/json'),
+      })
       const url = URL.createObjectURL(blob)
       const link = document.createElement('a')
       link.href = url
-      link.download = `${selectedId}-evidence.${format === 'markdown' ? 'md' : 'json'}`
+      link.download = response.filename || `${selectedId}-evidence.${format === 'markdown' ? 'md' : 'json'}`
       link.click()
       URL.revokeObjectURL(url)
     } catch (caught) {
@@ -220,19 +237,22 @@ export function ExecutionReviewsPage() {
         <section className="rounded-3xl border border-white/8 bg-hive-panel/75 p-5 sm:p-7">
           <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
             <div>
-              <p className="text-xs font-semibold uppercase tracking-[0.2em] text-cyan-300/70">Execution reviews</p>
-              <h2 className="mt-2 text-2xl font-semibold text-white">Review-gated execution plans</h2>
+              <p className="text-xs font-semibold uppercase tracking-[0.2em] text-cyan-300/70">Execution review</p>
+              <h2 className="mt-2 text-2xl font-semibold text-white">Approve the plan before handoff</h2>
               <p className="mt-2 max-w-2xl text-sm leading-6 text-slate-400">
-                Every plan requires an explicit approval decision before an allow-listed adapter handoff unlocks.
-                Nothing here pushes to a repo or installs packages on its own.
+                Plans normally arrive here from the execution preview. Approval unlocks only the configured,
+                allow-listed adapter handoff; the review decision itself does not execute the task.
               </p>
+              <Link to="/execution" className="mt-3 inline-flex text-xs font-medium text-cyan-300 hover:underline">
+                Build an execution preview first
+              </Link>
             </div>
             <button
               type="button"
               onClick={() => setShowCreate((v) => !v)}
-              className="flex h-10 items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-cyan-400 to-emerald-300 px-4 text-xs font-semibold text-hive-accent-deep"
+              className="flex h-10 items-center justify-center gap-2 rounded-xl border border-white/10 bg-white/[0.04] px-4 text-xs font-medium text-slate-300 hover:bg-white/[0.07]"
             >
-              <Plus className="h-4 w-4" /> New review plan
+              <Plus className="h-4 w-4" /> Manual review plan
             </button>
           </div>
 
@@ -359,6 +379,12 @@ export function ExecutionReviewsPage() {
                     <StatusBadge status={String(detail.status ?? 'unknown')} compact />
                   </div>
                   <p className="mt-1 font-mono text-xs text-slate-500">{selectedId}</p>
+                  {typeof detail.source_preview_id === 'string' && (
+                    <p className="mt-1 text-xs text-slate-500">
+                      From preview {detail.source_preview_id}
+                      {detail.source_preview_verified === true ? ' · verified against saved preview' : ''}
+                    </p>
+                  )}
                   <div className="mt-3 flex flex-wrap gap-1.5 text-xs text-slate-400">
                     <span className="rounded-full border border-white/10 px-2 py-0.5">
                       {detail.can_execute_now ? 'Can execute now' : 'Cannot execute yet'}
