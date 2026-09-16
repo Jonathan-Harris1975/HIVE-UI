@@ -17,29 +17,12 @@ export type SelectedAction =
   | null
   | "chat"
   | "apply_skill"
-  | "create_skill"
   | "upload";
 export type PendingDelete = { type: "selected" } | { type: "single"; file: FileObject };
 
 export interface UploadResponse {
   ok?: boolean;
   file?: FileObject;
-}
-
-export interface SkillFromFileResponse {
-  ok?: boolean;
-  message?: string;
-  error_code?: string;
-}
-
-export interface SkillRegistrationForm {
-  title: string;
-  description: string;
-  repo: string;
-  hiveLane: string;
-  priorityTier: string;
-  riskLevel: string;
-  tags: string;
 }
 
 export const TEXT_CHAT_SUFFIXES = new Set([
@@ -125,45 +108,6 @@ export function laneStatus(lane: R2Lane): { status: string; label: string } {
   return { status: "unknown", label: "Unavailable" };
 }
 
-export function stripExtension(name: string): string {
-  const index = name.lastIndexOf(".");
-  return index > 0 ? name.slice(0, index) : name;
-}
-
-export function defaultSkillForm(
-  file: FileObject,
-  lane: string,
-): SkillRegistrationForm {
-  const name = fileName(file);
-  const cleanName = stripExtension(name)
-    .replace(/[-_]+/g, " ")
-    .replace(/\s+/g, " ")
-    .trim();
-  return {
-    title: cleanName || name,
-    description: `Use ${name} as a governed HIVE skill reference.`,
-    repo: "HIVE",
-    hiveLane: "uploaded-file-skills",
-    priorityTier: "P2",
-    riskLevel: "medium",
-    tags: [
-      "uploaded-file",
-      lane || "uploads",
-      extension(name).replace(/^\./, ""),
-    ]
-      .filter(Boolean)
-      .join(", "),
-  };
-}
-
-export function tagsFromInput(value: string): string[] {
-  return value
-    .split(",")
-    .map((tag) => tag.trim())
-    .filter(Boolean)
-    .slice(0, 20);
-}
-
 export function skillItems(response: SkillListResponse): SkillItem[] {
   return response.items ?? response.skills ?? response.results ?? [];
 }
@@ -205,15 +149,6 @@ export function skillIdentifier(skill: SkillItem, index = 0): string {
       metadata.reference_prefix ||
       skillTitle(skill, index),
   );
-}
-
-export function isHiveSkillsDescriptorFolder(
-  lane: string,
-  currentPrefix: string,
-): boolean {
-  const cleanLane = lane.trim().toLowerCase().replace(/-/g, "_");
-  const cleanPrefix = currentPrefix.replace(/^\/+/, "");
-  return cleanLane === "hive_skills" && cleanPrefix.startsWith("skills/");
 }
 
 export function rootPrefixForLane(lane: R2Lane | undefined): string {
