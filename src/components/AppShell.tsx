@@ -41,7 +41,7 @@ const navigationGroups = [
     items: [
       { to: '/communications', label: 'Communications', icon: RadioTower, routes: ['/communications'] },
       { to: '/chat', label: 'Chat', icon: Bot, routes: ['/chat'] },
-      { to: '/files', label: 'Files', icon: Files, routes: ['/files', '/skills'] },
+      { to: '/files', label: 'Files', icon: Files, routes: ['/files'] },
       { to: '/repositories', label: 'Repositories', icon: FolderGit2, routes: ['/repositories', '/memory', '/intelligence'] },
     ],
   },
@@ -66,7 +66,6 @@ const navigationGroups = [
 const navigation = navigationGroups.flatMap((group) => group.items)
 
 const sectionTabs = [
-  { routes: ['/files', '/skills'], items: [{ to: '/files', label: 'Files' }, { to: '/skills', label: 'Skills' }] },
   { routes: ['/repositories', '/memory', '/intelligence'], items: [{ to: '/repositories', label: 'Overview' }, { to: '/intelligence', label: 'Memory & Intelligence' }] },
   { routes: ['/models', '/council'], items: [{ to: '/models', label: 'Registry' }, { to: '/council', label: 'AI Council' }] },
   {
@@ -82,8 +81,7 @@ const sectionTabs = [
 
 const pageMeta: Record<string, { title: string; subtitle: string }> = {
   '/chat': { title: 'Chat', subtitle: 'Private model routing and persistent conversations' },
-  '/files': { title: 'Files', subtitle: 'Authenticated files, storage and local HIVE skills' },
-  '/skills': { title: 'Files', subtitle: 'Authenticated files, storage and local HIVE skills' },
+  '/files': { title: 'Files', subtitle: 'Authenticated files and storage' },
   '/repositories': { title: 'Repositories', subtitle: 'Snapshots, memory, QA and repository intelligence' },
   '/memory': { title: 'Repositories', subtitle: 'Persistent memory and consolidated repository intelligence' },
   '/intelligence': { title: 'Repositories', subtitle: 'Persistent memory and consolidated repository intelligence' },
