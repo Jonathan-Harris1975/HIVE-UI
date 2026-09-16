@@ -87,8 +87,8 @@ test.describe('HIVE-UI critical path', () => {
     await page.getByLabel('Chat mode').selectOption('code')
     await page.getByRole('button', { name: 'Choose HIVE model' }).click()
     await page.getByRole('option', { name: /Test model/i }).click()
-    await page.getByRole('button', { name: 'Enable shared skills' }).click()
-    await expect(page.getByRole('button', { name: 'Disable shared skills' })).toBeVisible()
+    await page.getByRole('button', { name: 'Enable local skills' }).click()
+    await expect(page.getByRole('button', { name: 'Disable local skills' })).toBeVisible()
 
     await chatInput.fill('Hello HIVE')
     await page.getByRole('button', { name: 'Send message' }).click()
