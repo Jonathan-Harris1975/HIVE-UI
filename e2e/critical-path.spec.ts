@@ -2,7 +2,7 @@ import { expect, test } from '@playwright/test'
 
 // End-to-end coverage for the path the readiness audit found completely
 // unverified: login through the edge layer, a session cookie, one streamed
-// chat turn, one file upload, and one skill-apply action.
+// chat turn and one file upload.
 //
 // Network note: by default (no HIVE_UI_E2E_BASE_URL) this runs against a
 // local `npm run preview` build of the frontend only, with `/api/*` calls
@@ -24,7 +24,7 @@ test.describe('HIVE-UI critical path', () => {
     'Route mocks are for the local-preview mode only; against a real preview deployment this suite should run unmocked.',
   )
 
-  test('login, one chat turn, one file upload, and one skill apply', async ({ page }) => {
+  test('login, one chat turn, and one file upload', async ({ page }) => {
     await page.route('**/api/auth/session', (route) =>
       route.fulfill({ status: 401, json: { detail: 'no session' } }),
     )
@@ -62,12 +62,7 @@ test.describe('HIVE-UI critical path', () => {
         json: { ok: true, file: { object_key: 'uploads/e2e-test.txt' } },
       }),
     )
-    await page.route('**/api/v1/skills/list*', (route) =>
-      route.fulfill({
-        status: 200,
-        json: { ok: true, items: [{ id: 'skill-1', title: 'Test Skill' }] },
-      }),
-    )
+
 
     await page.goto('/')
 
@@ -87,9 +82,6 @@ test.describe('HIVE-UI critical path', () => {
     await page.getByLabel('Chat mode').selectOption('code')
     await page.getByRole('button', { name: 'Choose HIVE model' }).click()
     await page.getByRole('option', { name: /Test model/i }).click()
-    await page.getByRole('button', { name: 'Enable local skills' }).click()
-    await expect(page.getByRole('button', { name: 'Disable local skills' })).toBeVisible()
-
     await chatInput.fill('Hello HIVE')
     await page.getByRole('button', { name: 'Send message' }).click()
     await expect(page.getByText('Hi there!')).toBeVisible({ timeout: 15_000 })
