@@ -47,7 +47,7 @@ export function LoginScreen() {
           <p className="text-xs font-semibold uppercase tracking-[0.28em] text-cyan-300">Private access</p>
           <h1 className="mt-3 text-3xl font-semibold tracking-tight text-white">Enter the HIVE</h1>
           <p className="mx-auto mt-3 max-w-sm text-sm leading-6 text-slate-400">
-            Your operational command room for chat, files, skills and controlled workflows.
+            Your operational command room for chat, files and controlled workflows.
           </p>
           <p className="mt-2 text-xs text-slate-500">HIVE is a private AI operations console. Access is restricted to its operator.</p>
         </div>

@@ -45,11 +45,6 @@ export function WorkflowGraph({ nodes, edges = [], onInspect }: WorkflowGraphPro
               <span className="min-w-0">
                 <span className="block text-sm font-semibold text-white">{node.label || node.id}</span>
                 <span className="mt-1 block text-xs leading-5 text-slate-400">{node.summary || node.type || 'Workflow step'}</span>
-                {node.skill_ids && node.skill_ids.length > 0 && (
-                  <span className="mt-2 flex flex-wrap gap-1.5">
-                    {node.skill_ids.map((skillId) => <span key={skillId} className="rounded-full bg-white/[0.04] px-2 py-0.5 text-xs text-slate-400">{skillId}</span>)}
-                  </span>
-                )}
               </span>
               <StatusBadge status={node.status} compact />
             </button>
