@@ -11,7 +11,7 @@ import {
   skillItems,
   skillTitle,
 } from '../pages/files/fileHelpers'
-import type { FileObject, R2Lane, SkillItem } from '../types/api'
+import type { R2Lane, SkillItem } from '../types/api'
 
 describe('fileHelpers (extracted from FilesPage.tsx)', () => {
   it('fileKey prefers object_key, then key, then empty string', () => {
