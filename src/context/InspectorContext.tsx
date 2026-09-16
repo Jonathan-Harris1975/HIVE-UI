@@ -32,7 +32,7 @@ interface InspectorContextValue {
 const defaultPayload: InspectorPayload = {
   eyebrow: 'Inspector',
   title: 'Nothing selected',
-  description: 'Select a message, file, skill or operation to inspect its details.',
+  description: 'Select a message, file or operation to inspect its details.',
 }
 
 const InspectorContext = createContext<InspectorContextValue | null>(null)
