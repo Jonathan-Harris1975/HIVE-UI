@@ -1054,6 +1054,10 @@ export interface ExecutionReviewSummary {
   repo: string | null
   target: string
   workflow_preset: string | null
+  policy_profile?: string | null
+  source_preview_id?: string | null
+  source_simulation_id?: string | null
+  source_preview_verified?: boolean
   requested_by: string | null
   created_at: string | null
   updated_at: string | null
@@ -1091,6 +1095,7 @@ export interface ExecutionReviewCreateResponse {
   ok: boolean
   error_code?: string
   message?: string
+  mismatch_fields?: string[]
   dry_run: boolean
   plan_id: string
   status: string
@@ -1109,6 +1114,15 @@ export interface ExecutionReviewDecisionResponse {
   safety_note: string
 }
 
+export interface ExecutionReviewExportResponse {
+  ok: boolean
+  error_code?: string
+  format?: 'json' | 'markdown' | string
+  filename?: string
+  content_type?: string
+  export_document?: string
+}
+
 export interface PolicyProfile {
   label: string
   can_execute_now: boolean
@@ -1125,20 +1139,29 @@ export interface PolicyProfilesResponse {
   profiles: Record<string, PolicyProfile>
 }
 
+export interface ExecutionServiceRequirement {
+  service: string
+  purpose: string
+  required: boolean
+}
+
 export interface WorkflowSimulationResponse {
   ok: boolean
   error_code?: string
   simulation_id?: string
+  simulation_kind?: string
+  estimate_scope?: string
   preview_id?: string
   task?: string
   repo?: string | null
+  workflow_preset?: string | null
   policy_profile?: string
   policy?: PolicyProfile
   execution_mode?: string
   can_execute_now?: boolean
   adapter_execution_enabled?: boolean
   execution_state?: string
-  required_services?: string[]
+  required_services?: ExecutionServiceRequirement[]
   affected_repos?: string[]
   affected_buckets?: string[]
   risk_summary?: Record<string, unknown>
@@ -1155,6 +1178,7 @@ export interface SavedExecutionPreviewSummary {
   preview_id: string
   task: string
   repo: string | null
+  workflow_preset?: string | null
   policy_profile: string | null
   status: string
   can_execute_now: boolean
@@ -1178,6 +1202,7 @@ export interface ExecutionPreviewSaveResponse {
   ok: boolean
   error_code?: string
   dry_run: boolean
+  already_saved?: boolean
   preview_id: string
   preview?: Record<string, unknown>
   would_save?: Record<string, unknown>
@@ -1192,9 +1217,11 @@ export interface OptimisationDecision {
   previous_state: unknown
   new_state: unknown
   confidence: number
-  status: 'applied' | 'reverted' | string
+  status: 'applied' | 'proposed' | 'reverted' | string
   created_at: string
   reverted_at: string | null
+  state_restored?: boolean | null
+  revert_semantics?: string | null
 }
 
 export interface OptimisationExperiment {
@@ -1215,9 +1242,14 @@ export interface OptimisationExperimentsResponse {
 }
 
 export interface OptimisationStatsResponse {
+  ok?: boolean
+  error?: string
   decision_count: number
   applied_count: number
+  proposed_count?: number
+  actioned_count?: number
   reverted_count: number
+  reverted_rate?: number
   rollback_rate: number
   experiment_count: number
   experiment_success_rate: number
