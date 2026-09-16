@@ -7,7 +7,7 @@ HIVE-UI is the private React operator interface for HIVE. It runs behind a Cloud
 - Persisted streamed HIVE conversations.
 - File upload, R2-lane browsing and file chat with citations.
 - Searchable model groups for configured text/reasoning/coding/document/vision and discovery categories.
-- Skills discovery, recommendation and risk/status filtering.
+- Repository-local HIVE skill discovery, recommendation and risk/status filtering.
 - Repository intelligence and Repository Memory views.
 - Ops dashboard for HIVE, AIMS, RAMS and website operational evidence.
 - Embedded AIMS Comms Hub through a signed cross-subdomain hand-off.
@@ -19,7 +19,7 @@ HIVE-UI is the private React operator interface for HIVE. It runs behind a Cloud
 |---|---|
 | `/chat` | conversations and file chat |
 | `/files` | uploads and configured storage lanes |
-| `/skills` | skill discovery/recommendation |
+| `/skills` | local HIVE skill discovery/recommendation |
 | `/repositories` and related views | repository intelligence/memory |
 | `/communications` | embedded AIMS Comms Hub |
 | `/ops` | ecosystem health and operations |
