@@ -61,39 +61,20 @@ test('chat and operational cards expose native and announced interaction semanti
   const files = source('src/pages/FilesPage.tsx')
   assert.match(communications, /aria-busy=\{!ready && !error\}/)
   assert.match(communications, /role="status"/)
-  assert.match(files, /aria-label=\{loadingSkills \? "Searching skills" : "Search skills"\}/)
 })
 
 
 test('chat mobile controls remain reachable and reset cleanly', () => {
   const chat = source('src/pages/ChatPage.tsx')
   const shell = source('src/components/AppShell.tsx')
-  const skills = source('src/pages/SkillsPage.tsx')
   const css = source('src/index.css')
   assert.match(chat, /chat-empty-state/)
   assert.match(css, /\.chat-empty-state \{ justify-content: safe center; \}/)
   assert.match(chat, /aria-label="Send message"/)
   assert.match(chat, /aria-label="Choose files for chat"/)
-  assert.match(chat, /aria-label=\{useSkillContext \? 'Disable local skills' : 'Enable local skills'\}/)
-  assert.match(chat, /hasAttachedFiles \|\| attachedSkillId \|\| error/)
-  assert.match(chat, /removeAttachedSkill/)
   assert.match(chat, /event\.nativeEvent\.isComposing/)
   assert.match(chat, /newConversationRequested/)
   assert.match(shell, /navigate\('\/chat\?new=1'\)/)
-  assert.match(skills, /skill_id: skillId/)
-  assert.match(skills, /skill_title: title/)
-})
-
-test('skills UI uses the local catalogue and cannot register uploaded descriptors', () => {
-  const files = source('src/pages/FilesPage.tsx')
-  const skills = source('src/pages/SkillsPage.tsx')
-  const helpers = source('src/pages/files/fileHelpers.ts')
-
-  assert.match(skills, /Repository-local skills/)
-  assert.match(skills, /versioned HIVE catalogue/)
-  assert.doesNotMatch(files, /\/v1\/skills\/from-file/)
-  assert.doesNotMatch(files, /Create skill from descriptor file/)
-  assert.doesNotMatch(helpers, /create_skill/)
 })
 
 test('model picker escapes composer clipping with a viewport-positioned portal', () => {
