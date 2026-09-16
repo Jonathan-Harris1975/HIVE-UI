@@ -3,8 +3,6 @@ import type {
   FileObject,
   FileSourceSelection,
   R2Lane,
-  SkillItem,
-  SkillListResponse,
 } from "../../types/api";
 
 // ---------------------------------------------------------------------------
@@ -13,11 +11,7 @@ import type {
 // ---------------------------------------------------------------------------
 
 export type UploadMode = "file" | "text";
-export type SelectedAction =
-  | null
-  | "chat"
-  | "apply_skill"
-  | "upload";
+export type SelectedAction = null | "chat" | "upload";
 export type PendingDelete = { type: "selected" } | { type: "single"; file: FileObject };
 
 export interface UploadResponse {
@@ -106,49 +100,6 @@ export function laneStatus(lane: R2Lane): { status: string; label: string } {
   if (lane.readable) return { status: "readonly", label: "Read-only" };
   if (lane.configured) return { status: "warning", label: "Registry only" };
   return { status: "unknown", label: "Unavailable" };
-}
-
-export function skillItems(response: SkillListResponse): SkillItem[] {
-  return response.items ?? response.skills ?? response.results ?? [];
-}
-
-export function skillMetadata(skill: SkillItem): Record<string, unknown> {
-  return typeof skill.metadata === "object" && skill.metadata !== null
-    ? (skill.metadata as Record<string, unknown>)
-    : {};
-}
-
-export function skillField(skill: SkillItem, key: string, fallback = ""): string {
-  const direct = skill[key];
-  if (direct != null && direct !== "")
-    return Array.isArray(direct) ? direct.join(", ") : String(direct);
-  const metadata = skillMetadata(skill);
-  const nested = metadata[key];
-  if (nested != null && nested !== "")
-    return Array.isArray(nested) ? nested.join(", ") : String(nested);
-  return fallback;
-}
-
-export function skillTitle(skill: SkillItem, index = 0): string {
-  const metadata = skillMetadata(skill);
-  return String(
-    skill.title ||
-      skill.name ||
-      metadata.title ||
-      metadata.name ||
-      `Skill ${index + 1}`,
-  );
-}
-
-export function skillIdentifier(skill: SkillItem, index = 0): string {
-  const metadata = skillMetadata(skill);
-  return String(
-    skill.id ||
-      skill.source_id ||
-      metadata.skill_id ||
-      metadata.reference_prefix ||
-      skillTitle(skill, index),
-  );
 }
 
 export function rootPrefixForLane(lane: R2Lane | undefined): string {

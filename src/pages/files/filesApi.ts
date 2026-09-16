@@ -30,32 +30,3 @@ export function uploadTextFile(
     }),
   });
 }
-
-// Extracted from FilesPage.tsx's useSelectedSkillWithFile(): builds the
-// /chat navigation URL for the "review an existing skill, then apply it to
-// this file" flow. Pure and therefore directly unit-testable, unlike the
-// original which was buried inside a component closure over several pieces
-// of page state.
-export function buildSkillApplyChatUrl(params: {
-  lane: string;
-  fileKey: string;
-  fileDisplayName: string;
-  skillId: string;
-  skillTitle: string;
-}): string {
-  const source = {
-    lane: params.lane,
-    object_key: params.fileKey,
-    name: params.fileDisplayName,
-  };
-  const search = new URLSearchParams({
-    lane: params.lane,
-    file: params.fileKey,
-    name: params.fileDisplayName,
-    sources: JSON.stringify([source]),
-    skill_id: params.skillId,
-    skill_title: params.skillTitle,
-    draft: `Use ${params.skillTitle} with this file: `,
-  });
-  return `/chat?${search.toString()}`;
-}
