@@ -1,7 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import {
   canChatWithObject,
-  defaultSkillForm,
   fileKey,
   fileName,
   laneLabel,
@@ -11,7 +10,6 @@ import {
   skillIdentifier,
   skillItems,
   skillTitle,
-  tagsFromInput,
 } from '../pages/files/fileHelpers'
 import type { FileObject, R2Lane, SkillItem } from '../types/api'
 
@@ -37,7 +35,7 @@ describe('fileHelpers (extracted from FilesPage.tsx)', () => {
   })
 
   it('laneLabel humanises snake_case lane names', () => {
-    expect(laneLabel({ lane: 'hive_skills' } as R2Lane)).toBe('Hive Skills')
+    expect(laneLabel({ lane: 'podcast_rss' } as R2Lane)).toBe('Podcast Rss')
     expect(laneLabel({ lane: 'uploads' } as R2Lane)).toBe('Uploads')
   })
 
@@ -64,21 +62,6 @@ describe('fileHelpers (extracted from FilesPage.tsx)', () => {
     expect(rootPrefixForLane({ primary_upload_lane: true } as R2Lane)).toBe('uploads/')
     expect(rootPrefixForLane({ primary_upload_lane: false } as R2Lane)).toBe('')
     expect(rootPrefixForLane(undefined)).toBe('')
-  })
-
-  it('defaultSkillForm derives a clean title and tag set from the filename', () => {
-    const file: FileObject = { object_key: 'uploads/My-Cool_Report.pdf' }
-    const form = defaultSkillForm(file, 'uploads')
-    expect(form.title).toBe('My Cool Report')
-    expect(form.tags).toContain('uploaded-file')
-    expect(form.tags).toContain('pdf')
-    expect(form.riskLevel).toBe('medium')
-  })
-
-  it('tagsFromInput trims, dedupes empties, and caps at 20 tags', () => {
-    expect(tagsFromInput('a, b ,, c')).toEqual(['a', 'b', 'c'])
-    const many = Array.from({ length: 30 }, (_, i) => `t${i}`).join(',')
-    expect(tagsFromInput(many)).toHaveLength(20)
   })
 
   it('skillItems reads from whichever of items/skills/results is populated', () => {
