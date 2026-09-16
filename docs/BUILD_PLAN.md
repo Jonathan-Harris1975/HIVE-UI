@@ -17,7 +17,6 @@
 - Vite + React + TypeScript + Tailwind.
 - Cloudflare Worker gateway authentication boundary.
 - Typed API and SSE client.
-- Routes: `/chat`, `/files`, `/skills`, `/ops`.
 - Lighter HIVE navy/cyan/mint visual system.
 
 ## Session 2: chat — complete
@@ -38,12 +37,10 @@
 - Shared file-chat route.
 - Workflow presets and source citations.
 
-## Session 4: skills — complete
 
 - Search, scores and repo/lane/risk filters.
 - Task recommendation.
 - Status badges and detailed inspection.
-- Skill-to-chat hand-off.
 
 ## Session 5: ops — complete
 

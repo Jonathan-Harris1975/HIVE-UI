@@ -73,7 +73,6 @@ The safest first candidates are:
 
 - `audits`
 - `transcripts`
-- `hive_skills`
 - `meta`
 
 Podcast audio, published pages and RSS artefacts should remain governed by lane-specific publishing workflows even when HIVE has read/write bucket credentials.

@@ -24,13 +24,10 @@
 - File search, metadata cards and inspector detail.
 - One-click hand-off to the shared `/chat` interface.
 
-### `/skills`
 
 - Registry search.
 - Repository, lane and risk filters.
-- Recommendation request through `POST /v1/skills/recommend`.
 - Score, risk and status badges.
-- Skill metadata inspection and chat hand-off.
 
 ### `/ops`
 

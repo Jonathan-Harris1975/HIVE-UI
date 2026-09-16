@@ -25,7 +25,6 @@
 - Collapsed ecosystem Storage map from `/v1/files/r2-lanes`.
 - Honest separation between uploads access and registry-only buckets.
 
-## `/skills`
 
 - Registry search and relevance scores.
 - Repository, lane and risk filters.

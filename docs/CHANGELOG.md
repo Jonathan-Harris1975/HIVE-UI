@@ -41,7 +41,6 @@
 ## 0.10.10 — 22 June 2026
 
 - Synced UI marker to `0.10.10` / `catalogue-metadata`.
-- Uses backend-enriched skill and task descriptions so catalogue cards no longer depend on blank upstream fields.
 - Added a digital-dust review manifest for superseded root patch notes.
 
 ## 0.10.9 — 22 June 2026

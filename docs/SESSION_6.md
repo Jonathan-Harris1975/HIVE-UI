@@ -37,7 +37,6 @@ Session 6 turns the Sessions 1 to 5 interface into a deploy-ready Cloudflare Pag
 - Added a collapsed Storage map to `/files` using `GET /v1/files/r2-lanes`.
 - Clearly separates the active uploads lane from registry-only ecosystem lanes.
 - Does not pretend that multi-bucket read/write access exists.
-- Added a staged architecture for future read-only access to audits, podcasts, transcripts, skills and other approved buckets.
 
 ### Accessibility and responsive behaviour
 

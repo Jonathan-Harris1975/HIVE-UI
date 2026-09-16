@@ -97,7 +97,6 @@ Expected results:
 7. Refresh the page and confirm the session restores without re-entering the key.
 8. Open `/chat`, send a short Auto route message and confirm streaming persists.
 9. Open `/files`, upload a small text file and use the shared file-chat flow.
-10. Open `/skills` and `/ops` and confirm authenticated requests succeed.
 11. Sign out and confirm the session cookie is cleared and HIVE returns to standby when the UI session woke it.
 12. Log in again and confirm HIVE and AIMS are automatically resumed without manual Wake/Sleep controls.
 13. Log out and confirm each service is paused only if the UI session woke it; services already active for MAST must remain untouched.

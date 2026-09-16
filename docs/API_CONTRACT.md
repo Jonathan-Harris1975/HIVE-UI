@@ -155,12 +155,8 @@ GET /v1/models
 
 The response includes model groups, modalities, configured roles, free-model status, `chat_selectable` and a disabled reason. The picker always displays `Auto route` first. Image/video generation models are visible but disabled for ordinary chat in this release.
 
-## Skills
 
 ```text
-GET  /v1/skills/list
-GET  /v1/skills/search
-POST /v1/skills/recommend
 ```
 
 ## Operations
