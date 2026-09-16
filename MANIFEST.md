@@ -1,31 +1,40 @@
-# HIVE-UI changes — this session
+# HIVE-UI snapshot notes
 
-## New files (7)
-- src/pages/RepositoriesPage.tsx
-- src/pages/RepositoryIntelligencePage.tsx
-- src/pages/IntegrationsPage.tsx
-- src/pages/CouncilPage.tsx
+## Execution and optimisation tidy-up
+
+The former three-tab Optimisation workspace has been split by responsibility:
+
+- **Execution → Plan**: deterministic planning estimate and saved preview flow.
+- **Execution → Reviews**: review, approval, audit trail and evidence-pack workflow.
+- **Optimisation**: recorded decision and experiment history only.
+
+`/execution-simulation` remains as a compatibility redirect to `/execution`.
+
+The Execution Plan flow now persists a preview before creating a review plan and
+passes the persisted preview/simulation provenance into the review record. The
+review page also unwraps stored D1 metadata correctly when opening a plan.
+
+Optimisation no longer labels a ledger status change as an external rollback.
+The UI uses **Mark reverted** and the backend exposes `/revert`; the legacy
+`/rollback` endpoint remains as a backwards-compatible alias.
+
+## Files changed in this tidy-up
+
+- scripts/ui-overhaul.test.mjs
+- src/App.tsx
+- src/components/AppShell.tsx
+- src/pages/ExecutionPlanPage.tsx (replaces ExecutionSimulationPage.tsx)
 - src/pages/ExecutionReviewsPage.tsx
-- src/pages/ExecutionSimulationPage.tsx
+- src/pages/OpsPage.tsx
 - src/pages/OptimisationPage.tsx
+- src/types/api.ts
 
-## Edited files (3)
-- src/types/api.ts        (added ~25 new interfaces for the routers above)
-- src/App.tsx             (7 new lazy routes)
-- src/components/AppShell.tsx  (7 new nav items + page titles/subtitles)
+## Validation completed
 
-## Not verified
-No npm install / tsc / eslint / vite build was run against this code — the
-sandbox this was built in has no network access. Run the following before
-merging:
+- HIVE-UI source/UX contract tests: 17 passed.
+- HIVE-UI source verification: passed.
+- Backend test suite in the paired HIVE repository: 433 passed.
 
-    npm install
-    npm run build
-    npm run lint   # or your project's equivalent
-
-## Backend routes this wires up
-/v1/repositories/*, /v1/repositories/{id}/qa, /v1/repositories/{id}/council*,
-/v1/repositories/{id}/learning/*, /v1/connectors, /v1/buckets,
-/v1/ai-council/*, /v1/benchmark/*, /v1/execution-reviews/*,
-/v1/execution-preview/*, /v1/workflow-simulation,
-/v1/workflow-graphs/templates, /v1/optimisation/*, /v1/environment/audit
+The full UI dependency install/typecheck/build was not run in this workspace
+because its Node runtime is v22.16.0 while this repository requires Node
+>=22.22.0. CI or local validation should use the engine declared in package.json.
