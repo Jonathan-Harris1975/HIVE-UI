@@ -23,6 +23,7 @@ function dotTone(status: string, variant?: StatusBadgeProps['variant']): string 
     'pending_review',
     'approved_handoff_pending',
     'needs_changes',
+    'reverted',
     'medium',
     'blocked',
     'auth_blocked',
@@ -46,7 +47,7 @@ function dotTone(status: string, variant?: StatusBadgeProps['variant']): string 
 
   if (['complete', 'completed', 'approved', 'healthy', 'ready', 'ready_for_execution', 'ok', 'active', 'low'].includes(value)) return 'bg-emerald-300'
   if (['blocked', 'rejected', 'failed', 'error', 'high', 'down', 'critical'].includes(value)) return 'bg-rose-300'
-  if (['planned', 'queued', 'readonly'].includes(value)) return 'bg-cyan-300'
+  if (['planned', 'queued', 'readonly', 'proposed'].includes(value)) return 'bg-cyan-300'
   return 'bg-slate-500'
 }
 

@@ -17,6 +17,7 @@ import {
   Search,
   SlidersHorizontal,
   Trash2,
+  Workflow,
   Pencil,
   X,
 } from 'lucide-react'
@@ -50,13 +51,14 @@ const navigationGroups = [
     label: 'Intelligence',
     items: [
       { to: '/models', label: 'Models', icon: Cpu, routes: ['/models', '/council'] },
-      { to: '/optimisation', label: 'Optimisation', icon: SlidersHorizontal, routes: ['/optimisation', '/execution-reviews', '/execution-simulation'] },
+      { to: '/optimisation', label: 'Optimisation', icon: SlidersHorizontal, routes: ['/optimisation'] },
     ],
   },
   {
     id: 'system',
     label: 'System',
     items: [
+      { to: '/execution', label: 'Execution', icon: Workflow, routes: ['/execution', '/execution-reviews', '/execution-simulation'] },
       { to: '/ops', label: 'Operations', icon: Activity, routes: ['/ops', '/integrations'] },
       { to: '/monthly-review', label: 'Review', icon: CalendarClock, routes: ['/monthly-review'] },
     ],
@@ -69,11 +71,10 @@ const sectionTabs = [
   { routes: ['/repositories', '/memory', '/intelligence'], items: [{ to: '/repositories', label: 'Overview' }, { to: '/intelligence', label: 'Memory & Intelligence' }] },
   { routes: ['/models', '/council'], items: [{ to: '/models', label: 'Registry' }, { to: '/council', label: 'AI Council' }] },
   {
-    routes: ['/optimisation', '/execution-reviews', '/execution-simulation'],
+    routes: ['/execution', '/execution-reviews', '/execution-simulation'],
     items: [
-      { to: '/optimisation', label: 'Overview' },
+      { to: '/execution', label: 'Plan' },
       { to: '/execution-reviews', label: 'Reviews' },
-      { to: '/execution-simulation', label: 'Simulation' },
     ],
   },
   { routes: ['/ops', '/integrations'], items: [{ to: '/ops', label: 'System' }, { to: '/integrations', label: 'Integrations' }] },
@@ -87,9 +88,10 @@ const pageMeta: Record<string, { title: string; subtitle: string }> = {
   '/intelligence': { title: 'Repositories', subtitle: 'Persistent memory and consolidated repository intelligence' },
   '/models': { title: 'Models', subtitle: 'Ranked models, providers and evidence-based model review' },
   '/council': { title: 'Models', subtitle: 'Ranked models, providers and evidence-based model review' },
-  '/optimisation': { title: 'Optimisation', subtitle: 'Decisions, reviews, simulations and reversible changes' },
-  '/execution-reviews': { title: 'Optimisation', subtitle: 'Decisions, reviews, simulations and reversible changes' },
-  '/execution-simulation': { title: 'Optimisation', subtitle: 'Decisions, reviews, simulations and reversible changes' },
+  '/optimisation': { title: 'Optimisation', subtitle: 'Recorded optimisation activity' },
+  '/execution': { title: 'Execution', subtitle: 'Plan, preview and review controlled production work' },
+  '/execution-reviews': { title: 'Execution', subtitle: 'Plan, preview and review controlled production work' },
+  '/execution-simulation': { title: 'Execution', subtitle: 'Plan, preview and review controlled production work' },
   '/ops': { title: 'Operations', subtitle: 'Live runtime health, infrastructure and integrations' },
   '/integrations': { title: 'Operations', subtitle: 'Live runtime health, infrastructure and integrations' },
   '/monthly-review': { title: 'Review', subtitle: 'Consolidated monthly system, cost and governance review' },
