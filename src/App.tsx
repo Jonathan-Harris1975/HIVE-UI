@@ -9,7 +9,6 @@ import { InspectorProvider } from './context/InspectorContext'
 
 const ChatPage = lazy(() => import('./pages/ChatPage').then((module) => ({ default: module.ChatPage })))
 const FilesPage = lazy(() => import('./pages/FilesPage').then((module) => ({ default: module.FilesPage })))
-const SkillsPage = lazy(() => import('./pages/SkillsPage').then((module) => ({ default: module.SkillsPage })))
 const OpsPage = lazy(() => import('./pages/OpsPage').then((module) => ({ default: module.OpsPage })))
 const ModelRegistryPage = lazy(() =>
   import('./pages/ModelRegistryPage').then((module) => ({ default: module.ModelRegistryPage })),
@@ -70,7 +69,6 @@ export default function App() {
               <Route index element={<Navigate to="/chat" replace />} />
               <Route path="chat" element={<ChatPage />} />
               <Route path="files" element={<FilesPage />} />
-              <Route path="skills" element={<SkillsPage />} />
               <Route path="memory" element={<LegacyRepositoryMemoryRedirect />} />
               <Route path="repositories" element={<RepositoriesPage />} />
               <Route path="intelligence" element={<RepositoryIntelligencePage />} />
