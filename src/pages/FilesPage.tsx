@@ -43,11 +43,9 @@ import { isHiveManagedR2Source } from "../lib/storagePolicy";
 import { buildSkillApplyChatUrl, uploadSingleFile, uploadTextFile } from "./files/filesApi";
 import {
   canChatWithObject,
-  defaultSkillForm,
   extension,
   fileKey,
   fileName,
-  isHiveSkillsDescriptorFolder,
   laneLabel,
   laneStatus,
   MAX_SELECTED_OBJECTS,
@@ -60,11 +58,8 @@ import {
   skillItems,
   skillMetadata,
   skillTitle,
-  tagsFromInput,
   type PendingDelete,
   type SelectedAction,
-  type SkillFromFileResponse,
-  type SkillRegistrationForm,
   type UploadMode,
 } from "./files/fileHelpers";
 import type {
@@ -123,11 +118,6 @@ export function FilesPage() {
   const [textContent, setTextContent] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
-  const [skillFile, setSkillFile] = useState<FileObject | null>(null);
-  const [skillForm, setSkillForm] = useState<SkillRegistrationForm | null>(
-    null,
-  );
-  const [registeringSkill, setRegisteringSkill] = useState(false);
   const [skillPickerFile, setSkillPickerFile] = useState<FileObject | null>(
     null,
   );
@@ -157,10 +147,6 @@ export function FilesPage() {
   const configuredLaneCount = useMemo(
     () => lanes.filter((lane) => lane.configured).length,
     [lanes],
-  );
-  const canCreateSkillFromCurrentFolder = isHiveSkillsDescriptorFolder(
-    selectedLane,
-    prefix,
   );
   const selectedSources = useMemo(
     () => Object.values(selectedObjects),
@@ -793,89 +779,6 @@ export function FilesPage() {
     navigate(url);
   }
 
-  function openSkillRegistration(file: FileObject) {
-    if (!canCreateSkillFromCurrentFolder) {
-      setError(
-        "Create skill from file is only available when browsing the HIVE skills lane under the skills/ folder.",
-      );
-      return;
-    }
-    setSkillFile(file);
-    setSkillForm(defaultSkillForm(file, selectedLane || "hive_skills"));
-    setError(null);
-    setNotice(null);
-  }
-
-  function closeSkillRegistration() {
-    if (registeringSkill) return;
-    setSkillFile(null);
-    setSkillForm(null);
-  }
-
-  function updateSkillForm<K extends keyof SkillRegistrationForm>(
-    field: K,
-    value: SkillRegistrationForm[K],
-  ) {
-    setSkillForm((current) =>
-      current ? { ...current, [field]: value } : current,
-    );
-  }
-
-  async function registerSkillFromSelectedFile() {
-    const file = skillFile;
-    const form = skillForm;
-    const key = file ? fileKey(file) : "";
-    const title = form?.title.trim() ?? "";
-    if (!file || !key) return;
-    if (!form || !title) {
-      setError(
-        "Give the skill a clear title before adding it to the catalogue.",
-      );
-      return;
-    }
-    setRegisteringSkill(true);
-    setError(null);
-    setNotice(null);
-    try {
-      const response = await apiFetch<SkillFromFileResponse>(
-        "/v1/skills/from-file",
-        {
-          method: "POST",
-          body: JSON.stringify({
-            title,
-            object_key: key,
-            source_lane: selectedLane || "uploads",
-            description:
-              form.description.trim() ||
-              `Skill registered from uploaded file ${fileName(file)}.`,
-            repo: form.repo.trim() || "HIVE",
-            hive_lane: form.hiveLane.trim() || "uploaded-file-skills",
-            priority_tier: form.priorityTier.trim() || "P2",
-            risk_level: form.riskLevel,
-            tags: tagsFromInput(form.tags),
-          }),
-        },
-      );
-      if (!response.ok)
-        throw new Error(
-          response.message ||
-            response.error_code ||
-            "Skill registration failed.",
-        );
-      setNotice(
-        `${title} has been registered from the HIVE skills folder. Open Skills from the main menu to search or use it.`,
-      );
-      setSkillFile(null);
-      setSkillForm(null);
-    } catch (caught) {
-      setError(
-        caught instanceof Error ? caught.message : "Skill registration failed.",
-      );
-    } finally {
-      setRegisteringSkill(false);
-    }
-  }
-
   const downloadHref = (file: FileObject) =>
     `/api/v1/files/r2/${encodeURIComponent(selectedLane)}/download?key=${encodeURIComponent(fileKey(file))}`;
   const viewHref = (file: FileObject) =>
@@ -1146,25 +1049,6 @@ export function FilesPage() {
                   <BrainCircuit className="h-4 w-4" /> Apply skill
                 </button>
               )}
-              {selectedCurrentFile && canCreateSkillFromCurrentFolder && (
-                <button
-                  type="button"
-                  onClick={() => setSelectedAction("create_skill")}
-                  className={
-                    [
-                      "inline-flex h-9 items-center gap-2 rounded-xl px-3 text-xs font-medium ",
-                      "transition ",
-                      String(
-                        selectedAction === "create_skill"
-                          ? "bg-violet-300/12 text-violet-100"
-                          : "text-slate-300 hover:bg-white/[0.05]",
-                      ),
-                    ].join('')
-                  }
-                >
-                  <BrainCircuit className="h-4 w-4" /> Create skill
-                </button>
-              )}
               {activeLane?.writable && (
                 <button
                   type="button"
@@ -1237,32 +1121,6 @@ export function FilesPage() {
               </div>
             </div>
           )}
-
-          {selectedAction === "create_skill" &&
-            selectedCurrentFile &&
-            canCreateSkillFromCurrentFolder && (
-              <div className="mt-4 rounded-2xl border border-violet-300/15 bg-violet-300/[0.045] p-4 text-sm text-violet-50">
-                <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-                  <p>
-                    <span className="font-semibold">
-                      Create a skill from {fileName(selectedCurrentFile)}.
-                    </span>{" "}
-                    This is only available in the HIVE skills lane under
-                    skills/.
-                  </p>
-                  <button
-                    type="button"
-                    onClick={() => openSkillRegistration(selectedCurrentFile)}
-                    className={
-                      "inline-flex h-9 items-center justify-center gap-2 rounded-xl border border-violet-300/20 " +
-                      "bg-violet-300/10 px-3 text-xs font-medium text-violet-100 hover:bg-violet-300/15"
-                    }
-                  >
-                    <BrainCircuit className="h-4 w-4" /> Create skill
-                  </button>
-                </div>
-              </div>
-            )}
 
           {activeLane?.writable && selectedAction === "upload" ? (
             <div className="mt-6 border-t border-white/8 pt-5">
@@ -1744,20 +1602,6 @@ export function FilesPage() {
                         Delete
                       </button>
                     </div>
-                    {canCreateSkillFromCurrentFolder && (
-                      <button
-                        type="button"
-                        onClick={() => openSkillRegistration(file)}
-                        className={
-                          "mt-2 flex h-9 w-full items-center justify-center gap-2 rounded-xl border " +
-                          "border-violet-300/15 bg-violet-300/6 text-xs font-medium text-violet-100 transition " +
-                          "hover:bg-violet-300/10"
-                        }
-                      >
-                        <BrainCircuit className="h-4 w-4" /> Create skill from
-                        file
-                      </button>
-                    )}
                   </article>
                 );
               })}
@@ -1778,8 +1622,8 @@ export function FilesPage() {
                   Use a skill with this file
                 </h2>
                 <p className="mt-2 text-sm leading-6 text-slate-300">
-                  Pick an existing HIVE skill. The file stays a file, and the
-                  selected skill becomes guidance for chat/workflow analysis.
+                  Pick a repository-local HIVE capability. The file stays a
+                  file, and the selection becomes guidance for analysis.
                 </p>
               </div>
               <button
@@ -1887,7 +1731,7 @@ export function FilesPage() {
                         />
                       </div>
                       <p className="mt-2 truncate text-xs text-slate-400">
-                        {skillField(skill, "repo", "Shared")} ·{" "}
+                        {skillField(skill, "repo", "HIVE")} ·{" "}
                         {skillField(
                           skill,
                           "hive_lane",
@@ -1924,185 +1768,6 @@ export function FilesPage() {
         </div>
       )}
 
-      {skillFile && skillForm && (
-        <div className="fixed inset-0 z-50 flex items-end bg-hive-overlay/80 px-3 py-4 backdrop-blur-sm sm:items-center sm:justify-center">
-          <section className="max-h-[92vh] w-full overflow-y-auto rounded-3xl border border-white/10 bg-hive-dialog p-5 shadow-2xl shadow-black/40 sm:max-w-2xl sm:p-6">
-            <div className="flex items-start justify-between gap-4">
-              <div>
-                <p className="text-xs font-semibold uppercase tracking-[0.18em] text-violet-200/70">
-                  Hive skills folder only
-                </p>
-                <h2 className="mt-2 text-xl font-semibold text-white">
-                  Create skill from descriptor file
-                </h2>
-                <p className="mt-2 text-sm leading-6 text-slate-300">
-                  This action is only available from the hive_skills lane under
-                  the skills/ folder. Ordinary files should use an existing
-                  skill instead.
-                </p>
-              </div>
-              <button
-                type="button"
-                onClick={closeSkillRegistration}
-                disabled={registeringSkill}
-                className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-white/8 bg-white/[0.035] text-slate-300 transition hover:text-white disabled:opacity-40"
-                aria-label="Close skill registration"
-              >
-                <X className="h-4 w-4" />
-              </button>
-            </div>
-
-            <div className="mt-5 rounded-2xl border border-cyan-300/12 bg-cyan-300/[0.035] px-4 py-3 text-xs leading-5 text-cyan-100/80">
-              <span className="font-semibold text-cyan-100">
-                Selected file:
-              </span>{" "}
-              {fileName(skillFile)}
-              <span className="mx-2 text-cyan-100/35">·</span>
-              <span className="font-semibold text-cyan-100">Lane:</span>{" "}
-              {selectedLane || "uploads"}
-            </div>
-
-            <div className="mt-5 grid gap-4">
-              <label className="text-xs font-medium text-slate-300">
-                Skill title
-                <input
-                  value={skillForm.title}
-                  onChange={(event) =>
-                    updateSkillForm("title", event.target.value)
-                  }
-                  className="mt-2 h-11 w-full rounded-xl border border-white/8 bg-hive-canvas px-3 text-sm text-slate-100 outline-none focus:border-violet-300/40"
-                />
-              </label>
-
-              <label className="text-xs font-medium text-slate-300">
-                Description
-                <textarea
-                  value={skillForm.description}
-                  onChange={(event) =>
-                    updateSkillForm("description", event.target.value)
-                  }
-                  rows={4}
-                  placeholder="Explain what this skill should be used for…"
-                  className={
-                    "mt-2 w-full resize-y rounded-xl border border-white/8 bg-hive-canvas px-3 py-3 text-sm " +
-                    "leading-6 text-slate-100 outline-none placeholder:text-slate-400 focus:border-violet-300/40"
-                  }
-                />
-              </label>
-
-              <div className="grid gap-3 sm:grid-cols-2">
-                <label className="text-xs font-medium text-slate-300">
-                  Repo
-                  <select
-                    value={skillForm.repo}
-                    onChange={(event) =>
-                      updateSkillForm("repo", event.target.value)
-                    }
-                    className="mt-2 h-11 w-full rounded-xl border border-white/8 bg-hive-canvas px-3 text-sm text-slate-100 outline-none focus:border-violet-300/40"
-                  >
-                    <option value="HIVE">HIVE</option>
-                    <option value="HIVE-UI">HIVE-UI</option>
-                    <option value="AIMS">AIMS</option>
-                    <option value="RAMS">RAMS</option>
-                    <option value="Website">Website</option>
-                    <option value="Shared">Shared</option>
-                  </select>
-                </label>
-
-                <label className="text-xs font-medium text-slate-300">
-                  Skill lane
-                  <input
-                    value={skillForm.hiveLane}
-                    onChange={(event) =>
-                      updateSkillForm("hiveLane", event.target.value)
-                    }
-                    className="mt-2 h-11 w-full rounded-xl border border-white/8 bg-hive-canvas px-3 text-sm text-slate-100 outline-none focus:border-violet-300/40"
-                  />
-                </label>
-              </div>
-
-              <div className="grid gap-3 sm:grid-cols-2">
-                <label className="text-xs font-medium text-slate-300">
-                  Priority
-                  <select
-                    value={skillForm.priorityTier}
-                    onChange={(event) =>
-                      updateSkillForm("priorityTier", event.target.value)
-                    }
-                    className="mt-2 h-11 w-full rounded-xl border border-white/8 bg-hive-canvas px-3 text-sm text-slate-100 outline-none focus:border-violet-300/40"
-                  >
-                    <option value="P0">P0</option>
-                    <option value="P1">P1</option>
-                    <option value="P2">P2</option>
-                    <option value="P3">P3</option>
-                  </select>
-                </label>
-
-                <label className="text-xs font-medium text-slate-300">
-                  Risk level
-                  <select
-                    value={skillForm.riskLevel}
-                    onChange={(event) =>
-                      updateSkillForm("riskLevel", event.target.value)
-                    }
-                    className="mt-2 h-11 w-full rounded-xl border border-white/8 bg-hive-canvas px-3 text-sm text-slate-100 outline-none focus:border-violet-300/40"
-                  >
-                    <option value="low">Low</option>
-                    <option value="medium">Medium</option>
-                    <option value="high">High</option>
-                  </select>
-                </label>
-              </div>
-
-              <label className="text-xs font-medium text-slate-300">
-                Tags
-                <input
-                  value={skillForm.tags}
-                  onChange={(event) =>
-                    updateSkillForm("tags", event.target.value)
-                  }
-                  placeholder="uploaded-file, audits, repositories"
-                  className="mt-2 h-11 w-full rounded-xl border border-white/8 bg-hive-canvas px-3 text-sm text-slate-100 outline-none placeholder:text-slate-400 focus:border-violet-300/40"
-                />
-                <span className="mt-2 block text-xs leading-5 text-slate-400">
-                  Comma-separated. These are used for search and routing, so
-                  plain names beat cryptic goblin-code.
-                </span>
-              </label>
-            </div>
-
-            <div className="mt-6 flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
-              <button
-                type="button"
-                onClick={closeSkillRegistration}
-                disabled={registeringSkill}
-                className={
-                  "flex h-10 items-center justify-center rounded-xl border border-white/8 bg-white/[0.035] px-4 " +
-                  "text-sm font-medium text-slate-200 transition hover:bg-white/[0.06] disabled:opacity-40"
-                }
-              >
-                Cancel
-              </button>
-              <button
-                type="button"
-                onClick={() => void registerSkillFromSelectedFile()}
-                disabled={registeringSkill || !skillForm.title.trim()}
-                className={
-                  "flex h-10 items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-violet-300 " +
-                  "to-cyan-300 px-4 text-sm font-semibold text-hive-canvas transition disabled:opacity-50"
-                }
-              >
-                {registeringSkill ? (
-                  <LoaderCircle className="h-4 w-4 animate-spin" />
-                ) : (
-                  <BrainCircuit className="h-4 w-4" />
-                )}{" "}
-                Confirm create skill
-              </button>
-            </div>
-          </section>
-        </div>
-      )}
 
       <ConfirmDialog
         open={Boolean(pendingDelete)}

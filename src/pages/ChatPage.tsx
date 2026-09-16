@@ -49,7 +49,7 @@ const modeOptions: Array<{ value: ChatMode; label: string }> = [
 const starters = [
   { category: 'Operations', border: 'border-amber-300/40', prompt: 'Review the latest HIVE operational risks and give me a safe action order.' },
   { category: 'Debugging', border: 'border-rose-300/40', prompt: 'Help me trace a deployment failure without guessing.' },
-  { category: 'Skills', border: 'border-cyan-300/40', prompt: 'Recommend the best shared skills for a new AIMS quality-control task.' },
+  { category: 'Skills', border: 'border-cyan-300/40', prompt: 'Recommend the best repository-local HIVE capability for a new AIMS quality-control task.' },
 ]
 
 function makeMessage(role: 'user' | 'assistant', content: string, pending = false): UiMessage {
@@ -739,7 +739,7 @@ export function ChatPage() {
                     ].join('')
                   }
                   aria-pressed={useSkillContext}
-                  aria-label={useSkillContext ? 'Disable shared skills' : 'Enable shared skills'}
+                  aria-label={useSkillContext ? 'Disable local skills' : 'Enable local skills'}
                   title="Use retrieved HIVE skills for this message. Off keeps ordinary chat fast."
                 >
                   <Sparkles className="h-4 w-4" aria-hidden="true" />

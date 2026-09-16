@@ -78,7 +78,7 @@ export function SkillsPage() {
       const response = submittedQuery.trim()
         ? await apiFetch<SkillListResponse>(`/v1/skills/search?q=${encodeURIComponent(submittedQuery.trim())}&${params}`)
         : await apiFetch<SkillListResponse>(`/v1/skills/list?${params}`)
-      if (response.ok === false) throw new Error(response.error || 'Skill registry query failed.')
+      if (response.ok === false) throw new Error(response.error || 'Local skill catalogue query failed.')
       setSkills(itemsFrom(response))
     } catch (caught) {
       setError(caught instanceof Error ? caught.message : 'Skills could not be loaded.')
@@ -187,7 +187,7 @@ export function SkillsPage() {
   function inspect(skill: SkillItem) {
     const metadata = meta(skill)
     setPayload({
-      eyebrow: 'Skill registry',
+      eyebrow: 'Local skill catalogue',
       title: String(skill.title || skill.name || metadata.title || 'Skill'),
       description: skillDescription(skill),
       rows: [
@@ -206,7 +206,7 @@ export function SkillsPage() {
   function insertIntoChat(skill: SkillItem, index: number) {
     const title = skillTitle(skill, index)
     const skillId = String(skill.id || meta(skill).skill_id || title)
-    const draft = `Use the shared skill ${title} (${skillId}) as a planning reference for this task: `
+    const draft = `Use the repository-local HIVE capability ${title} (${skillId}) as a planning reference for this task: `
     const params = new URLSearchParams({
       draft,
       skill_id: skillId,
@@ -221,9 +221,12 @@ export function SkillsPage() {
         <section className="rounded-3xl border border-white/8 bg-hive-panel/75 p-5 sm:p-7">
           <div className="flex flex-col gap-5 lg:flex-row lg:items-end lg:justify-between">
             <div>
-              <p className="text-xs font-semibold uppercase tracking-[0.2em] text-cyan-300/70">Shared skill pool</p>
+              <p className="text-xs font-semibold uppercase tracking-[0.2em] text-cyan-300/70">Repository-local skills</p>
               <h2 className="mt-2 text-2xl font-semibold text-white">Find the right operational capability</h2>
-              <p className="mt-2 max-w-2xl text-sm leading-6 text-slate-400">Search and recommendation are metadata-only and review-gated. Nothing is installed or executed from this screen.</p>
+              <p className="mt-2 max-w-2xl text-sm leading-6 text-slate-400">
+                Search and recommendation use the versioned HIVE catalogue. Nothing is
+                downloaded, installed or executed from this screen.
+              </p>
             </div>
             <button
               type="button"
@@ -308,7 +311,7 @@ export function SkillsPage() {
 
         <section className="mt-5">
           {loading ? (
-            <div className="flex items-center justify-center py-16 text-slate-400"><LoaderCircle className="mr-2 h-5 w-5 animate-spin" /> Loading skill registry</div>
+            <div className="flex items-center justify-center py-16 text-slate-400"><LoaderCircle className="mr-2 h-5 w-5 animate-spin" /> Loading local skill catalogue</div>
           ) : skills.length === 0 ? (
             <EmptyState
               icon={<BrainCircuit className="h-5 w-5" />}
@@ -316,14 +319,14 @@ export function SkillsPage() {
               body={
                 submittedQuery || repo || risk || lane
                   ? 'The active filters are hiding every registry entry.'
-                  : 'The skill catalogue is empty or unavailable. Open the HIVE skills folder to add governed skill descriptors.'
+                  : 'The repository-local catalogue is empty or unavailable in this HIVE release.'
               }
               action={
                 submittedQuery
                   ? { label: 'Clear search', onClick: clearSearch }
                   : (repo || risk || lane)
                     ? { label: 'Clear filters', onClick: clearFilters }
-                    : { label: 'Open skills folder in Files', onClick: () => navigate('/files') }
+                    : { label: 'Retry', onClick: () => void loadSkills() }
               }
             />
           ) : (
@@ -351,7 +354,7 @@ export function SkillsPage() {
                       <h3 className="mt-4 text-sm font-semibold text-white">{title}</h3>
                       <p className="mt-2 line-clamp-3 min-h-[60px] text-xs leading-5 text-slate-400">{skillDescription(skill)}</p>
                       <div className="mt-4 flex flex-wrap gap-1.5 border-t border-white/6 pt-3 text-xs text-slate-400">
-                        <span>{field(skill, 'repo', 'Shared')}</span><span>·</span><span>{field(skill, 'hive_lane', field(skill, 'lane', 'General'))}</span>
+                        <span>{field(skill, 'repo', 'HIVE')}</span><span>·</span><span>{field(skill, 'hive_lane', field(skill, 'lane', 'General'))}</span>
                       </div>
                     </button>
                     <button
