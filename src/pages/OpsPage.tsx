@@ -12,9 +12,11 @@ import {
   ShieldCheck,
   Sparkles,
   GitBranch,
+  Trash2,
 } from 'lucide-react'
 import { useCallback, useEffect, useMemo, useState, type FormEvent } from 'react'
 import { Link } from 'react-router'
+import { ConfirmDialog } from '../components/ConfirmDialog'
 import { EmptyState } from '../components/EmptyState'
 import { StatusBadge } from '../components/StatusBadge'
 import { WorkflowGraph } from '../components/WorkflowGraph'
@@ -40,6 +42,25 @@ import type {
 } from '../types/api'
 
 type OpsTab = 'overview' | 'workflow'
+
+const DATABASE_PURGE_CONFIRMATION = 'PURGE ALL DATABASES'
+
+type DatabasePurgeResetResponse = {
+  ok: boolean
+  confirmation?: string
+  d1?: {
+    ok?: boolean
+    database_names?: string[]
+    databases?: Array<{ database_name?: string; ok?: boolean; tables_cleared?: string[] }>
+  }
+  sql?: {
+    ok?: boolean
+    dialect?: string
+    tables_cleared?: string[]
+    before?: Record<string, number>
+    after?: Record<string, number>
+  }
+}
 
 type FlagStatus = 'ready' | 'not_ready' | 'disabled' | 'partial' | 'unknown'
 
@@ -305,6 +326,11 @@ export function OpsPage() {
   const [openReviewCount, setOpenReviewCount] = useState(0)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const [purgeDialogOpen, setPurgeDialogOpen] = useState(false)
+  const [purgeConfirmation, setPurgeConfirmation] = useState('')
+  const [purgingDatabases, setPurgingDatabases] = useState(false)
+  const [purgeError, setPurgeError] = useState<string | null>(null)
+  const [purgeResult, setPurgeResult] = useState<DatabasePurgeResetResponse | null>(null)
 
   const [task, setTask] = useState('Review the HIVE repository and produce a safe, review-gated improvement plan.')
   const [repo, setRepo] = useState('HIVE')
@@ -353,6 +379,32 @@ export function OpsPage() {
       setLoading(false)
     }
   }, [refreshHealth])
+
+  const purgeResetDatabases = useCallback(async () => {
+    if (purgeConfirmation !== DATABASE_PURGE_CONFIRMATION) return
+    setPurgingDatabases(true)
+    setPurgeError(null)
+    setPurgeResult(null)
+    try {
+      const result = await apiFetch<DatabasePurgeResetResponse>('/v1/db/purge-reset', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ confirmation: purgeConfirmation }),
+      })
+      setPurgeResult(result)
+      if (!result.ok) {
+        setPurgeError('The reset completed only partially. Inspect the returned database result before retrying.')
+        return
+      }
+      setPurgeDialogOpen(false)
+      setPurgeConfirmation('')
+      await loadOps(true)
+    } catch (caught) {
+      setPurgeError(caught instanceof Error ? caught.message : 'Database purge/reset failed.')
+    } finally {
+      setPurgingDatabases(false)
+    }
+  }, [loadOps, purgeConfirmation])
 
   useEffect(() => {
     void loadOps(false)
@@ -647,6 +699,45 @@ export function OpsPage() {
               </div>
             </section>
 
+            <section className="mt-5 rounded-3xl border border-rose-300/15 bg-rose-300/[0.035] p-5 sm:p-6">
+              <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+                <div className="max-w-3xl">
+                  <div className="flex items-center gap-2">
+                    <Trash2 className="h-4 w-4 text-rose-300" />
+                    <h3 className="text-base font-semibold text-white">Purge / reset databases</h3>
+                  </div>
+                  <p className="mt-2 text-xs leading-5 text-slate-300">
+                    Permanently clears application data from database-hive, database-comms-hub and the HIVE Koyeb PostgreSQL database. Database identities, schemas and migration history are preserved.
+                  </p>
+                  {purgeResult?.ok && (
+                    <p className="mt-2 text-xs font-medium text-emerald-200" role="status">
+                      Database reset completed successfully.
+                    </p>
+                  )}
+                  {purgeError && !purgeDialogOpen && (
+                    <p className="mt-2 text-xs text-rose-200" role="alert">{purgeError}</p>
+                  )}
+                </div>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setPurgeError(null)
+                    setPurgeResult(null)
+                    setPurgeConfirmation('')
+                    setPurgeDialogOpen(true)
+                  }}
+                  disabled={purgingDatabases}
+                  className={
+                    "flex h-10 shrink-0 items-center justify-center gap-2 rounded-xl border border-rose-300/25 " +
+                    "bg-rose-300/10 px-4 text-xs font-semibold text-rose-100 transition hover:bg-rose-300/16 disabled:opacity-50"
+                  }
+                >
+                  {purgingDatabases ? <LoaderCircle className="h-4 w-4 animate-spin" /> : <Trash2 className="h-4 w-4" />}
+                  Purge / reset all databases
+                </button>
+              </div>
+            </section>
+
             <section className="mt-5 rounded-3xl border border-white/8 bg-hive-panel/70 p-5 sm:p-6">
               <h3 className="text-base font-semibold text-white">Live system snapshot</h3>
               <p className="mt-1 text-xs text-slate-400">Point-in-time state from the current HIVE runtime. No lifetime counters.</p>
@@ -868,6 +959,35 @@ export function OpsPage() {
           </section>
         )}
       </div>
+      <ConfirmDialog
+        open={purgeDialogOpen}
+        title="Purge and reset all databases?"
+        summary="This permanently deletes application records from both ecosystem D1 databases and HIVE's Koyeb PostgreSQL database. The schemas and database identities remain in place."
+        objectName="database-hive · database-comms-hub · Koyeb PostgreSQL"
+        systems={['Cloudflare D1', 'Koyeb PostgreSQL']}
+        confirmLabel={purgingDatabases ? 'Resetting…' : 'Purge / reset databases'}
+        cancelLabel="Keep data"
+        tone="destructive"
+        busy={purgingDatabases}
+        confirmDisabled={purgeConfirmation !== DATABASE_PURGE_CONFIRMATION}
+        error={purgeError}
+        textInput={{
+          label: `Type ${DATABASE_PURGE_CONFIRMATION} to confirm`,
+          value: purgeConfirmation,
+          onChange: setPurgeConfirmation,
+          placeholder: DATABASE_PURGE_CONFIRMATION,
+          required: true,
+        }}
+        onConfirm={() => void purgeResetDatabases()}
+        onCancel={() => {
+          if (purgingDatabases) return
+          setPurgeDialogOpen(false)
+          setPurgeConfirmation('')
+          setPurgeError(null)
+        }}
+      >
+        <p>This action cannot be undone from HIVE-UI. R2, Vectorize, Workers KV and Durable Object storage are not touched.</p>
+      </ConfirmDialog>
     </div>
   )
 }
