@@ -47,5 +47,6 @@ updates:
       day: wednesday
       time: "18:40"
       timezone: Europe/London
+    open-pull-requests-limit: 10
     commit-message:
       prefix: "deps(ci)"
