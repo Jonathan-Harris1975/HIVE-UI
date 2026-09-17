@@ -31,3 +31,13 @@ test('ChatPage checks title and auto_titled state before requesting auto-title',
   assert.match(page, /currentConversationSummary\.auto_titled === false/)
   assert.match(page, /autoTitleConversation\(completedConversationId\)/)
 })
+
+test('Operations database reset requires explicit destructive confirmation', () => {
+  const page = source('src/pages/OpsPage.tsx')
+  assert.match(page, /DATABASE_PURGE_CONFIRMATION = 'PURGE ALL DATABASES'/)
+  assert.match(page, /apiFetch<DatabasePurgeResetResponse>\('\/v1\/db\/purge-reset'/)
+  assert.match(page, /confirmDisabled=\{purgeConfirmation !== DATABASE_PURGE_CONFIRMATION\}/)
+  assert.match(page, /database-hive/)
+  assert.match(page, /database-comms-hub/)
+  assert.match(page, /R2, Vectorize, Workers KV and Durable Object storage are not touched/)
+})
