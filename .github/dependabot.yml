@@ -4,16 +4,41 @@ updates:
     directory: /
     schedule:
       interval: weekly
-      day: wednesday 
+      day: wednesday
       time: "18:40"
       timezone: Europe/London
     open-pull-requests-limit: 10
     versioning-strategy: increase-if-necessary
     groups:
-      production-dependencies:
-        dependency-type: production
-      development-tooling:
-        dependency-type: development
+      react-family:
+        patterns:
+          - "react"
+          - "react-dom"
+          - "@types/react"
+          - "@types/react-dom"
+        update-types: [patch, minor]
+      vitest-family:
+        patterns:
+          - "vitest"
+          - "@vitest/coverage-v8"
+        update-types: [patch, minor]
+      tailwind-family:
+        patterns:
+          - "tailwindcss"
+          - "@tailwindcss/vite"
+        update-types: [patch, minor]
+      eslint-family:
+        patterns:
+          - "eslint"
+          - "@eslint/js"
+          - "eslint-*"
+          - "typescript-eslint"
+        update-types: [patch, minor]
+      vite-family:
+        patterns:
+          - "vite"
+          - "@vitejs/plugin-react"
+        update-types: [patch, minor]
 
   - package-ecosystem: github-actions
     directory: /
