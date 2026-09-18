@@ -51,6 +51,11 @@ for (const required of [
   'HIVE_UI_SESSION_SECRET',
   'HIVE_COMMS_HANDOFF_SECRET',
   'LOGIN_RATE_LIMITER',
+  'backend_write_outcome_unknown',
+  'HIVE_API_FALLBACK_URLS',
+  'HIVE_API_TIMEOUT_MS',
+  'AbortSignal.timeout',
+  "script-src-attr 'none'",
   "|| 'read_only'",
 ]) {
   const combined = functionSource + await readFile('workers/gateway/security.ts', 'utf8')

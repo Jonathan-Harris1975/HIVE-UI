@@ -14,6 +14,14 @@ import {
   verifySessionToken,
 } from '../.security-test/security.js'
 
+import {
+  backendTimeoutMs,
+  configuredBackends,
+  isRetryableUpstreamStatus,
+  isTimeoutError,
+  validateBackendBaseUrl,
+} from '../.security-test/upstream.js'
+
 test('access-key comparison accepts exact values and rejects different values', async () => {
   assert.equal(await secureStringEqual('correct horse battery staple', 'correct horse battery staple'), true)
   assert.equal(await secureStringEqual('correct horse battery staple', 'correct horse battery stapler'), false)
@@ -83,4 +91,35 @@ test('communications handoff token is short-lived, verifiable and contains no HI
   assert.equal((await verifyCommsHandoffToken(token, secret, 1_700_000_100))?.actor, 'hive-owner')
   assert.equal(await verifyCommsHandoffToken(token, secret, 1_700_000_301), null)
   assert.equal(await verifyCommsHandoffToken(`${token}x`, secret, 1_700_000_100), null)
+})
+
+
+test('backend origins are HTTPS-only, deduplicated and never proxy back to the UI origin', () => {
+  assert.equal(validateBackendBaseUrl('http://backend.example'), null)
+  assert.equal(validateBackendBaseUrl('https://user:pass@backend.example'), null)
+  assert.equal(validateBackendBaseUrl('https://backend.example/api'), null)
+
+  const backends = configuredBackends(
+    'https://primary.example',
+    'https://fallback.example, https://primary.example, https://ui.example',
+    'https://ui.example',
+  )
+  assert.deepEqual(backends.map((value) => value.origin), [
+    'https://primary.example',
+    'https://fallback.example',
+  ])
+})
+
+test('backend timeout is bounded and only transient gateway statuses are retryable', () => {
+  assert.equal(backendTimeoutMs(undefined), 10_000)
+  assert.equal(backendTimeoutMs('50'), 1_000)
+  assert.equal(backendTimeoutMs('5000'), 5_000)
+  assert.equal(backendTimeoutMs('999999'), 30_000)
+  assert.equal(isRetryableUpstreamStatus(502), true)
+  assert.equal(isRetryableUpstreamStatus(503), true)
+  assert.equal(isRetryableUpstreamStatus(504), true)
+  assert.equal(isRetryableUpstreamStatus(500), false)
+  assert.equal(isRetryableUpstreamStatus(401), false)
+  assert.equal(isTimeoutError(new DOMException('deadline', 'TimeoutError')), true)
+  assert.equal(isTimeoutError(new Error('deadline')), false)
 })
