@@ -8,6 +8,7 @@ import {
   loginUi,
   logoutUi,
   recordUiActivity,
+  streamChat,
 } from '../lib/api'
 import type { ChatRequestPayload } from '../types/api'
 
@@ -80,6 +81,51 @@ describe('API helpers', () => {
     expect(unauthorisedHandler).toHaveBeenCalledTimes(1)
 
     window.removeEventListener('hive:unauthorised', unauthorisedHandler)
+  })
+
+  it('preserves structured gateway error codes for precise UI handling', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn().mockResolvedValue(
+        jsonResponse(
+          {
+            code: 'backend_write_outcome_unknown',
+            detail: 'The backend did not confirm this change. Check the current state before retrying.',
+          },
+          502,
+          { 'x-request-id': 'write-unknown-1' },
+        ),
+      ),
+    )
+
+    await expect(apiFetch('/v1/repositories/example', { method: 'PATCH', body: '{}' })).rejects.toMatchObject({
+      name: 'ApiError',
+      status: 502,
+      code: 'backend_write_outcome_unknown',
+      requestId: 'write-unknown-1',
+      message: 'The backend did not confirm this change. Check the current state before retrying.',
+    })
+  })
+
+  it('uses the same structured error parsing for chat streams', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn().mockResolvedValue(
+        jsonResponse(
+          { code: 'backend_timeout', detail: { reason: 'The chat backend took too long to respond.' } },
+          504,
+          { 'x-request-id': 'chat-timeout-1' },
+        ),
+      ),
+    )
+
+    await expect(streamChat(basePayload, { onEvent: vi.fn() })).rejects.toMatchObject({
+      name: 'ApiError',
+      status: 504,
+      code: 'backend_timeout',
+      requestId: 'chat-timeout-1',
+      message: 'The chat backend took too long to respond.',
+    })
   })
 
   it('falls back to status detail when a JSON error payload cannot be parsed', async () => {
