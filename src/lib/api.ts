@@ -11,13 +11,21 @@ export class ApiError extends Error {
   status: number
   payload: unknown
   requestId: string | null
+  code: string | null
 
-  constructor(message: string, status: number, payload: unknown, requestId: string | null = null) {
+  constructor(
+    message: string,
+    status: number,
+    payload: unknown,
+    requestId: string | null = null,
+    code: string | null = null,
+  ) {
     super(message)
     this.name = 'ApiError'
     this.status = status
     this.payload = payload
     this.requestId = requestId
+    this.code = code
   }
 }
 
@@ -64,6 +72,12 @@ function detailText(value: unknown): string | null {
   }
 }
 
+function responseCode(payload: unknown): string | null {
+  if (!payload || typeof payload !== 'object' || !('code' in payload)) return null
+  const code = (payload as { code?: unknown }).code
+  return typeof code === 'string' && code.trim() ? code.trim() : null
+}
+
 function responseDetail(response: Response, payload: unknown): string {
   if (typeof payload === 'object' && payload && 'detail' in payload) {
     const detail = detailText((payload as { detail: unknown }).detail)
@@ -83,7 +97,7 @@ async function sameOriginFetch(path: string, init: RequestInit = {}): Promise<Re
     })
   } catch (caught) {
     const message = navigator.onLine ? 'The HIVE service could not be reached.' : 'The browser is offline.'
-    throw new ApiError(message, 0, caught)
+    throw new ApiError(message, 0, caught, null, navigator.onLine ? 'network_unreachable' : 'browser_offline')
   }
 }
 
@@ -96,6 +110,7 @@ async function authFetch<T>(path: string, init: RequestInit = {}): Promise<T> {
       response.status,
       payload,
       response.headers.get('x-request-id'),
+      responseCode(payload),
     )
   }
   return payload as T
@@ -139,6 +154,7 @@ export async function apiFetch<T>(path: string, init: RequestInit = {}): Promise
       response.status,
       payload,
       response.headers.get('x-request-id'),
+      responseCode(payload),
     )
   }
   return payload as T
@@ -185,24 +201,24 @@ export async function streamChat(
   } catch (caught) {
     if (caught instanceof DOMException && caught.name === 'AbortError') throw caught
     const message = navigator.onLine ? 'The HIVE chat stream could not be reached.' : 'The browser is offline.'
-    throw new ApiError(message, 0, caught)
+    throw new ApiError(message, 0, caught, null, navigator.onLine ? 'network_unreachable' : 'browser_offline')
   }
 
   if (!response.ok || !response.body) {
-    let detail = `Chat stream failed with status ${response.status}`
-    let payload: unknown = null
-    try {
-      payload = await response.json()
-      if (typeof payload === 'object' && payload && 'detail' in payload) {
-        detail = String((payload as { detail: unknown }).detail)
-      }
-    } catch {
-      // Keep the status-based message.
-    }
+    const payload = await parseResponsePayload(response)
+    const detail = response.ok
+      ? 'The HIVE chat stream did not return a readable response.'
+      : responseDetail(response, payload)
     if (isSessionInvalid(response)) {
       window.dispatchEvent(new CustomEvent('hive:unauthorised'))
     }
-    throw new ApiError(detail, response.status, payload, response.headers.get('x-request-id'))
+    throw new ApiError(
+      detail,
+      response.status,
+      payload,
+      response.headers.get('x-request-id'),
+      responseCode(payload) ?? (response.ok ? 'stream_unavailable' : null),
+    )
   }
 
   const reader = response.body.getReader()
