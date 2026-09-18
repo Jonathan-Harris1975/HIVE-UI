@@ -10,6 +10,9 @@ custom_domain = true
 
 [vars]
 HIVE_API_BASE_URL = "https://liable-loreen-jonathanharris-57884580.koyeb.app"
+HIVE_API_TIMEOUT_MS = "10000"
+# HIVE_API_FALLBACK_URLS may be set in the Cloudflare dashboard as a comma-separated
+# list of secondary HTTPS origins. The Worker retries only GET/HEAD requests.
 HIVE_UI_SESSION_TTL_SECONDS = "43200"
 HIVE_UI_IDLE_TIMEOUT_SECONDS = "1800"
 HIVE_COMMS_ACTOR = "hive-owner"
