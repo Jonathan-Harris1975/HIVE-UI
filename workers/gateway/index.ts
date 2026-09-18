@@ -17,12 +17,15 @@ import {
 } from './security'
 import { HIVE_UI_VERSION } from '../../shared/version'
 import { HIVE_UI_BUILD_BRANCH, HIVE_UI_BUILD_SHA } from './build-meta'
+import { backendTimeoutMs, configuredBackends, isRetryableUpstreamStatus, isTimeoutError } from './upstream'
 
 interface Env {
   ASSETS: Fetcher
   HIVE_UI_BUILD_SHA?: string
   HIVE_UI_BUILD_BRANCH?: string
   HIVE_API_BASE_URL: string
+  HIVE_API_FALLBACK_URLS?: string
+  HIVE_API_TIMEOUT_MS?: string
   HIVE_ADMIN_TOKEN: string
   HIVE_UI_ACCESS_KEY?: string
   HIVE_UI_SESSION_SECRET?: string
@@ -152,18 +155,6 @@ function isSafeProxyPath(path: string): boolean {
   if (path.includes('\\') || path.includes('..') || path.includes('//') || path.includes('://')) return false
   if (/%(?:2f|5c|2e)/i.test(path)) return false
   return path === 'health' || path === 'livez' || path === 'readyz' || path.startsWith('v1/')
-}
-
-function validateBackendBaseUrl(raw: string | undefined): URL | null {
-  if (!raw) return null
-  try {
-    const url = new URL(raw)
-    if (url.protocol !== 'https:' || url.username || url.password || url.search || url.hash) return null
-    if (url.pathname !== '/' && url.pathname !== '') return null
-    return url
-  } catch {
-    return null
-  }
 }
 
 function isSameOriginRequest(request: Request): boolean {
@@ -336,7 +327,7 @@ async function handleAuth(request: Request, env: Env, path: string, requestId: s
     if (limit.blocked) {
       return errorResponse(
         'login_rate_limited',
-        'Too many failed access attempts. Try again later.',
+        `Too many failed access attempts. Try again in ${limit.retryAfter} seconds.`,
         429,
         requestId,
         { 'retry-after': String(limit.retryAfter) },
@@ -351,7 +342,7 @@ async function handleAuth(request: Request, env: Env, path: string, requestId: s
         return errorResponse('login_rate_limiter_unavailable', 'Login protection is temporarily unavailable.', 503, requestId)
       }
       if (failure.blocked) {
-        return errorResponse('login_rate_limited', 'Too many failed access attempts. Try again later.', 429, requestId, {
+        return errorResponse('login_rate_limited', `Too many failed access attempts. Try again in ${failure.retryAfter} seconds.`, 429, requestId, {
           'retry-after': String(failure.retryAfter),
           'x-hive-auth-state': 'login-failed',
         })
@@ -616,43 +607,104 @@ async function handleApi(request: Request, env: Env, path: string): Promise<Resp
   }
 
 
-  const configuredBackend = validateBackendBaseUrl(env.HIVE_API_BASE_URL)
   const adminToken = env.HIVE_ADMIN_TOKEN?.trim() ?? ''
   if (!adminToken) {
     return errorResponse('proxy_not_configured', 'The HIVE backend admin token is not configured.', 503, requestId)
   }
 
   const requestOrigin = new URL(request.url).origin
-  if (!configuredBackend || configuredBackend.origin === requestOrigin) {
+  const backends = configuredBackends(env.HIVE_API_BASE_URL, env.HIVE_API_FALLBACK_URLS, requestOrigin)
+  if (!backends.length) {
     return errorResponse('proxy_not_configured', 'No valid HIVE backend origin is configured.', 503, requestId)
   }
 
   const incomingUrl = new URL(request.url)
-  const upstreamUrl = new URL(`/${path}`, configuredBackend.origin)
-  upstreamUrl.search = incomingUrl.search
-  const requestBody = ['GET', 'HEAD'].includes(request.method) ? undefined : await request.arrayBuffer()
-  const init: RequestInit = {
-    method: request.method,
-    headers: buildUpstreamHeaders(request, adminToken, requestId),
-    redirect: 'manual',
-    signal: request.signal,
-    ...(requestBody !== undefined ? { body: requestBody } : {}),
-  }
+  const retrySafe = request.method === 'GET' || request.method === 'HEAD'
+  const requestBody = retrySafe ? undefined : await request.arrayBuffer()
+  const timeoutMs = backendTimeoutMs(env.HIVE_API_TIMEOUT_MS)
+  let lastFailure: unknown = null
 
-  try {
-    const upstream = await fetch(upstreamUrl.toString(), init)
-    if (upstream.status >= 300 && upstream.status < 400) {
-      console.error('HIVE upstream returned an unexpected redirect', { request_id: requestId, path, status: upstream.status, backend: configuredBackend.host })
-      return errorResponse('upstream_redirect_denied', 'The HIVE backend returned an unexpected redirect.', 502, requestId)
+  for (let index = 0; index < backends.length; index += 1) {
+    const backend = backends[index]
+    const upstreamUrl = new URL(`/${path}`, backend.origin)
+    upstreamUrl.search = incomingUrl.search
+    const hasFallback = retrySafe && index < backends.length - 1
+
+    try {
+      const upstream = await fetch(upstreamUrl.toString(), {
+        method: request.method,
+        headers: buildUpstreamHeaders(request, adminToken, requestId),
+        redirect: 'manual',
+        signal: AbortSignal.any([request.signal, AbortSignal.timeout(timeoutMs)]),
+        ...(requestBody !== undefined ? { body: requestBody } : {}),
+      })
+
+      if (upstream.status >= 300 && upstream.status < 400) {
+        console.error('HIVE upstream returned an unexpected redirect', {
+          request_id: requestId,
+          path,
+          status: upstream.status,
+          backend: backend.host,
+        })
+        if (hasFallback) {
+          await upstream.body?.cancel()
+          continue
+        }
+        return errorResponse('upstream_redirect_denied', 'The HIVE backend returned an unexpected redirect.', 502, requestId)
+      }
+
+      if (hasFallback && isRetryableUpstreamStatus(upstream.status)) {
+        console.warn('HIVE read request is failing over to a secondary backend', {
+          request_id: requestId,
+          path,
+          status: upstream.status,
+          backend: backend.host,
+        })
+        await upstream.body?.cancel()
+        continue
+      }
+
+      const responseHeaders = buildResponseHeaders(upstream.headers, requestId)
+      responseHeaders.set('x-hive-backend-origin', backend.host)
+      if (index > 0) responseHeaders.set('x-hive-backend-failover', String(index))
+      return new Response(upstream.body, { status: upstream.status, statusText: upstream.statusText, headers: responseHeaders })
+    } catch (error) {
+      lastFailure = error
+      console.error('HIVE proxy request failed', {
+        request_id: requestId,
+        path,
+        backend: backend.host,
+        timeout_ms: timeoutMs,
+        error: error instanceof Error ? error.message : String(error),
+      })
+      if (hasFallback && !request.signal.aborted) continue
+
+      const timedOut = isTimeoutError(error)
+      if (!retrySafe) {
+        return errorResponse(
+          'backend_write_outcome_unknown',
+          timedOut
+            ? 'The HIVE backend did not confirm this change before the request timed out. Check the current state before retrying.'
+            : 'The HIVE backend connection failed before this change was confirmed. Check the current state before retrying.',
+          502,
+          requestId,
+        )
+      }
+      return errorResponse(
+        timedOut ? 'backend_timeout' : 'backend_unreachable',
+        timedOut ? 'The HIVE backend took too long to respond.' : 'The HIVE backend could not be reached.',
+        timedOut ? 504 : 502,
+        requestId,
+      )
     }
-
-    const responseHeaders = buildResponseHeaders(upstream.headers, requestId)
-    responseHeaders.set('x-hive-backend-origin', configuredBackend.host)
-    return new Response(upstream.body, { status: upstream.status, statusText: upstream.statusText, headers: responseHeaders })
-  } catch (error) {
-    console.error('HIVE proxy request failed', { request_id: requestId, path, backend: configuredBackend.host, error: error instanceof Error ? error.message : String(error) })
-    return errorResponse('backend_unreachable', 'The HIVE backend could not be reached.', 502, requestId)
   }
+
+  return errorResponse(
+    isTimeoutError(lastFailure) ? 'backend_timeout' : 'backend_unreachable',
+    isTimeoutError(lastFailure) ? 'The HIVE backend took too long to respond.' : 'The HIVE backend could not be reached.',
+    isTimeoutError(lastFailure) ? 504 : 502,
+    requestId,
+  )
 
 }
 
@@ -708,7 +760,10 @@ function secureAssetResponse(response: Response): Response {
       [
         "default-src 'self';",
         "script-src 'self';",
-        "style-src 'self' 'unsafe-inline';",
+        "script-src-attr 'none';",
+        "style-src 'self';",
+        "style-src-elem 'self';",
+        "style-src-attr 'unsafe-inline';",
         "img-src 'self' data: blob:;",
         "connect-src 'self';",
         "font-src 'self' data:;",
@@ -720,6 +775,7 @@ function secureAssetResponse(response: Response): Response {
         "form-action 'self';",
         "manifest-src 'self';",
         "worker-src 'self' blob:;",
+        "media-src 'none';",
         'upgrade-insecure-requests',
       ].join(' '),
     )
