@@ -1,5 +1,5 @@
 > **Document status:** Production reference  
-> **Last reviewed:** 22 June 2026  
+> **Last reviewed:** 20 September 2026  
 > **Operational authority:** Current repository README, SECURITY policy and operations guide.
 
 # HIVE-UI API contract
@@ -27,7 +27,19 @@ Secure
 SameSite=Strict
 ```
 
-The session is HMAC-signed using the configured UI access secret. The raw access key is not stored in browser storage and is not forwarded to HIVE. Login also resumes the Koyeb HIVE service when it is in standby. The signed session records whether this UI session owns that wake-up so MAST-owned governance uptime is not accidentally paused on logout.
+The access key is used only for login verification. The session is HMAC-signed with the independent mandatory `HIVE_UI_SESSION_SECRET`; it does not fall back to or derive signing material from `HIVE_UI_ACCESS_KEY`. The raw access key is not stored in browser storage and is not forwarded to HIVE. Login also resumes the Koyeb HIVE service when it is in standby. The signed session records whether this UI session owns that wake-up so MAST-owned governance uptime is not accidentally paused on logout.
+
+#### Failed-login limiter contract
+
+Every login is protected by the required `LOGIN_RATE_LIMITER` Durable Object binding, implemented by the `LoginRateLimiter` class. The Worker derives a per-client key, checks the Durable Object before credential evaluation, and stores `{ failures, resetAt }` in Durable Object storage.
+
+- The first failed attempt starts a fixed 10-minute window.
+- Failures within that window increment the stored count.
+- The fifth failed attempt reaches the block threshold and returns HTTP 429 with `Retry-After`; attempts remain blocked until the original window expires.
+- A successful credential check must clear the stored failure state before a session is issued.
+- If the binding is missing or the limiter request/clear operation fails, login returns HTTP 503 with `login_rate_limiter_unavailable`. Authentication does not fail open.
+
+The production `wrangler.toml` must retain `LOGIN_RATE_LIMITER` -> `LoginRateLimiter` and the SQLite Durable Object migration for `LoginRateLimiter`.
 
 ### Session restore
 

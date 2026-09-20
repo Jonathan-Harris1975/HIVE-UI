@@ -1,5 +1,5 @@
 > **Document status:** Production reference  
-> **Last reviewed:** 22 August 2026  
+> **Last reviewed:** 20 September 2026  
 > **Operational authority:** Current repository README, SECURITY policy and operations guide.
 
 # HIVE-UI Cloudflare Worker production checklist
@@ -51,6 +51,24 @@ Configure Preview values separately only when preview deployments need working b
 
 Never configure any runtime secret with a `VITE_` prefix.
 
+### Required Durable Object binding and migration
+
+`LOGIN_RATE_LIMITER` is not an environment variable. It is a required Durable Object namespace and must remain configured in `wrangler.toml` as:
+
+```toml
+[[durable_objects.bindings]]
+name = "LOGIN_RATE_LIMITER"
+class_name = "LoginRateLimiter"
+
+[[migrations]]
+tag = "login-rate-limiter-v1"
+new_sqlite_classes = ["LoginRateLimiter"]
+```
+
+The limiter stores per-client failed-login state (`failures` and `resetAt`) in Durable Object storage. Five failed attempts within the fixed 10-minute window block login until the original window expires. If the binding or Durable Object path is unavailable, the Worker deliberately fails login closed with HTTP 503 (`login_rate_limiter_unavailable`). Do not deploy a fallback that bypasses this control.
+
+After changing Worker bindings or migrations, deploy through Wrangler/CI and confirm the migration is accepted before testing authentication.
+
 ## 3. HIVE backend alignment
 
 Confirm Koyeb uses the matching backend token:
@@ -97,6 +115,7 @@ Expected results:
 7. Refresh the page and confirm the session restores without re-entering the key.
 8. Open `/chat`, send a short Auto route message and confirm streaming persists.
 9. Open `/files`, upload a small text file and use the shared file-chat flow.
+10. In a controlled canary/staging check, confirm failed logins are recorded by `LOGIN_RATE_LIMITER`, the fifth failure returns HTTP 429 with `Retry-After`, and an unavailable limiter produces fail-closed HTTP 503 rather than allowing login.
 11. Sign out and confirm the session cookie is cleared and HIVE returns to standby when the UI session woke it.
 12. Log in again and confirm HIVE and AIMS are automatically resumed without manual Wake/Sleep controls.
 13. Log out and confirm each service is paused only if the UI session woke it; services already active for MAST must remain untouched.
