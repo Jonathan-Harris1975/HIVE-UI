@@ -31,7 +31,7 @@ The UI uses **Mark reverted** and the backend exposes `/revert`; the legacy
 
 ## Validation completed
 
-- HIVE-UI source/UX contract tests: 17 passed.
+- HIVE-UI source/UX contract tests: 17 passed in this historical tidy-up snapshot; this is not the current release-gate count.
 - HIVE-UI source verification: passed.
 - Backend test suite in the paired HIVE repository: 433 passed.
 
