@@ -234,3 +234,18 @@ test('execution planning is separated from optimisation and retains legacy routi
   assert.match(types, /export interface ExecutionServiceRequirement/)
   assert.match(types, /export interface ExecutionReviewExportResponse/)
 })
+
+test('declarative router keeps protected routes and compatibility redirects stable', () => {
+  const main = source('src/main.tsx')
+  const app = source('src/App.tsx')
+
+  assert.match(main, /import \{ BrowserRouter \} from 'react-router'/)
+  assert.match(main, /<BrowserRouter>[\s\S]*<AuthProvider>[\s\S]*<App \/>[\s\S]*<\/AuthProvider>[\s\S]*<\/BrowserRouter>/)
+  assert.match(app, /import \{ Navigate, Route, Routes, useLocation \} from 'react-router'/)
+  assert.match(app, /if \(status === 'signed-out'\) return <LoginScreen \/>/)
+  assert.match(app, /<Route index element={<Navigate to="\/chat" replace \/>} \/>/)
+  assert.match(app, /return <Navigate to={`\/intelligence\$\{location\.search\}`} replace \/>/)
+  assert.match(app, /path="execution-simulation" element={<Navigate to="\/execution" replace \/>}/)
+  assert.match(app, /path="\*" element={<Navigate to="\/chat" replace \/>}/)
+  assert.doesNotMatch(app, /\b(?:loader|action)=/)
+})

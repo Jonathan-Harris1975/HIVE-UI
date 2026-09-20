@@ -82,7 +82,66 @@ if (!/\[observability\.traces\]\s*\r?\n\s*enabled\s*=\s*true\b/.test(wranglerSou
   throw new Error('Cloudflare Workers traces must be enabled in production.')
 }
 
+const durableObjectBinding = wranglerSource.match(/\[\[durable_objects\.bindings\]\]([\s\S]*?)(?=\n\[\[|$)/)?.[1] ?? ''
+if (!/name\s*=\s*"LOGIN_RATE_LIMITER"/.test(durableObjectBinding) || !/class_name\s*=\s*"LoginRateLimiter"/.test(durableObjectBinding)) {
+  throw new Error('wrangler.toml must bind LOGIN_RATE_LIMITER to the LoginRateLimiter Durable Object class.')
+}
+const durableObjectMigrations = [...wranglerSource.matchAll(/\[\[migrations\]\]([\s\S]*?)(?=\n\[\[|$)/g)].map((match) => match[1])
+const hasLoginLimiterMigration = durableObjectMigrations.some((migration) => (
+  /new_sqlite_classes\s*=\s*\[[^\]]*"LoginRateLimiter"[^\]]*\]/.test(migration)
+))
+if (!hasLoginLimiterMigration) {
+  throw new Error('wrangler.toml must retain a SQLite Durable Object migration for LoginRateLimiter.')
+}
+
+const productionDocs = {
+  'README.md': await readFile('README.md', 'utf8'),
+  'SECURITY.md': await readFile('SECURITY.md', 'utf8'),
+  'docs/API_CONTRACT.md': await readFile('docs/API_CONTRACT.md', 'utf8'),
+  'docs/OPERATIONS.md': await readFile('docs/OPERATIONS.md', 'utf8'),
+  'docs/PRODUCTION_READINESS.md': await readFile('docs/PRODUCTION_READINESS.md', 'utf8'),
+  'docs/DEPLOYMENT_CHECKLIST.md': await readFile('docs/DEPLOYMENT_CHECKLIST.md', 'utf8'),
+}
+for (const [path, source] of Object.entries(productionDocs)) {
+  for (const required of ['LOGIN_RATE_LIMITER', 'LoginRateLimiter']) {
+    if (!source.includes(required)) throw new Error(`${path} must document the ${required} authentication contract.`)
+  }
+  for (const stale of [
+    /best-effort per-client edge throttling/i,
+    /Durable global rate limiting using KV or Durable Objects/i,
+  ]) {
+    if (stale.test(source)) throw new Error(`${path} contains a stale login-rate-limiter description: ${stale}`)
+  }
+}
+const apiContract = productionDocs['docs/API_CONTRACT.md']
+if (/session is HMAC-signed using the configured UI access secret/i.test(apiContract)) {
+  throw new Error('API contract must not describe HIVE_UI_ACCESS_KEY as the session-signing secret.')
+}
+if (!apiContract.includes('HIVE_UI_SESSION_SECRET') || !apiContract.includes('login_rate_limiter_unavailable')) {
+  throw new Error('API contract must document the independent session secret and fail-closed login limiter.')
+}
+
+const productionReadiness = productionDocs['docs/PRODUCTION_READINESS.md']
+for (const required of ['10 minutes', 'fifth', 'HTTP 503', 'login_rate_limiter_unavailable', 'new_sqlite_classes']) {
+  if (!productionReadiness.includes(required)) {
+    throw new Error(`Production-readiness documentation is missing login limiter detail: ${required}`)
+  }
+}
+const envExample = await readFile('.env.example', 'utf8')
+if (/HIVE_UI_SESSION_SECRET=.*optional/i.test(envExample) || /If omitted.*HIVE_UI_ACCESS_KEY/i.test(envExample)) {
+  throw new Error('.env.example must not describe mandatory signing secrets as optional or derived from HIVE_UI_ACCESS_KEY.')
+}
+
 const packageMetadata = JSON.parse(await readFile('package.json', 'utf8'))
+const packageLock = JSON.parse(await readFile('package-lock.json', 'utf8'))
+const declaredReactRouter = packageMetadata.dependencies?.['react-router']
+const lockedReactRouter = packageLock.packages?.['node_modules/react-router']?.version
+if (declaredReactRouter !== '8.4.0' || lockedReactRouter !== '8.4.0') {
+  throw new Error(`React Router must remain on the reviewed 8.4.0 release (manifest=${declaredReactRouter || 'missing'}, lock=${lockedReactRouter || 'missing'}).`)
+}
+if (!packageLock.packages?.['node_modules/react-router']?.dependencies?.['@remix-run/route-pattern']) {
+  throw new Error('React Router 8.4.0 lock entry must retain its @remix-run/route-pattern dependency.')
+}
 const bundleBudget = JSON.parse(await readFile('config/bundle-budget.json', 'utf8'))
 if (bundleBudget.policyVersion !== packageMetadata.version) {
   throw new Error(`Bundle budget policy version (${bundleBudget.policyVersion}) must match package version (${packageMetadata.version}). Review bundle measurements when releasing.`)
