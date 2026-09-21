@@ -46,9 +46,9 @@ const modeOptions: Array<{ value: ChatMode; label: string }> = [
 ]
 
 const starters = [
-  { category: 'Operations', border: 'border-amber-300/40', prompt: 'Review the latest HIVE operational risks and give me a safe action order.' },
-  { category: 'Debugging', border: 'border-rose-300/40', prompt: 'Help me trace a deployment failure without guessing.' },
-  { category: 'Workflows', border: 'border-cyan-300/40', prompt: 'Plan a safe, review-gated workflow for a new AIMS quality-control task.' },
+  { category: 'Operations', prompt: 'Review the latest HIVE operational risks and give me a safe action order.' },
+  { category: 'Debugging', prompt: 'Help me trace a deployment failure without guessing.' },
+  { category: 'Workflows', prompt: 'Plan a safe, review-gated workflow for a new AIMS quality-control task.' },
 ]
 
 function makeMessage(role: 'user' | 'assistant', content: string, pending = false): UiMessage {
@@ -501,35 +501,22 @@ export function ChatPage() {
               </div>
               <p className="mt-2 text-xs font-semibold uppercase tracking-[0.22em] text-cyan-300/80 sm:mt-5">Shared intelligence layer</p>
               <h2 className="mt-2 text-2xl font-semibold tracking-tight text-white sm:text-3xl">What are we solving?</h2>
-              <p className="mt-2 max-w-xl text-sm leading-6 text-slate-300 sm:mt-3">
-                Auto route chooses the safest configured model policy. Select a specialist mode when you need tighter control.
-              </p>
-              <div className="mt-5 grid w-full max-w-2xl gap-2.5 sm:mt-7 sm:grid-cols-3">
+              <p className="mt-2 max-w-xl text-sm leading-6 text-slate-400">Ask HIVE anything, or start with a common task.</p>
+              <div className="mt-5 flex w-full max-w-xl flex-wrap justify-center gap-2">
                 {starters.map((starter) => (
                   <button
                     key={starter.category}
                     type="button"
                     onClick={() => void submitMessage(starter.prompt)}
-                    className={
-                      [
-                        "rounded-2xl border border-l-2 border-white/8 ",
-                        String(starter.border),
-                        " bg-white/[0.025] p-3.5 text-left text-xs leading-5 text-slate-400 transition ",
-                        "hover:border-cyan-300/20 hover:bg-cyan-300/[0.04] hover:text-slate-200 ",
-                        "focus-visible:border-cyan-300/35",
-                      ].join('')
-                    }
+                    title={starter.prompt}
+                    className="inline-flex h-10 items-center gap-2 rounded-xl border border-white/10 bg-white/[0.025] px-4 text-xs font-medium text-slate-200 transition hover:border-cyan-300/25 hover:bg-cyan-300/[0.05] focus-visible:border-cyan-300/35"
                   >
-                    <span
-                      className="mb-2 flex items-center gap-1.5 text-xs font-semibold uppercase tracking-[0.16em] text-slate-300"
-                    ><Sparkles
-                      className="h-3.5 w-3.5 text-cyan-300/70"
-                    /> {starter.category}</span>
-                    {starter.prompt}
+                    <Sparkles className="h-3.5 w-3.5 text-cyan-300/70" aria-hidden="true" />
+                    {starter.category}
                   </button>
                 ))}
               </div>
-              <div className="mt-4 grid w-full max-w-sm grid-cols-2 gap-2 sm:mt-5 sm:flex sm:max-w-none sm:flex-wrap sm:justify-center">
+              <div className="mt-4 grid w-full max-w-sm grid-cols-2 gap-2 sm:flex sm:max-w-none sm:flex-wrap sm:justify-center">
                 <button
                   type="button"
                   onClick={startNewConversation}
