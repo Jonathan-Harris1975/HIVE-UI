@@ -5,23 +5,45 @@
   --font-sans: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
   --font-mono: "SFMono-Regular", Consolas, "Liberation Mono", monospace;
 
-  /* Centralised brand palette. Core canvas/panel literals previously repeated
-     across page components are now mapped to these semantic HIVE tokens.
-     Extend this palette rather than introducing new one-off hex utilities. */
-  --color-hive-canvas: #061126;
-  --color-hive-panel: #0a192d;
-  --color-hive-panel-deep: #0b1b31;
-  --color-hive-panel-hover: #0d2038;
-  --color-hive-surface: #071426;
-  --color-hive-accent-deep: #052035;
-  --color-hive-elevated: #09182b;
-  --color-hive-code: #040b18;
-  --color-hive-dialog: #08172b;
-  --color-hive-overlay: #020817;
-  --color-hive-border: rgba(255, 255, 255, 0.08);
-  --color-hive-border-strong: rgba(103, 232, 249, 0.28);
-  --color-hive-text: #eaf7ff;
-  --color-hive-muted: #a9c1d1;
+  /* Tonal surfaces: depth is communicated by tone first, borders second. */
+  --color-hive-canvas: #07101f;
+  --color-hive-surface: #0b1627;
+  --color-hive-raised: #101d30;
+  --color-hive-panel: #0b1627;
+  --color-hive-panel-deep: #0b1627;
+  --color-hive-panel-hover: #122238;
+  --color-hive-elevated: #101d30;
+  --color-hive-code: #050b14;
+  --color-hive-dialog: #0b1627;
+  --color-hive-overlay: #02060d;
+  --color-hive-accent-deep: #06252c;
+  --color-hive-accent: #58d6d0;
+  --color-hive-accent-strong: #77e2dc;
+  --color-hive-border: rgba(226, 232, 240, 0.08);
+  --color-hive-border-strong: rgba(88, 214, 208, 0.26);
+  --color-hive-text: #f2f7fb;
+  --color-hive-muted: #9eb0c2;
+  --color-hive-success: #6ee7b7;
+  --color-hive-warning: #fcd34d;
+  --color-hive-danger: #fda4af;
+
+  /* Five-step console type scale. */
+  --text-hive-xs: 0.75rem;
+  --text-hive-sm: 0.875rem;
+  --text-hive-base: 1rem;
+  --text-hive-lg: 1.25rem;
+  --text-hive-xl: 1.75rem;
+
+  /* 4px rhythm, two radii and one elevation rule. */
+  --spacing-hive-1: 0.25rem;
+  --spacing-hive-2: 0.5rem;
+  --spacing-hive-3: 0.75rem;
+  --spacing-hive-4: 1rem;
+  --spacing-hive-6: 1.5rem;
+  --spacing-hive-8: 2rem;
+  --radius-hive: 0.625rem;
+  --radius-hive-lg: 1rem;
+  --shadow-hive: 0 12px 30px rgba(0, 0, 0, 0.18);
 }
 
 :root {
@@ -210,9 +232,6 @@ select option {
 
 /* The console is intentionally dense, but 12px body text was overused as a default.
    Keep badges compact while bringing ordinary `text-xs` copy up one notch. */
-.text-xs { font-size: 0.8125rem; }
-.text-xs:not([class*="leading-"]) { line-height: 1.125rem; }
-.text-slate-500 { color: #8497ad; }
 button.h-7, button.h-8, select.h-7, select.h-8, input.h-7, input.h-8 { min-height: 2.25rem; }
 button.w-7.h-7, button.w-8.h-8 { min-width: 2.25rem; }
 
@@ -245,9 +264,9 @@ input::placeholder, textarea::placeholder { opacity: 1; }
    and screen-reader behaviour while avoiding bespoke dropdown state. */
 .ui-disclosure {
   overflow: hidden;
-  border: 1px solid var(--color-hive-border);
-  border-radius: 1rem;
-  background: color-mix(in srgb, var(--color-hive-panel) 62%, transparent);
+  border: 0;
+  border-radius: var(--radius-hive-lg);
+  background: var(--color-hive-raised);
 }
 
 .ui-disclosure > summary {
@@ -277,4 +296,22 @@ input::placeholder, textarea::placeholder { opacity: 1; }
   color: #94a3b8;
   font-size: 0.75rem;
   font-weight: 500;
+}
+
+/* 2026 design foundation: quiet operational chrome and flatter content hierarchy. */
+#hive-main-content .rounded-3xl { border-radius: var(--radius-hive-lg); }
+#hive-main-content .rounded-2xl { border-radius: var(--radius-hive-lg); }
+#hive-main-content .rounded-xl { border-radius: var(--radius-hive); }
+#hive-main-content .border-white\/8,
+#hive-main-content .border-white\/10 { border-color: rgba(226, 232, 240, 0.065); }
+#hive-main-content .bg-hive-panel\/75,
+#hive-main-content .bg-hive-panel\/70 { background: var(--color-hive-surface); }
+#hive-main-content .shadow-xl { box-shadow: var(--shadow-hive); }
+#hive-main-content .text-cyan-300,
+#hive-main-content .text-cyan-200 { color: var(--color-hive-accent); }
+#hive-main-content .bg-cyan-300\/10,
+#hive-main-content .bg-cyan-300\/8 { background: color-mix(in srgb, var(--color-hive-accent) 10%, transparent); }
+
+@media (max-width: 639px) {
+  #hive-main-content > div { padding-left: 0.75rem; padding-right: 0.75rem; }
 }
