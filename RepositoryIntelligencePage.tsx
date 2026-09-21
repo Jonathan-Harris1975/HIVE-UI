@@ -114,7 +114,7 @@ export function RepositoryIntelligencePage() {
   const [promptCopied, setPromptCopied] = useState(false)
   const [improvementJob, setImprovementJob] = useState<RepositoryImprovementJob | null>(null)
   const [improvementStarting, setImprovementStarting] = useState(false)
-  const [executionMode, setExecutionMode] = useState<RepositoryImprovementExecutionMode>('single_pass')
+  const [executionMode, setExecutionMode] = useState<RepositoryImprovementExecutionMode>('multi_pass')
   const [maxWorkPasses, setMaxWorkPasses] = useState(4)
   const [improvementCancelling, setImprovementCancelling] = useState(false)
   const [setupRepairing, setSetupRepairing] = useState(false)
@@ -594,10 +594,10 @@ export function RepositoryIntelligencePage() {
                   {selectedRepository.fingerprint.slice(0, 12)}
                 </span>
               </div>
-              <div className="mt-3 grid gap-2 text-xs text-slate-400 sm:grid-cols-2 lg:grid-cols-4">
+              <div className="mt-3 grid grid-cols-2 gap-2 text-xs text-slate-400 lg:grid-cols-4">
                 <div className="rounded-xl border border-white/8 bg-white/[0.025] p-3">
                   <p className="text-slate-500">Snapshot</p>
-                  <p className="mt-1 break-all font-mono text-[11px] text-slate-200">{selectedRepository.fingerprint}</p>
+                  <p className="mt-1 truncate font-mono text-[11px] text-slate-200" title={selectedRepository.fingerprint}>{selectedRepository.fingerprint.slice(0, 12)}…</p>
                   {selectedRepository.source && <p className="mt-1 break-all">Source: {selectedRepository.source}</p>}
                   <p className="mt-1">Indexed version: v{selectedRepository.indexed_version}</p>
                   {sourceCommit && <p className="mt-1 break-all">Commit: {sourceCommit}</p>}
@@ -708,9 +708,9 @@ export function RepositoryIntelligencePage() {
                 <input
                   type="number"
                   min={2}
-                  max={10}
+                  max={8}
                   value={maxWorkPasses}
-                  onChange={(event) => setMaxWorkPasses(Math.max(2, Math.min(10, Number(event.target.value) || 2)))}
+                  onChange={(event) => setMaxWorkPasses(Math.max(2, Math.min(8, Number(event.target.value) || 2)))}
                   disabled={executionMode !== 'multi_pass'}
                   className="mt-1 h-10 w-full rounded-xl border border-white/8 bg-hive-surface px-3 text-sm text-slate-200 disabled:opacity-50"
                 />
@@ -1067,6 +1067,11 @@ export function RepositoryIntelligencePage() {
               {typeof improvementJob.qa_score_after === 'number' && (
                 <span className="rounded-full border border-emerald-300/15 bg-emerald-300/7 px-2.5 py-1 text-emerald-100">
                   Static QA after: {scorePct(improvementJob.qa_score_after)}%
+                </span>
+              )}
+              {improvementJob.status === 'completed' && improvementJob.quality_target_met === false && (
+                <span className="rounded-full border border-amber-300/20 bg-amber-300/8 px-2.5 py-1 text-amber-100">
+                  Safe progress saved · target not yet met
                 </span>
               )}
             </div>
