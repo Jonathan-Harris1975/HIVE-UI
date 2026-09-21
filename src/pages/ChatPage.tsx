@@ -509,7 +509,10 @@ export function ChatPage() {
                     type="button"
                     onClick={() => void submitMessage(starter.prompt)}
                     title={starter.prompt}
-                    className="inline-flex h-10 items-center gap-2 rounded-xl border border-white/10 bg-white/[0.025] px-4 text-xs font-medium text-slate-200 transition hover:border-cyan-300/25 hover:bg-cyan-300/[0.05] focus-visible:border-cyan-300/35"
+                    className={
+                      'inline-flex h-10 items-center gap-2 rounded-xl border border-white/10 bg-white/[0.025] px-4 text-xs font-medium text-slate-200 transition ' +
+                      'hover:border-cyan-300/25 hover:bg-cyan-300/[0.05] focus-visible:border-cyan-300/35'
+                    }
                   >
                     <Sparkles className="h-3.5 w-3.5 text-cyan-300/70" aria-hidden="true" />
                     {starter.category}
