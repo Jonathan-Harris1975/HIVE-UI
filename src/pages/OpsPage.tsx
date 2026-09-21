@@ -611,11 +611,21 @@ export function OpsPage() {
               <div className="flex items-center justify-between gap-3">
                 <div className="min-w-0">
                   <h3 className="text-sm font-semibold text-white">Services</h3>
-                  <p className="mt-0.5 text-[11px] text-slate-500">Live and production-ready state</p>
+                  <p className="mt-0.5 text-[11px] text-slate-500">
+                    Each service reports liveness and readiness separately
+                  </p>
                 </div>
                 <div className="flex items-center gap-2">
                   <span className="text-xs text-slate-400">{repoHealth?.repos?.filter((item) => ['healthy', 'busy'].includes(item.status)).length ?? 0}/{repoHealth?.repos?.length ?? 0} healthy</span>
-                  {repoHealth?.error && <button type="button" onClick={() => void loadOps(true)} className="inline-flex h-8 items-center gap-1 rounded-lg border border-amber-300/15 px-2 text-xs text-amber-100"><RefreshCw className="h-3.5 w-3.5" /> Retry</button>}
+                  {repoHealth?.error && (
+                    <button
+                      type="button"
+                      onClick={() => void loadOps(true)}
+                      className="inline-flex h-8 items-center gap-1 rounded-lg border border-amber-300/15 px-2 text-xs text-amber-100"
+                    >
+                      <RefreshCw className="h-3.5 w-3.5" /> Retry
+                    </button>
+                  )}
                 </div>
               </div>
               {repoHealth?.repos?.length ? (
@@ -625,7 +635,14 @@ export function OpsPage() {
                   ))}
                 </div>
               ) : (
-                <div className="mt-3"><EmptyState icon={<ServerCog className="h-7 w-7" />} title="Repository health unavailable" body="Repo health could not be loaded or is not configured on this HIVE backend." action={{ label: 'Retry', onClick: () => void loadOps(true) }} /></div>
+                <div className="mt-3">
+                  <EmptyState
+                    icon={<ServerCog className="h-7 w-7" />}
+                    title="Repository health unavailable"
+                    body="Repo health could not be loaded or is not configured on this HIVE backend."
+                    action={{ label: 'Retry', onClick: () => void loadOps(true) }}
+                  />
+                </div>
               )}
             </section>
 
@@ -662,12 +679,70 @@ export function OpsPage() {
                 <span className="text-xs text-slate-400">{openReviewCount} reviews · {runtimeStats?.providers?.count ?? 0} providers</span>
               </summary>
               <div className="grid grid-cols-2 gap-2 border-t border-white/6 p-3 sm:grid-cols-3">
-                <button type="button" onClick={() => inspect('Repository health', repoHealth)} className="rounded-xl border border-white/8 bg-hive-surface p-3 text-left"><Activity className="h-4 w-4 text-emerald-300" /><p className="mt-2 text-lg font-semibold text-white">{repoHealth?.repos?.filter((item) => ['healthy', 'busy'].includes(item.status)).length ?? 0}/{repoHealth?.repos?.length ?? 0}</p><span className="text-[10px] uppercase tracking-wider text-slate-500">Services healthy</span></button>
-                <Link to="/execution-reviews" className="rounded-xl border border-white/8 bg-hive-surface p-3 text-left"><ShieldCheck className="h-4 w-4 text-violet-300" /><p className="mt-2 text-lg font-semibold text-white">{openReviewCount}</p><span className="text-[10px] uppercase tracking-wider text-slate-500">Open reviews</span></Link>
-                <button type="button" onClick={() => inspect('Repository runtime', runtimeStats?.repository_manager ?? {})} className="rounded-xl border border-white/8 bg-hive-surface p-3 text-left"><Database className="h-4 w-4 text-cyan-300" /><p className="mt-2 text-lg font-semibold text-white">{runtimeStats?.repository_manager?.registered_count ?? 0}</p><span className="text-[10px] uppercase tracking-wider text-slate-500">Repositories</span></button>
-                <button type="button" onClick={() => inspect('Model Registry', runtimeStats?.model_registry ?? {})} className="rounded-xl border border-white/8 bg-hive-surface p-3 text-left"><Sparkles className="h-4 w-4 text-emerald-300" /><p className="mt-2 text-lg font-semibold text-white">{runtimeStats?.model_registry?.total_models ?? 0}</p><span className="text-[10px] uppercase tracking-wider text-slate-500">Models</span></button>
-                <button type="button" onClick={() => inspect('Providers', runtimeStats?.providers ?? {})} className="rounded-xl border border-white/8 bg-hive-surface p-3 text-left"><Network className="h-4 w-4 text-violet-300" /><p className="mt-2 text-lg font-semibold text-white">{runtimeStats?.providers?.count ?? 0}</p><span className="text-[10px] uppercase tracking-wider text-slate-500">Providers</span></button>
-                <button type="button" onClick={() => inspect('Default coding model', { model: runtimeStats?.model_registry?.default_coding_model })} className="rounded-xl border border-white/8 bg-hive-surface p-3 text-left"><Activity className="h-4 w-4 text-amber-300" /><p className="mt-2 truncate text-xs font-semibold text-white">{runtimeStats?.model_registry?.default_coding_model ?? '—'}</p><span className="text-[10px] uppercase tracking-wider text-slate-500">Coding default</span></button>
+                <button
+                  type="button"
+                  onClick={() => inspect('Repository health', repoHealth)}
+                  className="rounded-xl border border-white/8 bg-hive-surface p-3 text-left"
+                >
+                  <Activity className="h-4 w-4 text-emerald-300" />
+                  <p className="mt-2 text-lg font-semibold text-white">
+                    {repoHealth?.repos?.filter((item) => ['healthy', 'busy'].includes(item.status)).length ?? 0}/
+                    {repoHealth?.repos?.length ?? 0}
+                  </p>
+                  <span className="text-[10px] uppercase tracking-wider text-slate-500">Services healthy</span>
+                </button>
+                <Link
+                  to="/execution-reviews"
+                  className="rounded-xl border border-white/8 bg-hive-surface p-3 text-left"
+                >
+                  <ShieldCheck className="h-4 w-4 text-violet-300" />
+                  <p className="mt-2 text-lg font-semibold text-white">{openReviewCount}</p>
+                  <span className="text-[10px] uppercase tracking-wider text-slate-500">Open reviews</span>
+                </Link>
+                <button
+                  type="button"
+                  onClick={() => inspect('Repository runtime', runtimeStats?.repository_manager ?? {})}
+                  className="rounded-xl border border-white/8 bg-hive-surface p-3 text-left"
+                >
+                  <Database className="h-4 w-4 text-cyan-300" />
+                  <p className="mt-2 text-lg font-semibold text-white">
+                    {runtimeStats?.repository_manager?.registered_count ?? 0}
+                  </p>
+                  <span className="text-[10px] uppercase tracking-wider text-slate-500">Repositories</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => inspect('Model Registry', runtimeStats?.model_registry ?? {})}
+                  className="rounded-xl border border-white/8 bg-hive-surface p-3 text-left"
+                >
+                  <Sparkles className="h-4 w-4 text-emerald-300" />
+                  <p className="mt-2 text-lg font-semibold text-white">
+                    {runtimeStats?.model_registry?.total_models ?? 0}
+                  </p>
+                  <span className="text-[10px] uppercase tracking-wider text-slate-500">Models</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => inspect('Providers', runtimeStats?.providers ?? {})}
+                  className="rounded-xl border border-white/8 bg-hive-surface p-3 text-left"
+                >
+                  <Network className="h-4 w-4 text-violet-300" />
+                  <p className="mt-2 text-lg font-semibold text-white">{runtimeStats?.providers?.count ?? 0}</p>
+                  <span className="text-[10px] uppercase tracking-wider text-slate-500">Providers</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => inspect('Default coding model', {
+                    model: runtimeStats?.model_registry?.default_coding_model,
+                  })}
+                  className="rounded-xl border border-white/8 bg-hive-surface p-3 text-left"
+                >
+                  <Activity className="h-4 w-4 text-amber-300" />
+                  <p className="mt-2 truncate text-xs font-semibold text-white">
+                    {runtimeStats?.model_registry?.default_coding_model ?? '—'}
+                  </p>
+                  <span className="text-[10px] uppercase tracking-wider text-slate-500">Coding default</span>
+                </button>
               </div>
             </details>
 
@@ -677,10 +752,23 @@ export function OpsPage() {
                 <span className="text-[11px] text-slate-500">Database reset</span>
               </summary>
               <div className="border-t border-rose-300/10 p-4">
-                <p className="text-xs leading-5 text-slate-400">Permanently clears application data from database-hive, database-comms-hub and HIVE PostgreSQL while preserving schemas and migration history.</p>
+                <p className="text-xs leading-5 text-slate-400">
+                  Permanently clears application data from database-hive, database-comms-hub and HIVE PostgreSQL
+                  while preserving schemas and migration history.
+                </p>
                 {purgeResult?.ok && <p className="mt-2 text-xs font-medium text-emerald-200" role="status">Database reset completed successfully.</p>}
                 {purgeError && !purgeDialogOpen && <p className="mt-2 text-xs text-rose-200" role="alert">{purgeError}</p>}
-                <button type="button" onClick={() => { setPurgeError(null); setPurgeResult(null); setPurgeConfirmation(''); setPurgeDialogOpen(true) }} disabled={purgingDatabases} className="mt-3 flex h-9 w-full items-center justify-center gap-2 rounded-xl border border-rose-300/25 bg-rose-300/10 px-4 text-xs font-semibold text-rose-100 disabled:opacity-50">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setPurgeError(null)
+                    setPurgeResult(null)
+                    setPurgeConfirmation('')
+                    setPurgeDialogOpen(true)
+                  }}
+                  disabled={purgingDatabases}
+                  className="mt-3 flex h-9 w-full items-center justify-center gap-2 rounded-xl border border-rose-300/25 bg-rose-300/10 px-4 text-xs font-semibold text-rose-100 disabled:opacity-50"
+                >
                   {purgingDatabases ? <LoaderCircle className="h-4 w-4 animate-spin" /> : <Trash2 className="h-4 w-4" />} Purge / reset databases
                 </button>
               </div>
