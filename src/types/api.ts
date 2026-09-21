@@ -962,6 +962,7 @@ export interface RepositoryImprovementJob {
   deleted_files?: string[]
   remaining_risks?: string[]
   qa_score_after?: number
+  quality_target_met?: boolean
   error?: string
   execution_mode?: RepositoryImprovementExecutionMode
   configured_change_ratio?: number
