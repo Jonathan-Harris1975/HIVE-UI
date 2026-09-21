@@ -413,17 +413,10 @@ export function OpsPage() {
   const templateEntries = useMemo(() => Object.entries(templates), [templates])
   const adapterPolicy = useMemo(() => recordValue(health?.execution_adapter_policy), [health])
   const executionAdaptersEnabled = Boolean(health?.execution_adapters_enabled ?? adapterPolicy.enabled)
-  const executionAdaptersRequireApproval = Boolean(adapterPolicy.requires_approval ?? true)
   const executionAdapterDetail = stringFrom(adapterPolicy.note) ?? (executionAdaptersEnabled
     ? 'Execution adapters are available for approved, allow-listed production handoffs'
     : 'Execution adapters are disabled by backend configuration')
-  const executionAdapterSummary = health
-    ? executionAdaptersEnabled
-      ? executionAdaptersRequireApproval
-        ? 'execution adapters ready after approval'
-        : 'execution adapters ready'
-      : 'execution adapters disabled by config'
-    : 'execution adapter status loading'
+
 
   const storageFlags = recordFrom(health?.storage_flags)
   const r2Flags = recordFrom(storageFlags.r2)
@@ -573,41 +566,35 @@ export function OpsPage() {
   return (
     <div className="h-full overflow-y-auto p-4 sm:p-6 lg:p-8">
       <div className="mx-auto max-w-7xl">
-        <section className="flex flex-col gap-5 rounded-3xl border border-white/8 bg-hive-panel/75 p-5 sm:flex-row sm:items-center sm:justify-between sm:p-7">
-          <div>
-            <p className="text-xs font-semibold uppercase tracking-[0.2em] text-cyan-300/70">Control plane</p>
-            <h2 className="mt-2 text-2xl font-semibold text-white">Operational health and controlled workflow planning</h2>
-            <p
-              className="mt-2 text-sm text-slate-400"
-            >Build {health?.build ?? (loading ? 'checking…' : 'unavailable')} · {health?.env ?? (loading ? 'checking environment…' : 'environment unavailable')} · {executionAdapterSummary}</p>
+        <section className="flex items-center justify-between gap-3 rounded-2xl border border-white/8 bg-hive-panel/65 px-4 py-3">
+          <div className="min-w-0">
+            <div className="flex items-center gap-2">
+              <p className="text-sm font-semibold text-white">System operations</p>
+              <StatusBadge status={repoHealth?.overall_status || 'not_configured'} variant="operational" compact />
+            </div>
+            <p className="mt-0.5 truncate text-[11px] text-slate-500">{health?.build ?? (loading ? 'checking…' : 'unavailable')} · {health?.env ?? 'environment unavailable'}</p>
           </div>
-          <div className="flex flex-col items-stretch gap-2 sm:items-end">
-            <button
-              type="button"
-              onClick={() => void loadOps(true)}
-              className="flex h-10 items-center justify-center gap-2 rounded-xl border border-white/8 bg-white/[0.04] px-4 text-xs text-slate-300 hover:bg-white/[0.07]"
-            >
-              <RefreshCw className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`} /> Refresh status
-            </button>
-          </div>
+          <button
+            type="button"
+            onClick={() => void loadOps(true)}
+            aria-label="Refresh operational status"
+            title="Refresh status"
+            className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border border-white/8 bg-white/[0.04] text-slate-300 hover:bg-white/[0.07]"
+          >
+            <RefreshCw className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`} />
+          </button>
         </section>
 
-        <div className="mt-4 flex gap-1 overflow-x-auto rounded-2xl border border-white/8 bg-hive-surface p-1.5">
+        <div className="mt-3 grid grid-cols-2 gap-1 rounded-xl border border-white/8 bg-hive-surface p-1">
           {tabs.map((item) => (
             <button
               key={item.id}
               type="button"
               onClick={() => setTab(item.id)}
-              className={
-                [
-                  "whitespace-nowrap rounded-xl px-4 py-2 text-xs font-medium transition ",
-                  String(
-                    tab === item.id
-                      ? 'bg-cyan-300/10 text-cyan-100'
-                      : 'text-slate-400 hover:bg-white/[0.04] hover:text-slate-300',
-                  ),
-                ].join('')
-              }
+              className={[
+                'rounded-lg px-3 py-2 text-xs font-medium transition',
+                tab === item.id ? 'bg-cyan-300/10 text-cyan-100' : 'text-slate-400 hover:bg-white/[0.04] hover:text-slate-300',
+              ].join(' ')}
             >
               {item.label}
             </button>
@@ -620,27 +607,16 @@ export function OpsPage() {
           <div className="flex items-center justify-center py-20 text-slate-400"><LoaderCircle className="mr-2 h-5 w-5 animate-spin" /> Loading operational state</div>
         ) : tab === 'overview' ? (
           <>
-            <section className="mt-5 rounded-2xl border border-white/8 bg-hive-panel/60 p-3 sm:p-4">
+            <section className="mt-4 rounded-2xl border border-white/8 bg-hive-panel/60 p-3 sm:p-4">
               <div className="flex items-center justify-between gap-3">
-                <div>
-                  <h3 className="text-sm font-semibold text-white">Repository and service health</h3>
-                  <p
-                    className="mt-0.5 text-xs text-slate-400"
-                  >Each service reports liveness and readiness separately. Online means the service answers; Ready means its production dependencies and configuration are available.</p>
+                <div className="min-w-0">
+                  <h3 className="text-sm font-semibold text-white">Services</h3>
+                  <p className="mt-0.5 text-[11px] text-slate-500">Live and production-ready state</p>
                 </div>
-                <div
-                  className="flex items-center gap-1.5"
-                ><StatusBadge
-                  status={repoHealth?.overall_status || 'not_configured'}
-                  variant="operational"
-                  compact
-                />{repoHealth?.error && <button
-                  type="button"
-                  onClick={() => void loadOps(true)}
-                  className="inline-flex h-8 items-center gap-1.5 rounded-lg border border-amber-300/15 bg-amber-300/7 px-2.5 text-xs text-amber-100"
-                ><RefreshCw
-                  className="h-3.5 w-3.5"
-                /> Retry</button>}</div>
+                <div className="flex items-center gap-2">
+                  <span className="text-xs text-slate-400">{repoHealth?.repos?.filter((item) => ['healthy', 'busy'].includes(item.status)).length ?? 0}/{repoHealth?.repos?.length ?? 0} healthy</span>
+                  {repoHealth?.error && <button type="button" onClick={() => void loadOps(true)} className="inline-flex h-8 items-center gap-1 rounded-lg border border-amber-300/15 px-2 text-xs text-amber-100"><RefreshCw className="h-3.5 w-3.5" /> Retry</button>}
+                </div>
               </div>
               {repoHealth?.repos?.length ? (
                 <div className="mt-3 grid grid-cols-1 gap-2 sm:grid-cols-2">
@@ -649,190 +625,70 @@ export function OpsPage() {
                   ))}
                 </div>
               ) : (
-                <div
-                  className="mt-3"
-                ><EmptyState
-                  icon={<ServerCog className="h-8 w-8" />}
-                  title="Repository health unavailable"
-                  body="Repo health could not be loaded or is not configured on this HIVE backend."
-                  action={{ label: 'Retry', onClick: () => void loadOps(true) }}
-                /></div>
+                <div className="mt-3"><EmptyState icon={<ServerCog className="h-7 w-7" />} title="Repository health unavailable" body="Repo health could not be loaded or is not configured on this HIVE backend." action={{ label: 'Retry', onClick: () => void loadOps(true) }} /></div>
               )}
             </section>
 
-            <section className="mt-5 rounded-3xl border border-white/8 bg-hive-panel/70 p-5 sm:p-6">
-              <div className="flex items-center justify-between gap-3">
-                <div>
-                  <h3 className="text-base font-semibold text-white">Operational alerts</h3>
-                  <p className="mt-1 text-xs text-slate-400">Central, redacted events from runtime services and deployment watchers.</p>
+            {opsEvents?.items?.length ? (
+              <details className="group mt-3 rounded-2xl border border-amber-300/15 bg-hive-panel/60">
+                <summary className="flex cursor-pointer list-none items-center justify-between gap-3 px-4 py-3">
+                  <span className="flex items-center gap-2 text-sm font-semibold text-white"><BellRing className="h-4 w-4 text-amber-300" /> Operational alerts</span>
+                  <StatusBadge status={opsEvents.items.some((item) => item.severity === 'critical') ? 'critical' : 'warning'} label={`${opsEvents.count ?? 0} events`} compact />
+                </summary>
+                <div className="grid gap-2 border-t border-white/6 p-3 lg:grid-cols-2">
+                  {opsEvents.items.slice(0, 6).map((item) => <OpsEventCard key={item.event_id} item={item} onInspect={() => inspect(item.title || 'Operational event', item, item.summary)} />)}
                 </div>
-                <StatusBadge
-                  status={
-                    opsEvents?.error
-                      ? 'error'
-                      : opsEvents?.items?.some((item) => item.severity === 'critical')
-                        ? 'critical'
-                        : opsEvents?.items?.length
-                          ? 'warning'
-                          : 'healthy'
-                  }
-                  label={opsEvents?.error ? 'unavailable' : `${opsEvents?.count ?? 0} events`}
-                  compact
-                />
+              </details>
+            ) : (
+              <div className="mt-3 flex items-center justify-between rounded-xl border border-white/8 bg-hive-panel/45 px-4 py-3">
+                <span className="flex items-center gap-2 text-xs text-slate-400"><BellRing className="h-4 w-4 text-emerald-300" /> Operational alerts</span>
+                <span className="text-xs font-medium text-emerald-200">None</span>
               </div>
-              {opsEvents?.items?.length ? (
-                <div className="mt-4 grid gap-2 lg:grid-cols-2">
-                  {opsEvents.items.slice(0, 6).map((item) => (
-                    <OpsEventCard key={item.event_id} item={item} onInspect={() => inspect(item.title || 'Operational event', item, item.summary)} />
-                  ))}
-                </div>
-              ) : (
-                <div className="mt-4"><EmptyState icon={<BellRing className="h-8 w-8" />} title="No operational events" body="No operational events are currently recorded." /></div>
-              )}
-            </section>
+            )}
 
-            <section className="mt-5 rounded-3xl border border-white/8 bg-hive-panel/70 p-5 sm:p-6">
-              <h3 className="text-base font-semibold text-white">Integration readiness</h3>
-              <p className="mt-1 text-xs text-slate-400">Point-in-time configuration state for every backend dependency.</p>
-              <div className="mt-4 grid grid-cols-2 gap-2 sm:grid-cols-3 xl:grid-cols-4">
+            <details className="group mt-3 rounded-2xl border border-white/8 bg-hive-panel/60">
+              <summary className="flex cursor-pointer list-none items-center justify-between gap-3 px-4 py-3">
+                <span className="text-sm font-semibold text-white">Integration readiness</span>
+                <span className="text-xs text-slate-400">{flags.filter((flag) => flag.status === 'ready').length}/{flags.length} ready</span>
+              </summary>
+              <div className="grid grid-cols-1 gap-2 border-t border-white/6 p-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
                 {flags.map((flag) => <Flag key={flag.label} {...flag} />)}
               </div>
-            </section>
+            </details>
 
-            <section className="mt-5 rounded-3xl border border-rose-300/15 bg-rose-300/[0.035] p-5 sm:p-6">
-              <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-                <div className="max-w-3xl">
-                  <div className="flex items-center gap-2">
-                    <Trash2 className="h-4 w-4 text-rose-300" />
-                    <h3 className="text-base font-semibold text-white">Purge / reset databases</h3>
-                  </div>
-                  <p className="mt-2 text-xs leading-5 text-slate-300">
-                    Permanently clears application data from database-hive, database-comms-hub and the HIVE Koyeb PostgreSQL database. Database identities, schemas and migration history are preserved.
-                  </p>
-                  {purgeResult?.ok && (
-                    <p className="mt-2 text-xs font-medium text-emerald-200" role="status">
-                      Database reset completed successfully.
-                    </p>
-                  )}
-                  {purgeError && !purgeDialogOpen && (
-                    <p className="mt-2 text-xs text-rose-200" role="alert">{purgeError}</p>
-                  )}
-                </div>
-                <button
-                  type="button"
-                  onClick={() => {
-                    setPurgeError(null)
-                    setPurgeResult(null)
-                    setPurgeConfirmation('')
-                    setPurgeDialogOpen(true)
-                  }}
-                  disabled={purgingDatabases}
-                  className={
-                    "flex h-10 shrink-0 items-center justify-center gap-2 rounded-xl border border-rose-300/25 " +
-                    "bg-rose-300/10 px-4 text-xs font-semibold text-rose-100 transition hover:bg-rose-300/16 disabled:opacity-50"
-                  }
-                >
-                  {purgingDatabases ? <LoaderCircle className="h-4 w-4 animate-spin" /> : <Trash2 className="h-4 w-4" />}
-                  Purge / reset all databases
-                </button>
+            <details className="group mt-3 rounded-2xl border border-white/8 bg-hive-panel/60">
+              <summary className="flex cursor-pointer list-none items-center justify-between gap-3 px-4 py-3">
+                <span className="text-sm font-semibold text-white">Live system snapshot</span>
+                <span className="text-xs text-slate-400">{openReviewCount} reviews · {runtimeStats?.providers?.count ?? 0} providers</span>
+              </summary>
+              <div className="grid grid-cols-2 gap-2 border-t border-white/6 p-3 sm:grid-cols-3">
+                <button type="button" onClick={() => inspect('Repository health', repoHealth)} className="rounded-xl border border-white/8 bg-hive-surface p-3 text-left"><Activity className="h-4 w-4 text-emerald-300" /><p className="mt-2 text-lg font-semibold text-white">{repoHealth?.repos?.filter((item) => ['healthy', 'busy'].includes(item.status)).length ?? 0}/{repoHealth?.repos?.length ?? 0}</p><span className="text-[10px] uppercase tracking-wider text-slate-500">Services healthy</span></button>
+                <Link to="/execution-reviews" className="rounded-xl border border-white/8 bg-hive-surface p-3 text-left"><ShieldCheck className="h-4 w-4 text-violet-300" /><p className="mt-2 text-lg font-semibold text-white">{openReviewCount}</p><span className="text-[10px] uppercase tracking-wider text-slate-500">Open reviews</span></Link>
+                <button type="button" onClick={() => inspect('Repository runtime', runtimeStats?.repository_manager ?? {})} className="rounded-xl border border-white/8 bg-hive-surface p-3 text-left"><Database className="h-4 w-4 text-cyan-300" /><p className="mt-2 text-lg font-semibold text-white">{runtimeStats?.repository_manager?.registered_count ?? 0}</p><span className="text-[10px] uppercase tracking-wider text-slate-500">Repositories</span></button>
+                <button type="button" onClick={() => inspect('Model Registry', runtimeStats?.model_registry ?? {})} className="rounded-xl border border-white/8 bg-hive-surface p-3 text-left"><Sparkles className="h-4 w-4 text-emerald-300" /><p className="mt-2 text-lg font-semibold text-white">{runtimeStats?.model_registry?.total_models ?? 0}</p><span className="text-[10px] uppercase tracking-wider text-slate-500">Models</span></button>
+                <button type="button" onClick={() => inspect('Providers', runtimeStats?.providers ?? {})} className="rounded-xl border border-white/8 bg-hive-surface p-3 text-left"><Network className="h-4 w-4 text-violet-300" /><p className="mt-2 text-lg font-semibold text-white">{runtimeStats?.providers?.count ?? 0}</p><span className="text-[10px] uppercase tracking-wider text-slate-500">Providers</span></button>
+                <button type="button" onClick={() => inspect('Default coding model', { model: runtimeStats?.model_registry?.default_coding_model })} className="rounded-xl border border-white/8 bg-hive-surface p-3 text-left"><Activity className="h-4 w-4 text-amber-300" /><p className="mt-2 truncate text-xs font-semibold text-white">{runtimeStats?.model_registry?.default_coding_model ?? '—'}</p><span className="text-[10px] uppercase tracking-wider text-slate-500">Coding default</span></button>
               </div>
-            </section>
+            </details>
 
-            <section className="mt-5 rounded-3xl border border-white/8 bg-hive-panel/70 p-5 sm:p-6">
-              <h3 className="text-base font-semibold text-white">Live system snapshot</h3>
-              <p className="mt-1 text-xs text-slate-400">Point-in-time state from the current HIVE runtime. No lifetime counters.</p>
-              <div className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-3">
-                <button
-                  type="button"
-                  onClick={() => inspect('Repository health', repoHealth)}
-                  className="rounded-2xl border border-white/8 bg-hive-surface p-4 text-left transition hover:border-cyan-300/20"
-                >
-                  <Activity className="h-4 w-4 text-emerald-300" />
-                  <p className="mt-3 text-xl font-semibold text-white">{repoHealth?.repos?.filter((item) => ['healthy', 'busy'].includes(item.status)).length ?? 0}/{repoHealth?.repos?.length ?? 0}</p>
-                  <h3 className="mt-0.5 text-xs font-medium uppercase tracking-[0.14em] text-slate-400">Services healthy now</h3>
-                </button>
-                <Link to="/execution-reviews" className="rounded-2xl border border-white/8 bg-hive-surface p-4 text-left transition hover:border-cyan-300/20">
-                  <ShieldCheck className="h-4 w-4 text-violet-300" />
-                  <p className="mt-3 text-xl font-semibold text-white">{openReviewCount}</p>
-                  <h3 className="mt-0.5 text-xs font-medium uppercase tracking-[0.14em] text-slate-400">Open reviews now</h3>
-                </Link>
-                <button
-                  type="button"
-                  onClick={() => inspect('Repository runtime', runtimeStats?.repository_manager ?? {})}
-                  className="rounded-2xl border border-white/8 bg-hive-surface p-4 text-left transition hover:border-cyan-300/20"
-                >
-                  <Database className="h-4 w-4 text-cyan-300" />
-                  <p className="mt-3 text-xl font-semibold text-white">{runtimeStats?.repository_manager?.registered_count ?? 0}</p>
-                  <h3 className="mt-0.5 text-xs font-medium uppercase tracking-[0.14em] text-slate-400">Repos available now</h3>
-                </button>
-                <button
-                  type="button"
-                  onClick={() => inspect('Model Registry', runtimeStats?.model_registry ?? {})}
-                  className="rounded-2xl border border-white/8 bg-hive-surface p-4 text-left transition hover:border-cyan-300/20"
-                >
-                  <Sparkles className="h-4 w-4 text-emerald-300" />
-                  <p className="mt-3 text-xl font-semibold text-white">{runtimeStats?.model_registry?.total_models ?? 0}</p>
-                  <h3 className="mt-0.5 text-xs font-medium uppercase tracking-[0.14em] text-slate-400">Qualified models now</h3>
-                </button>
-                <button
-                  type="button"
-                  onClick={() => inspect('Providers', runtimeStats?.providers ?? {})}
-                  className="rounded-2xl border border-white/8 bg-hive-surface p-4 text-left transition hover:border-cyan-300/20"
-                >
-                  <Network className="h-4 w-4 text-violet-300" />
-                  <p className="mt-3 text-xl font-semibold text-white">{runtimeStats?.providers?.count ?? 0}</p>
-                  <h3 className="mt-0.5 text-xs font-medium uppercase tracking-[0.14em] text-slate-400">Providers active now</h3>
-                </button>
-                <button
-                  type="button"
-                  onClick={() => inspect('Default coding model', { model: runtimeStats?.model_registry?.default_coding_model }, 'Current ranked coding default.')}
-                  className="rounded-2xl border border-white/8 bg-hive-surface p-4 text-left transition hover:border-cyan-300/20"
-                >
-                  <Activity className="h-4 w-4 text-amber-300" />
-                  <p
-                    className="mt-3 truncate text-sm font-semibold text-white"
-                    title={runtimeStats?.model_registry?.default_coding_model ?? 'None'}
-                  >{runtimeStats?.model_registry?.default_coding_model ?? '—'}</p>
-                  <h3 className="mt-0.5 text-xs font-medium uppercase tracking-[0.14em] text-slate-400">Coding default now</h3>
+            <details className="group mt-3 rounded-2xl border border-rose-300/15 bg-rose-300/[0.025]">
+              <summary className="flex cursor-pointer list-none items-center justify-between gap-3 px-4 py-3">
+                <span className="flex items-center gap-2 text-sm font-semibold text-rose-100"><Trash2 className="h-4 w-4 text-rose-300" /> Danger zone</span>
+                <span className="text-[11px] text-slate-500">Database reset</span>
+              </summary>
+              <div className="border-t border-rose-300/10 p-4">
+                <p className="text-xs leading-5 text-slate-400">Permanently clears application data from database-hive, database-comms-hub and HIVE PostgreSQL while preserving schemas and migration history.</p>
+                {purgeResult?.ok && <p className="mt-2 text-xs font-medium text-emerald-200" role="status">Database reset completed successfully.</p>}
+                {purgeError && !purgeDialogOpen && <p className="mt-2 text-xs text-rose-200" role="alert">{purgeError}</p>}
+                <button type="button" onClick={() => { setPurgeError(null); setPurgeResult(null); setPurgeConfirmation(''); setPurgeDialogOpen(true) }} disabled={purgingDatabases} className="mt-3 flex h-9 w-full items-center justify-center gap-2 rounded-xl border border-rose-300/25 bg-rose-300/10 px-4 text-xs font-semibold text-rose-100 disabled:opacity-50">
+                  {purgingDatabases ? <LoaderCircle className="h-4 w-4 animate-spin" /> : <Trash2 className="h-4 w-4" />} Purge / reset databases
                 </button>
               </div>
-            </section>
-
-            <section className="mt-5 rounded-3xl border border-white/8 bg-hive-panel/70 p-5 sm:p-6">
-              <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-                <div>
-                  <h3 className="text-base font-semibold text-white">Workflow templates</h3>
-                  <p className="mt-1 text-xs text-slate-300">Planning presets exposed by the backend. They build graphs but do not execute tools.</p>
-                </div>
-                <button
-                  type="button"
-                  onClick={() => setTab('workflow')}
-                  className="flex h-9 items-center justify-center gap-2 rounded-xl border border-cyan-300/20 bg-cyan-300/8 px-3 text-xs text-cyan-100"
-                >
-                  <Sparkles className="h-4 w-4" /> Open workflow lab
-                </button>
-              </div>
-              <div className="mt-5 grid gap-3 md:grid-cols-2 xl:grid-cols-4">
-                {templateEntries.map(([id, item]) => (
-                  <button
-                    key={id}
-                    type="button"
-                    onClick={() => { setTemplate(id); setRepo(item.default_repo || 'HIVE'); setTab('workflow') }}
-                    className="rounded-2xl border border-white/8 bg-hive-surface p-4 text-left transition hover:border-cyan-300/20"
-                  >
-                    <div className="flex items-center gap-2">
-                      <Network className="h-4 w-4 text-emerald-300" />
-                    </div>
-                    <h4 className="mt-4 text-sm font-semibold text-white">{item.label || id}</h4>
-                    <p className="mt-2 text-xs leading-5 text-slate-400">{item.description || 'Workflow planning template.'}</p>
-                  </button>
-                ))}
-              </div>
-            </section>
+            </details>
           </>
         ) : (
           <section className="mt-5 grid gap-5 xl:grid-cols-[380px_minmax(0,1fr)]">
-            <form onSubmit={buildGraph} className="h-fit rounded-3xl border border-white/8 bg-hive-panel/75 p-5 sm:p-6">
+            <form onSubmit={buildGraph} className="h-fit rounded-2xl border border-white/8 bg-hive-panel/70 p-4 sm:p-5">
               <p className="text-xs font-semibold uppercase tracking-[0.2em] text-cyan-300/70">Plan only</p>
               <h3 className="mt-2 text-lg font-semibold text-white">Workflow builder</h3>
               <label className="mt-5 block text-xs font-medium text-slate-400">Task</label>
@@ -840,7 +696,7 @@ export function OpsPage() {
                 value={task}
                 aria-label="Workflow task"
                 onChange={(event) => setTask(event.target.value)}
-                rows={5}
+                rows={3}
                 className="mt-2 w-full resize-none rounded-xl border border-white/8 bg-hive-surface px-3 py-3 text-sm leading-6 text-white outline-none focus:border-cyan-300/30"
               />
               <div className="mt-4 grid gap-3 sm:grid-cols-2 xl:grid-cols-1">
@@ -909,7 +765,7 @@ export function OpsPage() {
             </form>
 
             <div className="space-y-5">
-              <section className="rounded-3xl border border-white/8 bg-hive-panel/75 p-5 sm:p-6">
+              <section className="rounded-2xl border border-white/8 bg-hive-panel/70 p-4 sm:p-5">
                 <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
                   <div>
                     <p className="text-xs font-semibold uppercase tracking-[0.2em] text-emerald-300/70">Workflow graph</p>
@@ -922,7 +778,7 @@ export function OpsPage() {
               </section>
 
               {preview && (
-                <section className="rounded-3xl border border-white/8 bg-hive-panel/75 p-5 sm:p-6">
+                <section className="rounded-2xl border border-white/8 bg-hive-panel/70 p-4 sm:p-5">
                   <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                     <div>
                       <p className="text-xs font-semibold uppercase tracking-[0.2em] text-violet-300/70">Execution preview</p>
