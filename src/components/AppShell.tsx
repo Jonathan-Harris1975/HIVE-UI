@@ -1,7 +1,6 @@
 import {
   Activity,
   Check,
-  ChevronDown,
   Copy,
   Cpu,
   Files,
@@ -301,22 +300,14 @@ function ConversationSection({ closeMobile }: { closeMobile?: () => void }) {
   )
 }
 
-function SidebarContent({ closeMobile }: { closeMobile?: () => void }) {
+function SidebarContent({ closeMobile, compact = false }: { closeMobile?: () => void; compact?: boolean }) {
   const { logout } = useAuth()
   const { pathname } = useLocation()
-  const activeGroup = navigationGroups.find((group) => group.items.some((item) => item.routes.includes(pathname)))?.id ?? 'workspace'
-  const [openGroups, setOpenGroups] = useState<Record<string, boolean>>(() =>
-    Object.fromEntries(navigationGroups.map((group) => [group.id, group.id === 'workspace' || group.id === activeGroup])),
-  )
-
-  useEffect(() => {
-    setOpenGroups((current) => ({ ...current, [activeGroup]: true }))
-  }, [activeGroup])
 
   return (
-    <div className="flex h-full flex-col p-4">
-      <div className="flex items-center justify-between px-1">
-        <HiveLogo size="sm" />
+    <div className="flex h-full flex-col p-3">
+      <div className={`flex items-center ${compact ? 'justify-center' : 'justify-between'} px-1`}>
+        <HiveLogo size="sm" showWordmark={!compact} />
         {closeMobile && (
           <button type="button" onClick={closeMobile} aria-label="Close navigation" className="rounded-lg p-2 text-slate-400 hover:bg-white/5 hover:text-white">
             <X className="h-5 w-5" />
@@ -324,97 +315,30 @@ function SidebarContent({ closeMobile }: { closeMobile?: () => void }) {
         )}
       </div>
 
-      <nav className="mt-6">
-        <div className="grid grid-cols-2 gap-2 lg:hidden">
-          {navigation.map(({ to, label, icon: Icon, routes }) => {
-            const active = routes.includes(pathname)
-            return (
-              <Link
-                key={to}
-                to={to}
-                onClick={closeMobile}
-                aria-current={active ? 'page' : undefined}
-                className={
-                  [
-                    "flex min-h-12 items-center gap-2.5 rounded-xl border px-3 py-2.5 text-sm ",
-                    "font-medium transition ",
-                    String(
-                      active
-                        ? 'border-cyan-300/20 bg-cyan-300/10 text-cyan-50'
-                        : 'border-white/6 bg-white/[0.02] text-slate-300 hover:border-white/10 hover:bg-white/[0.05] hover:text-white',
-                    ),
-                  ].join('')
-                }
-              >
-                <Icon className="h-4.5 w-4.5 shrink-0" aria-hidden="true" />
-                <span className="truncate">{label}</span>
-              </Link>
-            )
-          })}
-        </div>
-
-        <div className="hidden space-y-2 lg:block">
-          {navigationGroups.map((group) => {
-            const expanded = openGroups[group.id] ?? false
-            return (
-              <section key={group.id}>
-                <button
-                  type="button"
-                  onClick={() => setOpenGroups((current) => ({ ...current, [group.id]: !expanded }))}
-                  aria-expanded={expanded}
-                  className={
-                    "flex w-full items-center justify-between rounded-lg px-3 py-1.5 text-xs font-semibold " +
-                    "uppercase tracking-[0.12em] text-slate-400 transition hover:bg-white/[0.03] " +
-                    "hover:text-slate-300"
-                  }
-                >
-                  <span>{group.label}</span>
-                  <ChevronDown className={`h-3.5 w-3.5 transition-transform ${expanded ? 'rotate-180' : ''}`} />
-                </button>
-                {expanded && (
-                  <div className="mt-1 space-y-1">
-                    {group.items.map(({ to, label, icon: Icon, routes }) => {
-                      const active = routes.includes(pathname)
-                      return (
-                        <Link
-                          key={to}
-                          to={to}
-                          onClick={closeMobile}
-                          aria-current={active ? 'page' : undefined}
-                          className={
-                            [
-                              "flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm transition ",
-                              String(
-                                active
-                                  ? 'bg-white/8 text-white'
-                                  : 'text-slate-400 hover:bg-white/[0.04] hover:text-slate-200',
-                              ),
-                            ].join('')
-                          }
-                        >
-                          <Icon className="h-4.5 w-4.5" />
-                          <span>{label}</span>
-                        </Link>
-                      )
-                    })}
-                  </div>
-                )}
-              </section>
-            )
-          })}
-        </div>
+      <nav className="mt-6 space-y-1" aria-label="Primary navigation">
+        {navigation.map(({ to, label, icon: Icon, routes }) => {
+          const active = routes.includes(pathname)
+          return (
+            <Link key={to} to={to} onClick={closeMobile} aria-current={active ? 'page' : undefined} title={compact ? label : undefined}
+              className={[
+                'flex min-h-11 items-center rounded-hive text-sm font-medium transition',
+                compact ? 'justify-center px-2' : 'gap-3 px-3',
+                active ? 'bg-white/[0.07] text-white' : 'text-hive-muted hover:bg-white/[0.04] hover:text-white',
+              ].join(' ')}>
+              <Icon className="h-5 w-5 shrink-0" aria-hidden="true" />
+              {!compact && <span className="truncate">{label}</span>}
+            </Link>
+          )
+        })}
       </nav>
 
-      {pathname === '/chat' ? <ConversationSection closeMobile={closeMobile} /> : <div className="flex-1" />}
+      {pathname === '/chat' && !compact ? <ConversationSection closeMobile={closeMobile} /> : <div className="flex-1" />}
 
-      <div className="mt-4 border-t border-white/8 pt-4">
-        <p className="mb-2 px-3 text-xs uppercase tracking-[0.12em] text-slate-300" title={HIVE_UI_BUILD}>UI {HIVE_UI_VERSION}</p>
-        <button
-          type="button"
-          onClick={logout}
-          className="flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-sm text-slate-400 transition hover:bg-white/[0.04] hover:text-slate-200"
-        >
-          <LogOut className="h-4 w-4" /> Sign out
+      <div className="mt-4 border-t border-white/[0.06] pt-3">
+        {!compact && <p className="mb-1 px-3 text-xs text-slate-400" title={HIVE_UI_BUILD}>UI {HIVE_UI_VERSION}</p>}
+        <button type="button" onClick={logout} title={compact ? 'Sign out' : undefined}
+          className={`flex w-full items-center ${compact ? 'justify-center' : 'gap-3'} rounded-hive px-3 py-2.5 text-sm text-hive-muted transition hover:bg-white/[0.04] hover:text-white`}>
+          <LogOut className="h-4 w-4" /> {!compact && 'Sign out'}
         </button>
       </div>
     </div>
@@ -533,10 +457,10 @@ function ContextTabs({ pathname }: { pathname: string }) {
             key={item.to}
             to={item.to}
             className={({ isActive }) => [
-              'rounded-lg px-3 py-1.5 text-xs font-medium transition ',
+              'border-b-2 border-transparent px-3 py-2 text-sm font-medium transition ',
               String(
                 isActive
-                  ? 'bg-cyan-300/10 text-cyan-100'
+                  ? 'border-hive-accent text-white'
                   : 'text-slate-400 hover:bg-white/[0.04] hover:text-slate-200',
               ),
             ].join('')}
@@ -624,6 +548,7 @@ export function AppShell() {
   const online = useOnlineStatus()
   const { open, toggle } = useInspector()
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
+  const [railCollapsed, setRailCollapsed] = useState(false)
   const closeMobileMenu = () => setMobileMenuOpen(false)
   const mobileDrawerRef = useMobileDrawer(mobileMenuOpen, closeMobileMenu)
   const meta = pageMeta[pathname] ?? { title: 'HIVE', subtitle: 'Private operations console' }
@@ -638,8 +563,12 @@ export function AppShell() {
         href="#hive-main-content"
         className="sr-only z-[100] rounded-lg bg-cyan-300 px-3 py-2 font-semibold text-hive-accent-deep focus:not-sr-only focus:fixed focus:left-3 focus:top-3"
       >Skip to main content</a>
-      <aside className="hidden w-[280px] shrink-0 border-r border-white/8 bg-hive-panel lg:block">
-        <SidebarContent />
+      <aside className={`relative hidden shrink-0 border-r border-white/[0.06] bg-hive-panel transition-[width] lg:block ${railCollapsed ? 'w-[76px]' : 'w-[280px]'}`}>
+        <SidebarContent compact={railCollapsed} />
+        <button type="button" onClick={() => setRailCollapsed((value) => !value)} aria-label={railCollapsed ? 'Expand navigation' : 'Collapse navigation'}
+          className="absolute -right-3 top-5 z-10 grid h-7 w-7 place-items-center rounded-full bg-hive-raised text-hive-muted shadow-hive hover:text-white">
+          {railCollapsed ? <PanelRightOpen className="h-4 w-4" /> : <PanelRightClose className="h-4 w-4" />}
+        </button>
       </aside>
 
       {mobileMenuOpen && (
@@ -664,7 +593,7 @@ export function AppShell() {
             Browser offline. Stored pages remain visible, but HIVE requests will wait for the connection to return.
           </div>
         )}
-        <header className="flex min-h-[72px] shrink-0 items-center justify-between gap-3 border-b border-white/8 bg-hive-surface/85 px-4 py-3 backdrop-blur-xl sm:px-6">
+        <header className="flex min-h-[72px] shrink-0 items-center justify-between gap-3 border-b border-white/[0.06] bg-hive-canvas/95 px-4 py-3 backdrop-blur-xl sm:px-6">
           <div className="flex min-w-0 items-center gap-3">
             <button
               type="button"
