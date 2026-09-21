@@ -285,14 +285,17 @@ export function ModelPicker({ models, value, onChange, loading = false }: ModelP
             bottom: popupPosition.bottom,
             maxHeight: popupPosition.maxHeight,
           }}
-          className="fixed z-[80] flex flex-col overflow-hidden rounded-2xl border border-white/10 bg-hive-elevated/98 shadow-2xl shadow-black/50 backdrop-blur-xl"
+          className="fixed z-[80] flex flex-col overflow-hidden rounded-xl border border-white/10 bg-hive-elevated/98 shadow-2xl shadow-black/50 backdrop-blur-xl"
         >
-          <div className="shrink-0 space-y-2 border-b border-white/8 p-3">
-            <label className="text-xs font-semibold uppercase tracking-[0.16em] text-slate-400">Model type</label>
+          <div className="shrink-0 space-y-2 border-b border-white/8 p-2.5">
+            <div className="flex items-center justify-between px-1">
+              <span className="text-xs font-medium text-slate-300">Choose model</span>
+              <span className="text-xs text-slate-500">{visibleModels.length} available</span>
+            </div>
             <select
               value={category}
               onChange={(event) => setCategory(event.target.value)}
-              className="h-10 w-full rounded-xl border border-white/8 bg-hive-canvas px-3 text-xs text-slate-200 outline-none focus:border-cyan-300/30"
+              className="h-9 w-full rounded-lg border border-white/8 bg-hive-canvas px-3 text-xs text-slate-200 outline-none focus:border-cyan-300/30"
               aria-label="Filter models by category"
             >
               <option value="all">All model types · {visibleModels.length}</option>
@@ -309,7 +312,7 @@ export function ModelPicker({ models, value, onChange, loading = false }: ModelP
                 onKeyDown={handleListKeyDown}
                 placeholder="Search models, providers or capabilities"
                 aria-label="Search models"
-                className="h-10 w-full rounded-xl border border-white/8 bg-hive-canvas pl-9 pr-9 text-xs text-slate-200 outline-none placeholder:text-slate-400 focus:border-cyan-300/30"
+                className="h-9 w-full rounded-lg border border-white/8 bg-hive-canvas pl-9 pr-9 text-xs text-slate-200 outline-none placeholder:text-slate-400 focus:border-cyan-300/30"
               />
               {query && (
                 <button
@@ -341,18 +344,18 @@ export function ModelPicker({ models, value, onChange, loading = false }: ModelP
               aria-selected={!value}
               onFocus={() => setActiveIndex(0)}
               onClick={() => selectModel(null)}
-              className={`flex w-full items-start gap-3 rounded-xl px-3 py-2.5 text-left transition hover:bg-cyan-300/[0.06] ${activeIndex === 0 ? 'ring-1 ring-cyan-300/50 bg-cyan-300/[0.045]' : ''}`}
+              className={`flex w-full items-center gap-2.5 rounded-lg px-2.5 py-2 text-left transition hover:bg-cyan-300/[0.06] ${activeIndex === 0 ? 'ring-1 ring-cyan-300/50 bg-cyan-300/[0.045]' : ''}`}
             >
-              <div className="mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-lg border border-cyan-300/15 bg-cyan-300/7 text-cyan-200"><BrainCircuit className="h-4 w-4" /></div>
+              <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg border border-cyan-300/15 bg-cyan-300/7 text-cyan-200"><BrainCircuit className="h-4 w-4" /></div>
               <div className="min-w-0 flex-1">
                 <div className="flex items-center gap-2 text-xs font-semibold text-white">Auto route {!value && <Check className="h-3.5 w-3.5 text-emerald-300" />}</div>
-                <p className="mt-1 text-xs leading-4 text-slate-400">Let HIVE choose the configured model for the task and fallback policy.</p>
+                <p className="mt-0.5 truncate text-xs text-slate-500">Recommended · uses configured routing and fallback</p>
               </div>
             </button>
 
             {grouped.map(({ group, models: groupModels }) => (
               <section key={group} className="mt-2" aria-label={categoryLabel(group)}>
-                <div className="sticky top-0 z-10 flex items-center justify-between bg-hive-elevated/95 px-3 py-2 text-xs font-semibold uppercase tracking-[0.15em] text-slate-400 backdrop-blur">
+                <div className="sticky top-0 z-10 flex items-center justify-between bg-hive-elevated/95 px-2.5 py-1.5 text-xs font-semibold uppercase tracking-[0.12em] text-slate-500 backdrop-blur">
                   <span className="flex items-center gap-1.5">{groupIcon(group)} {categoryLabel(group)}</span>
                   <span>{groupModels.length}</span>
                 </div>
@@ -377,7 +380,7 @@ export function ModelPicker({ models, value, onChange, loading = false }: ModelP
                         onClick={() => { if (chatSelectable) selectModel(item) }}
                         className={
                           [
-                            "group/model flex w-full items-start gap-3 rounded-xl px-3 py-2.5 text-left ",
+                            "group/model flex w-full items-center gap-2.5 rounded-lg px-2.5 py-2 text-left ",
                             "transition ",
                             String(
                               chatSelectable
@@ -393,7 +396,7 @@ export function ModelPicker({ models, value, onChange, loading = false }: ModelP
                           ].join('')
                         }
                       >
-                        <div className="mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-lg border border-white/8 bg-white/[0.035] text-slate-400">
+                        <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg border border-white/8 bg-white/[0.035] text-slate-400">
                           <BrainCircuit className="h-3.5 w-3.5" />
                         </div>
                         <div className="min-w-0 flex-1">
@@ -401,17 +404,13 @@ export function ModelPicker({ models, value, onChange, loading = false }: ModelP
                             <span className="truncate text-xs font-medium text-slate-200 group-hover/model:text-white">{modelLabel(item)}</span>
                             {active && <Check className="h-3.5 w-3.5 shrink-0 text-emerald-300" />}
                           </div>
-                          <p className="mt-0.5 truncate text-xs text-slate-400">{item.id}</p>
-                          <div className="mt-1.5 flex flex-wrap gap-1">
-                            {!chatSelectable && <span className="rounded bg-amber-300/10 px-1.5 py-0.5 text-xs font-semibold uppercase text-amber-100">Discovery only</span>}
-                            {item.is_free === true && <span className="rounded bg-emerald-300/8 px-1.5 py-0.5 text-xs font-semibold uppercase text-emerald-200">Free</span>}
-                            {stringArray(item.configured_roles).slice(0, 3).map((role) => <span key={role} className="rounded bg-cyan-300/7 px-1.5 py-0.5 text-xs text-cyan-200/80">{role}</span>)}
-                            {context && <span className="rounded bg-white/[0.035] px-1.5 py-0.5 text-xs text-slate-400">{context}</span>}
-                            {stringArray(item.output_modalities).slice(0, 3).map((mode) => <span key={mode} className="rounded bg-violet-300/7 px-1.5 py-0.5 text-xs text-violet-100/75">{mode}</span>)}
+                          <div className="mt-0.5 flex min-w-0 items-center gap-2 text-xs text-slate-500">
+                            <span className="truncate">{item.id}</span>
+                            {item.is_free === true && <span className="shrink-0 text-emerald-300">Free</span>}
+                            {context && <span className="hidden shrink-0 sm:inline">{context}</span>}
+                            {!chatSelectable && <span className="shrink-0 text-amber-200">Discovery only</span>}
                           </div>
-                          {advisory && (
-                            <p className="mt-1.5 text-xs leading-4 text-amber-100/75">{advisory}</p>
-                          )}
+                          {advisory && <p className="mt-1 truncate text-xs text-amber-100/70">{advisory}</p>}
                         </div>
                       </button>
                     )
