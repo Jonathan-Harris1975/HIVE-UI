@@ -400,10 +400,12 @@ export function ExecutionPlanPage() {
           </section>
         )}
 
-        <section className="mt-8">
-          <h3 className="flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.18em] text-slate-400">
-            <History className="h-4 w-4" /> Saved preview history
-          </h3>
+        <details className="ui-disclosure mt-6">
+          <summary>
+            <span className="flex items-center gap-2"><History className="h-4 w-4" /> Saved preview history</span>
+            <span className="ui-disclosure-count">{history.length}</span>
+          </summary>
+          <div className="ui-disclosure-body">
           {historyLoading ? (
             <div className="mt-3 flex items-center gap-2 text-xs text-slate-500"><LoaderCircle className="h-3.5 w-3.5 animate-spin" /> Loading history</div>
           ) : history.length === 0 ? (
@@ -436,10 +438,12 @@ export function ExecutionPlanPage() {
               {JSON.stringify(selectedPreview, null, 2)}
             </pre>
           )}
-        </section>
+          </div>
+        </details>
 
-        <section className="mt-8">
-          <h3 className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-400">Policy profiles</h3>
+        <details className="ui-disclosure mt-3">
+          <summary>Policy profiles</summary>
+          <div className="ui-disclosure-body">
           {profilesLoading ? (
             <div className="mt-3 flex items-center gap-2 text-xs text-slate-500"><LoaderCircle className="h-3.5 w-3.5 animate-spin" /> Loading profiles</div>
           ) : (
@@ -457,7 +461,8 @@ export function ExecutionPlanPage() {
               ))}
             </div>
           )}
-        </section>
+          </div>
+        </details>
       </div>
     </div>
   )

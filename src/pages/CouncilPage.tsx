@@ -205,9 +205,13 @@ export function CouncilPage() {
           </div>
         </section>
 
-        <section className="mt-6 rounded-3xl border border-white/8 bg-hive-panel/70 p-5">
+        <details className="ui-disclosure mt-3">
+          <summary>
+            <span className="flex items-center gap-2"><TrendingUp className="h-4 w-4 text-cyan-300" /> Benchmark ranking</span>
+          </summary>
+          <div className="ui-disclosure-body">
           <div className="flex items-center justify-between">
-            <h3 className="flex items-center gap-2 text-sm font-semibold text-white"><TrendingUp className="h-4 w-4 text-cyan-300" /> Benchmark ranking</h3>
+            <h3 className="sr-only">Benchmark ranking</h3>
             <button
               type="button"
               onClick={() => void runRanking()}
@@ -302,7 +306,8 @@ export function CouncilPage() {
                 ))}
             </div>
           )}
-        </section>
+          </div>
+        </details>
       </div>
     </div>
   )

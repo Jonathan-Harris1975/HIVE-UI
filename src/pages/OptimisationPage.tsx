@@ -145,10 +145,12 @@ export function OptimisationPage() {
           </div>
         )}
 
-        <section className="mt-8">
-          <h3 className="flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.18em] text-slate-400">
-            <ListTree className="h-4 w-4" /> Decision &amp; recommendation ledger
-          </h3>
+        <details open className="ui-disclosure mt-6">
+          <summary>
+            <span className="flex items-center gap-2"><ListTree className="h-4 w-4" /> Decision &amp; recommendation ledger</span>
+            <span className="ui-disclosure-count">{decisions.length}</span>
+          </summary>
+          <div className="ui-disclosure-body">
           {loading ? (
             <div className="mt-3 flex items-center gap-2 text-xs text-slate-500">
               <LoaderCircle className="h-3.5 w-3.5 animate-spin" /> Loading decisions
@@ -195,12 +197,15 @@ export function OptimisationPage() {
               ))}
             </div>
           )}
-        </section>
+          </div>
+        </details>
 
-        <section className="mt-8">
-          <h3 className="flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.18em] text-slate-400">
-            <Beaker className="h-4 w-4" /> Experiments
-          </h3>
+        <details className="ui-disclosure mt-3">
+          <summary>
+            <span className="flex items-center gap-2"><Beaker className="h-4 w-4" /> Experiments</span>
+            <span className="ui-disclosure-count">{experiments.length}</span>
+          </summary>
+          <div className="ui-disclosure-body">
           {loading ? (
             <div className="mt-3 flex items-center gap-2 text-xs text-slate-500">
               <LoaderCircle className="h-3.5 w-3.5 animate-spin" /> Loading experiments
@@ -236,7 +241,8 @@ export function OptimisationPage() {
               ))}
             </div>
           )}
-        </section>
+          </div>
+        </details>
 
         <ConfirmDialog
           open={Boolean(pendingRevert)}
