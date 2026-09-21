@@ -9,12 +9,12 @@ import {
   Plus,
   RefreshCcw,
   Trash2,
-  Upload,
 } from 'lucide-react'
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import { ConfirmDialog } from '../components/ConfirmDialog'
 import { EmptyState } from '../components/EmptyState'
 import { StatusBadge } from '../components/StatusBadge'
+import { RepositoryOperationsPanel } from '../components/RepositoryOperationsPanel'
 import { useInspector } from '../context/InspectorContext'
 import { apiFetch } from '../lib/api'
 import { formatBytes, formatDate } from '../lib/format'
@@ -25,13 +25,20 @@ import type {
   RepositoryRefreshConfiguration,
   RepositorySetupResponse,
   RepositorySummary,
-  RepositoryUploadResponse,
 } from '../types/api'
 
 type PendingDelete = { repositoryId: string }
 type NoticeTone = 'success' | 'warning'
 
 function repositoryStatus(repo: RepositorySummary): { status: string; label: string; detail: string } {
+  const pipelineStatus = repo.pipeline_status ?? null
+  if (pipelineStatus === 'setup_incomplete') {
+    return {
+      status: 'warning',
+      label: 'Setup incomplete',
+      detail: 'The source snapshot is available, but automatic Memory or Repository Intelligence setup is incomplete. Use Retry setup after resolving the reported backend issue.',
+    }
+  }
   if (repo.rehydrated) {
     return {
       status: 'readonly',
@@ -71,15 +78,12 @@ function languageBreakdown(languages: Record<string, number>): { name: string; b
 
 export function RepositoriesPage() {
   const { setPayload, setOpen } = useInspector()
-  const fileInputRef = useRef<HTMLInputElement | null>(null)
-
   const [repositories, setRepositories] = useState<RepositorySummary[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [notice, setNotice] = useState<string | null>(null)
   const [noticeTone, setNoticeTone] = useState<NoticeTone>('success')
 
-  const [uploading, setUploading] = useState(false)
   const [refreshConfig, setRefreshConfig] = useState<RepositoryRefreshConfiguration | null>(null)
   const [refreshConfigError, setRefreshConfigError] = useState<string | null>(null)
 
@@ -152,39 +156,6 @@ export function RepositoriesPage() {
   function selectRepository(repositoryId: string) {
     setSelectedId(repositoryId)
     void loadManifest(repositoryId)
-  }
-
-  async function handleUpload(fileList: FileList | null) {
-    const file = fileList?.[0]
-    if (!file) return
-    setUploading(true)
-    setError(null)
-    setNotice(null)
-    setNoticeTone('success')
-    try {
-      const body = new FormData()
-      body.append('upload', file)
-      const manifestResponse = await apiFetch<RepositoryUploadResponse>('/v1/repositories', { method: 'POST', body })
-      const pipelineStatus = manifestResponse.pipeline?.status
-      if (pipelineStatus === 'setup_incomplete') {
-        const failed = manifestResponse.pipeline?.failed_stages?.join(', ') || 'one or more required stages'
-        setNoticeTone('warning')
-        setNotice(`${manifestResponse.repository_id} snapshot stored, but setup is incomplete (${failed}). Use Retry setup after the backend dependency is restored.`)
-      } else if (pipelineStatus === 'ready_with_warnings') {
-        const failed = manifestResponse.pipeline?.failed_stages?.join(', ') || 'optional services'
-        setNoticeTone('warning')
-        setNotice(`${manifestResponse.repository_id} registered and operational with optional warning(s): ${failed}.`)
-      } else {
-        setNotice(`${manifestResponse.repository_id} registered and ready (${manifestResponse.file_count} files, ${formatBytes(manifestResponse.total_bytes)}).`)
-      }
-      await loadRepositories()
-      selectRepository(manifestResponse.repository_id)
-    } catch (caught) {
-      setError(caught instanceof Error ? caught.message : 'Repository upload failed.')
-    } finally {
-      setUploading(false)
-      if (fileInputRef.current) fileInputRef.current.value = ''
-    }
   }
 
   async function runDiff(repositoryId: string) {
@@ -315,18 +286,6 @@ export function RepositoriesPage() {
           </div>
 
           <div className="mt-6 flex flex-wrap items-center gap-3 border-t border-white/8 pt-5">
-            <label className="flex h-10 cursor-pointer items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-cyan-400 to-emerald-300 px-4 text-xs font-semibold text-hive-accent-deep">
-              {uploading ? <LoaderCircle className="h-4 w-4 animate-spin" /> : <Upload className="h-4 w-4" />}
-              {uploading ? 'Uploading…' : 'Upload repository (.zip)'}
-              <input
-                ref={fileInputRef}
-                type="file"
-                accept=".zip"
-                onChange={(event) => void handleUpload(event.target.files)}
-                disabled={uploading}
-                className="hidden"
-              />
-            </label>
             <span className="rounded-full border border-white/10 px-2.5 py-1 text-xs text-slate-400">
               {repositories.length} registered
             </span>
@@ -334,6 +293,14 @@ export function RepositoriesPage() {
             <span className="rounded-full border border-white/10 px-2.5 py-1 text-xs text-slate-400">{formatBytes(totalBytes)}</span>
           </div>
         </section>
+
+        <RepositoryOperationsPanel
+          repositories={repositories}
+          refreshConfig={refreshConfig}
+          refreshConfigError={refreshConfigError}
+          onRepositoriesChanged={loadRepositories}
+          onRepositoryUploaded={selectRepository}
+        />
 
         <section className="mt-4 rounded-2xl border border-white/8 bg-hive-panel/60 px-4 py-3 sm:px-5">
           <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
