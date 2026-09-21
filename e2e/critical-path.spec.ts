@@ -67,7 +67,7 @@ test.describe('HIVE-UI critical path', () => {
     await page.goto('/')
 
     // --- Login ---
-    await expect(page.getByRole('heading', { name: /enter the hive/i })).toBeVisible()
+    await expect(page.getByRole('heading', { name: /enter hive/i })).toBeVisible()
     await page.getByPlaceholder(/enter access key/i).fill('e2e-test-key')
     await page.getByRole('button', { name: /unlock console/i }).click()
 
