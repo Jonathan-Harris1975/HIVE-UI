@@ -1,5 +1,6 @@
 import {
   CheckCircle2,
+  ChevronDown,
   Files,
   FolderGit2,
   LoaderCircle,
@@ -8,11 +9,10 @@ import {
   Upload,
   XCircle,
 } from 'lucide-react'
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { StatusBadge } from './StatusBadge'
 import { apiFetch } from '../lib/api'
-import { formatBytes, formatDate } from '../lib/format'
-import { GOVERNED_REPOSITORIES } from '../lib/repositories'
+import { formatBytes } from '../lib/format'
 import type {
   RepositoryBulkUploadItemResult,
   RepositoryBulkUploadResponse,
@@ -78,40 +78,6 @@ function pipelineState(result: RepositoryBulkUploadItemResult, stage: 'memory' |
     ?? (result.pipeline?.intelligence?.ok ? 'ready' : result.pipeline?.intelligence?.error ? 'failed' : null)
 }
 
-function explicitCurrent(repo: RepositorySummary, domain: 'memory' | 'intelligence'): boolean {
-  if (domain === 'memory') {
-    const freshness = repo.freshness?.memory ?? repo.memory_freshness
-    if (freshness === 'current') return true
-    if (freshness === 'stale' || freshness === 'not_ready') return false
-    const memoryFingerprint = repo.freshness?.memory_fingerprint ?? repo.memory_fingerprint
-    return Boolean(repo.memory_ready && memoryFingerprint && memoryFingerprint === repo.fingerprint)
-  }
-  const freshness = repo.freshness?.intelligence ?? repo.intelligence_freshness
-  if (repo.intelligence_current === true || freshness === 'current') return true
-  if (repo.intelligence_current === false || freshness === 'stale' || freshness === 'not_ready') return false
-  const intelligenceFingerprint = repo.freshness?.intelligence_fingerprint ?? repo.intelligence_fingerprint
-  return Boolean(repo.intelligence_ready && intelligenceFingerprint && intelligenceFingerprint === repo.fingerprint)
-}
-
-function freshnessLabel(repo: RepositorySummary | undefined, domain: 'snapshot' | 'memory' | 'intelligence'): string {
-  if (!repo) return 'Missing'
-  if (repo.rehydrated) return 'Rehydrated · refresh required'
-  if (domain === 'snapshot') {
-    const state = repo.freshness?.snapshot ?? repo.snapshot_status
-    if (repo.snapshot_current === false || state === 'stale') return 'Stale'
-    if (repo.snapshot_current === true || state === 'current') return 'Current'
-    return 'Registered · freshness unreported'
-  }
-  if (explicitCurrent(repo, domain)) return 'Current'
-  if (domain === 'memory') {
-    if (repo.memory_status === 'unavailable') return 'Pipeline failed'
-    if (repo.memory_ready) return 'Ready · freshness unreported'
-    return 'Not ready'
-  }
-  if (repo.intelligence_ready) return 'Ready · freshness unreported'
-  return 'Not ready'
-}
-
 function resultForFile(results: RepositoryBulkUploadItemResult[], file: File, index: number) {
   return results.find((item) => item.filename === file.name) ?? results[index]
 }
@@ -139,13 +105,6 @@ export function RepositoryOperationsPanel({
   const queuedUpload = queue.some((item) => item.state === 'queued')
   const refreshActive = Boolean(refreshJob && ACTIVE_REFRESH_STATUSES.has(refreshJob.status))
 
-  const estate = useMemo(() => GOVERNED_REPOSITORIES.map((repositoryId) => ({
-    repositoryId,
-    repo: repositories.find((item) => item.repository_id === repositoryId),
-  })), [repositories])
-  const registeredCount = estate.filter((entry) => entry.repo).length
-  const memoryCurrentCount = estate.filter((entry) => entry.repo && explicitCurrent(entry.repo, 'memory')).length
-  const intelligenceCurrentCount = estate.filter((entry) => entry.repo && explicitCurrent(entry.repo, 'intelligence')).length
 
   useEffect(() => {
     if (!refreshJob || !ACTIVE_REFRESH_STATUSES.has(refreshJob.status)) return undefined
@@ -415,45 +374,20 @@ export function RepositoryOperationsPanel({
         {uploadNotice && <div role="status" className="mt-3 rounded-xl border border-emerald-300/20 bg-emerald-300/8 px-3 py-2 text-xs text-emerald-100">{uploadNotice}</div>}
       </section>
 
-      <section className="rounded-2xl border border-white/8 bg-hive-panel/60 p-4 sm:p-5">
-        <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
-          <div>
-            <p className="text-xs font-semibold uppercase tracking-[0.16em] text-slate-400">Eight-repository governed estate</p>
-            <p className="mt-1 text-sm text-slate-300">Registration and freshness are tracked separately. Eight records existing does not make eight Intelligence snapshots current.</p>
+      <details className="group rounded-2xl border border-white/8 bg-hive-panel/60 open:bg-hive-panel/70">
+        <summary
+          className={
+            "flex cursor-pointer list-none items-center justify-between gap-3 p-4 sm:p-5 " +
+            "[&::-webkit-details-marker]:hidden"
+          }
+        >
+          <div className="min-w-0">
+            <p className="text-xs font-semibold uppercase tracking-[0.16em] text-slate-400">Governed refresh</p>
+            <p className="mt-1 text-sm text-slate-300">Refresh all configured repository snapshots and rebuild their governed state.</p>
           </div>
-          <div className="flex flex-wrap gap-2 text-xs">
-            <span className="rounded-full border border-white/10 px-2.5 py-1 text-slate-300">{registeredCount}/8 registered</span>
-            <span className="rounded-full border border-white/10 px-2.5 py-1 text-slate-300">{memoryCurrentCount}/8 Memory current</span>
-            <span className="rounded-full border border-white/10 px-2.5 py-1 text-slate-300">{intelligenceCurrentCount}/8 Intelligence current</span>
-          </div>
-        </div>
-
-        <div className="mt-4 grid gap-2 sm:grid-cols-2 lg:grid-cols-4">
-          {estate.map(({ repositoryId, repo }) => {
-            const snapshot = freshnessLabel(repo, 'snapshot')
-            const memory = freshnessLabel(repo, 'memory')
-            const intelligence = freshnessLabel(repo, 'intelligence')
-            const lastRefresh = repo?.last_refresh_at ?? repo?.freshness?.refreshed_at
-            return (
-              <article key={repositoryId} className="rounded-xl border border-white/8 bg-white/[0.025] p-3">
-                <div className="flex items-start justify-between gap-2">
-                  <p className="text-xs font-semibold text-white">{repositoryId}</p>
-                  <StatusBadge status={repo ? 'active' : 'error'} label={repo ? 'Registered' : 'Missing'} compact />
-                </div>
-                <div className="mt-2 space-y-1.5 text-xs text-slate-400">
-                  <p>Snapshot: <span className={snapshot === 'Current' ? 'text-emerald-200' : 'text-slate-300'}>{snapshot}</span></p>
-                  <p>Memory: <span className={memory === 'Current' ? 'text-emerald-200' : 'text-slate-300'}>{memory}</span></p>
-                  <p>Intelligence: <span className={intelligence === 'Current' ? 'text-emerald-200' : 'text-slate-300'}>{intelligence}</span></p>
-                  {lastRefresh && <p>Last refresh: <span className="text-slate-300">{formatDate(lastRefresh)}</span></p>}
-                  {repo?.last_pipeline_failure && <p className="text-rose-200">Pipeline failure recorded</p>}
-                  {repo?.repair_required && <p className="text-amber-100">Repair required</p>}
-                </div>
-              </article>
-            )
-          })}
-        </div>
-
-        <div className="mt-4 flex flex-col gap-3 border-t border-white/8 pt-4 sm:flex-row sm:items-center sm:justify-between">
+          <ChevronDown className="h-4 w-4 shrink-0 text-slate-500 transition-transform group-open:rotate-180" />
+        </summary>
+        <div className="mx-4 flex flex-col gap-3 border-t border-white/8 pb-4 pt-4 sm:mx-5 sm:flex-row sm:items-center sm:justify-between">
           <div className="min-w-0 text-xs text-slate-400">
             <p className="font-semibold text-slate-300">Refresh all repositories</p>
             <p className="mt-1">Runs the governed backend refresh and polls only while the job is active, with a bounded polling window.</p>
@@ -479,7 +413,7 @@ export function RepositoryOperationsPanel({
         </div>
 
         {refreshJob && (
-          <div className="mt-4 rounded-xl border border-white/8 bg-hive-surface/60 p-3" aria-live="polite">
+          <div className="mx-4 mb-4 rounded-xl border border-white/8 bg-hive-surface/60 p-3 sm:mx-5" aria-live="polite">
             <div className="flex flex-wrap items-center justify-between gap-2">
               <p className="text-xs font-semibold text-slate-100">Job {refreshJob.job_id.slice(0, 12)}</p>
               <StatusBadge
@@ -519,8 +453,8 @@ export function RepositoryOperationsPanel({
             {refreshJob.error && <p className="mt-2 text-xs text-rose-200">{refreshJob.error}</p>}
           </div>
         )}
-        {refreshError && <div role="alert" className="mt-3 rounded-xl border border-rose-400/20 bg-rose-400/8 px-3 py-2 text-xs text-rose-200">{refreshError}</div>}
-      </section>
+        {refreshError && <div role="alert" className="mx-4 mb-4 rounded-xl border border-rose-400/20 bg-rose-400/8 px-3 py-2 text-xs text-rose-200 sm:mx-5">{refreshError}</div>}
+      </details>
     </div>
   )
 }
