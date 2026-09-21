@@ -250,21 +250,22 @@ test('declarative router keeps protected routes and compatibility redirects stab
   assert.doesNotMatch(app, /\b(?:loader|action)=/)
 })
 
-test('repository overview exposes bulk upload, eight-repository freshness and bounded refresh-all polling', () => {
+test('repository overview merges estate freshness into repository cards and keeps bounded refresh-all polling', () => {
   const operations = source('src/components/RepositoryOperationsPanel.tsx')
   const repositories = source('src/pages/RepositoriesPage.tsx')
   const apiTypes = source('src/types/api.ts')
 
   assert.match(repositories, /<RepositoryOperationsPanel/)
-  assert.match(operations, /GOVERNED_REPOSITORIES/)
+  assert.match(repositories, /memoryCurrentCount/)
+  assert.match(repositories, /intelligenceCurrentCount/)
   assert.match(operations, /multiple=\{mode === 'bulk'\}/)
   assert.match(operations, /body\.append\('uploads', item\.file\)/)
   assert.match(operations, /\/v1\/repositories\/bulk/)
   assert.match(operations, /Selected queue/)
   assert.match(operations, /Retry failed item/)
-  assert.match(operations, /8 registered/)
-  assert.match(operations, /8 Memory current/)
-  assert.match(operations, /8 Intelligence current/)
+  assert.match(repositories, /freshnessLabel\(repo, domain\)/)
+  assert.match(repositories, /freshness pending/)
+  assert.doesNotMatch(operations, /Eight-repository governed estate/)
   assert.match(operations, /\/v1\/repositories\/refresh-all/)
   assert.match(operations, /\/v1\/repositories\/refresh-jobs\/\$\{encodeURIComponent\(jobId\)\}/)
   assert.match(operations, /REFRESH_POLL_LIMIT/)
