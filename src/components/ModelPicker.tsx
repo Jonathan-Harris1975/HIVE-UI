@@ -344,7 +344,9 @@ export function ModelPicker({ models, value, onChange, loading = false }: ModelP
               aria-selected={!value}
               onFocus={() => setActiveIndex(0)}
               onClick={() => selectModel(null)}
-              className={`flex w-full items-center gap-2.5 rounded-lg px-2.5 py-2 text-left transition hover:bg-cyan-300/[0.06] ${activeIndex === 0 ? 'ring-1 ring-cyan-300/50 bg-cyan-300/[0.045]' : ''}`}
+              className={`flex w-full items-center gap-2.5 rounded-lg px-2.5 py-2 text-left transition hover:bg-cyan-300/[0.06] ${
+                activeIndex === 0 ? 'ring-1 ring-cyan-300/50 bg-cyan-300/[0.045]' : ''
+              }`}
             >
               <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg border border-cyan-300/15 bg-cyan-300/7 text-cyan-200"><BrainCircuit className="h-4 w-4" /></div>
               <div className="min-w-0 flex-1">
