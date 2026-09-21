@@ -313,8 +313,6 @@ export function ModelRegistryPage() {
         <section className="rounded-3xl border border-white/8 bg-hive-panel/75 p-5 sm:p-7">
           <div className="flex flex-col gap-5 lg:flex-row lg:items-end lg:justify-between">
             <div>
-              <p className="text-xs font-semibold uppercase tracking-[0.2em] text-cyan-300/70">Model registry</p>
-              <h2 className="mt-2 text-2xl font-semibold text-white">Ranked models per task category</h2>
               <p className="mt-2 max-w-2xl text-sm leading-6 text-slate-400">
                 Only models clearing the quality floor are shown or eligible for automatic routing. The monthly AI
                 Council refreshes benchmark evidence and persists qualified rankings in D1.

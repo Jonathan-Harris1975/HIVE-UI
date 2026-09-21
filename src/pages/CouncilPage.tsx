@@ -118,8 +118,6 @@ export function CouncilPage() {
     <div className="h-full overflow-y-auto p-4 sm:p-6 lg:p-8">
       <div className="mx-auto max-w-6xl">
         <section className="rounded-3xl border border-white/8 bg-hive-panel/75 p-5 sm:p-7">
-          <p className="text-xs font-semibold uppercase tracking-[0.2em] text-cyan-300/70">AI Council &amp; Benchmark</p>
-          <h2 className="mt-2 text-2xl font-semibold text-white">Provider discovery, promotion &amp; model ranking</h2>
           <p className="mt-2 max-w-2xl text-sm leading-6 text-slate-400">
             The Council discovers configured providers, diffs their catalogues against the last run, and auto-promotes
             qualifying models into the Model Registry. The Benchmark Engine below lets you rank arbitrary candidates

@@ -576,8 +576,6 @@ export function RepositoryIntelligencePage() {
     <div className="h-full overflow-x-hidden overflow-y-auto p-3 sm:p-6 lg:p-8">
       <div className="mx-auto w-full min-w-0 max-w-6xl">
         <section className="min-w-0 overflow-hidden rounded-3xl border border-white/8 bg-hive-panel/75 p-4 sm:p-7">
-          <p className="text-xs font-semibold uppercase tracking-[0.2em] text-cyan-300/70">Repository workspace</p>
-          <h2 className="mt-2 break-words text-xl font-semibold text-white sm:text-2xl">Memory &amp; Repository Intelligence</h2>
           <p className="mt-2 max-w-2xl text-sm leading-6 text-slate-400">
             One governed workspace for persistent Repository Memory, QA evidence, Council scoring, consolidated findings and code-improvement instructions.
           </p>

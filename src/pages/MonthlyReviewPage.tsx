@@ -90,8 +90,6 @@ export function MonthlyReviewPage() {
     <div className="p-4 sm:p-6">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <p className="text-xs font-semibold uppercase tracking-[0.2em] text-cyan-300/70">Governance</p>
-          <h1 className="mt-2 text-xl font-semibold text-white">Monthly Review</h1>
           <p className="mt-1 max-w-2xl text-xs leading-5 text-slate-400">
             Consolidated system health, AI Council/model registry, optimisation stats, execution
             review posture, and token usage/cost for each calendar month. The day-1 MAST job calls one HIVE endpoint that

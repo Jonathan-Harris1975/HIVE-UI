@@ -213,8 +213,6 @@ export function ExecutionPlanPage() {
     <div className="h-full overflow-y-auto p-4 sm:p-6 lg:p-8">
       <div className="mx-auto max-w-6xl">
         <section className="rounded-3xl border border-white/8 bg-hive-panel/75 p-5 sm:p-7">
-          <p className="text-xs font-semibold uppercase tracking-[0.2em] text-cyan-300/70">Execution planning</p>
-          <h2 className="mt-2 text-2xl font-semibold text-white">Preview a controlled execution plan</h2>
           <p className="mt-2 max-w-2xl text-sm leading-6 text-slate-400">
             Build a deterministic planning estimate before anything is approved or handed to an execution adapter.
             The preview does not mutate a repository, write to R2, call models, or start background work.

@@ -308,8 +308,6 @@ export function RepositoriesPage() {
         <section className="rounded-3xl border border-white/8 bg-hive-panel/75 p-5 sm:p-7">
           <div className="flex flex-col gap-5 lg:flex-row lg:items-end lg:justify-between">
             <div>
-              <p className="text-xs font-semibold uppercase tracking-[0.2em] text-cyan-300/70">Repository manager</p>
-              <h2 className="mt-2 text-2xl font-semibold text-white">Registered repository snapshots</h2>
               <p className="mt-2 max-w-2xl text-sm leading-6 text-slate-400">
                 Upload a zipped repository to build Repository Memory and consolidated Repository Intelligence. Repository IDs are stable,
                 monthly uploads replace the same governed snapshot, and production stores both the source ZIP and manifest
