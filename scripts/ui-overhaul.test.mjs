@@ -40,7 +40,8 @@ test('core HIVE palette is expressed through theme tokens rather than repeated h
 
 test('dense controls and copy retain a readable interaction baseline', () => {
   const css = source('src/index.css')
-  assert.match(css, /\.text-xs \{ font-size: 0\.8125rem; \}/)
+  assert.match(css, /--text-hive-xs: 0\.75rem;/)
+  assert.doesNotMatch(css, /\.text-xs \{ font-size:/)
   assert.match(css, /@media \(pointer: coarse\)/)
   assert.match(css, /min-height: 44px/)
   assert.match(css, /@media \(prefers-reduced-motion: reduce\)/)
@@ -213,7 +214,7 @@ test('execution planning is separated from optimisation and retains legacy routi
   assert.match(app, /path="execution-simulation" element={<Navigate to="\/execution" replace \/>}/)
   assert.match(shell, /to: '\/execution', label: 'Execution'/)
   assert.doesNotMatch(shell, /to: '\/optimisation'.*execution-reviews/)
-  assert.match(plan, /Preview a controlled execution plan/)
+  assert.match(plan, /\['Preview', 'Review', 'Approve', 'Execute'\]/)
   assert.match(plan, /source_preview_id: sourcePreviewId/)
   assert.match(plan, /preview_id: simulation\.preview_id \|\| null/)
   assert.match(plan, /simulation_id: simulation\.simulation_id \|\| null/)
