@@ -668,7 +668,12 @@ export function RepositoryIntelligencePage() {
             <summary className="flex cursor-pointer list-none items-center justify-between gap-3 px-4 py-3 [&::-webkit-details-marker]:hidden">
               <div>
                 <p className="text-xs font-semibold uppercase tracking-[0.14em] text-slate-300">Improvement settings</p>
-                <p className="mt-1 text-xs text-slate-500">{executionMode === 'multi_pass' ? `Multi-pass · up to ${maxWorkPasses} passes` : 'Single pass'} · {Math.round(configuredWorkScopeRatio * 100)}% per-pass scope</p>
+                <p className="mt-1 text-xs text-slate-500">
+                  {executionMode === 'multi_pass'
+                    ? `Multi-pass · up to ${maxWorkPasses} passes`
+                    : 'Single pass'}{' '}
+                  · {Math.round(configuredWorkScopeRatio * 100)}% per-pass scope
+                </p>
               </div>
               <ChevronDown className="h-4 w-4 shrink-0 text-slate-500 transition-transform group-open:rotate-180" />
             </summary>

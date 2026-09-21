@@ -408,7 +408,12 @@ export function RepositoriesPage() {
                       </span>
                     </div>
                     <details className="group mt-3 rounded-xl border border-white/8 bg-black/10 open:bg-white/[0.02]">
-                      <summary className="flex cursor-pointer list-none items-center justify-between px-3 py-2 text-xs font-semibold text-slate-300 hover:text-white [&::-webkit-details-marker]:hidden">
+                      <summary
+                        className={
+                          "flex cursor-pointer list-none items-center justify-between px-3 py-2 text-xs font-semibold " +
+                          "text-slate-300 hover:text-white [&::-webkit-details-marker]:hidden"
+                        }
+                      >
                         <span>More information &amp; actions</span>
                         <ChevronDown className="h-3.5 w-3.5 transition-transform group-open:rotate-180" />
                       </summary>
