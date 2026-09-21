@@ -581,20 +581,33 @@ export function RepositoryIntelligencePage() {
           <p className="mt-2 max-w-2xl text-sm leading-6 text-slate-400">
             One governed workspace for persistent Repository Memory, QA evidence, Council scoring, consolidated findings and code-improvement instructions.
           </p>
+          <div className="mt-5 min-w-0 rounded-2xl border border-cyan-300/15 bg-cyan-300/[0.035] p-3 sm:p-4">
+            <div className="flex min-w-0 items-center justify-between gap-3">
+              <label htmlFor="repository-workspace-selector" className="text-xs font-semibold uppercase tracking-[0.14em] text-cyan-200/80">Current repository</label>
+              {selectedRepository && (
+                <span className="shrink-0 rounded-full border border-cyan-300/15 bg-cyan-300/8 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.12em] text-cyan-100">
+                  Active
+                </span>
+              )}
+            </div>
+            <select
+              id="repository-workspace-selector"
+              value={repositoryId}
+              aria-label="Choose registered repository"
+              onChange={(event) => selectRepository(event.target.value)}
+              className="mt-2 h-12 w-full min-w-0 max-w-full rounded-xl border border-cyan-300/15 bg-hive-surface px-3 text-base font-medium text-slate-100 outline-none focus:border-cyan-300/40"
+            >
+              <option value="">{catalog.loading ? 'Loading repositories…' : 'Choose a registered repository…'}</option>
+              {catalog.repositories.map((repo) => (
+                <option key={repo.repository_id} value={repo.repository_id}>{repo.repository_id} · {repo.source_filename}</option>
+              ))}
+            </select>
+            <p className="mt-2 text-xs leading-5 text-slate-500">Switching repository changes Memory, QA, Council, Intelligence and improvement history together.</p>
+          </div>
+
           {selectedRepository && (
             <div className="mt-4 min-w-0">
-              <div className="flex min-w-0 flex-wrap items-center gap-2 text-xs">
-                <span className="rounded-full border border-cyan-300/20 bg-cyan-300/8 px-2.5 py-1 font-semibold text-cyan-100">
-                  Selected: {selectedRepository.repository_id}
-                </span>
-                <span className="max-w-full truncate rounded-full border border-white/10 px-2.5 py-1 text-slate-400">
-                  {selectedRepository.source_filename}
-                </span>
-                <span className="max-w-full break-all rounded-full border border-white/10 px-2.5 py-1 font-mono text-[11px] text-slate-500">
-                  {selectedRepository.fingerprint.slice(0, 12)}
-                </span>
-              </div>
-              <div className="mt-3 grid grid-cols-2 gap-2 text-xs text-slate-400 lg:grid-cols-4">
+              <div className="grid grid-cols-2 gap-2 text-xs text-slate-400 lg:grid-cols-4">
                 <div className="rounded-xl border border-white/8 bg-white/[0.025] p-3">
                   <p className="text-slate-500">Snapshot</p>
                   <p className="mt-1 truncate font-mono text-[11px] text-slate-200" title={selectedRepository.fingerprint}>{selectedRepository.fingerprint.slice(0, 12)}…</p>
@@ -647,22 +660,6 @@ export function RepositoryIntelligencePage() {
             </div>
           )}
 
-          <div className="mt-6 min-w-0 border-t border-white/8 pt-5">
-            <label htmlFor="repository-workspace-selector" className="mb-2 block text-xs font-semibold uppercase tracking-[0.14em] text-slate-500">Repository</label>
-            <select
-              id="repository-workspace-selector"
-              value={repositoryId}
-              aria-label="Choose registered repository"
-              onChange={(event) => selectRepository(event.target.value)}
-              className="h-11 w-full min-w-0 max-w-full rounded-xl border border-white/8 bg-hive-surface px-3 text-sm text-slate-200 outline-none focus:border-cyan-300/30"
-            >
-              <option value="">{catalog.loading ? 'Loading repositories…' : 'Choose a registered repository…'}</option>
-              {catalog.repositories.map((repo) => (
-                <option key={repo.repository_id} value={repo.repository_id}>{repo.repository_id} · {repo.source_filename}</option>
-              ))}
-            </select>
-            <p className="mt-2 text-xs text-slate-500">Changing repository switches Memory, QA, Council, Intelligence and improvement history together.</p>
-          </div>
 
           <details className="group mt-4 rounded-2xl border border-white/8 bg-white/[0.015]">
             <summary className="flex cursor-pointer list-none items-center justify-between gap-3 px-4 py-3 [&::-webkit-details-marker]:hidden">
