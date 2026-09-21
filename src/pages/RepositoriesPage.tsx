@@ -77,6 +77,42 @@ function languageBreakdown(languages: Record<string, number>): { name: string; b
     .slice(0, 8)
 }
 
+function explicitCurrent(repo: RepositorySummary, domain: 'memory' | 'intelligence'): boolean {
+  const freshness = domain === 'memory'
+    ? repo.freshness?.memory ?? repo.memory_freshness
+    : repo.freshness?.intelligence ?? repo.intelligence_freshness
+  if (freshness === 'current' || (domain === 'intelligence' && repo.intelligence_current === true)) return true
+  if (freshness === 'stale' || freshness === 'not_ready') return false
+  const fingerprint = domain === 'memory'
+    ? repo.freshness?.memory_fingerprint ?? repo.memory_fingerprint
+    : repo.freshness?.intelligence_fingerprint ?? repo.intelligence_fingerprint
+  const ready = domain === 'memory' ? repo.memory_ready : repo.intelligence_ready
+  return Boolean(ready && fingerprint && fingerprint === repo.fingerprint)
+}
+
+function freshnessLabel(repo: RepositorySummary, domain: 'snapshot' | 'memory' | 'intelligence'): string {
+  if (repo.rehydrated) return 'Refresh required'
+  if (domain === 'snapshot') {
+    const state = repo.freshness?.snapshot ?? repo.snapshot_status
+    if (repo.snapshot_current === false || state === 'stale') return 'Stale'
+    if (repo.snapshot_current === true || state === 'current') return 'Current'
+    return 'Registered'
+  }
+  if (explicitCurrent(repo, domain)) return 'Current'
+  if (domain === 'memory') {
+    if (repo.memory_status === 'unavailable') return 'Failed'
+    return repo.memory_ready ? 'Ready' : 'Not ready'
+  }
+  return repo.intelligence_ready ? 'Ready' : 'Not ready'
+}
+
+function freshnessTone(label: string): string {
+  if (label === 'Current') return 'text-emerald-200'
+  if (label === 'Failed' || label === 'Stale') return 'text-rose-200'
+  if (label === 'Not ready' || label === 'Refresh required') return 'text-amber-100'
+  return 'text-slate-300'
+}
+
 export function RepositoriesPage() {
   const { setPayload, setOpen } = useInspector()
   const [repositories, setRepositories] = useState<RepositorySummary[]>([])
@@ -260,6 +296,11 @@ export function RepositoriesPage() {
 
   const totalFiles = useMemo(() => repositories.reduce((sum, repo) => sum + repo.file_count, 0), [repositories])
   const totalBytes = useMemo(() => repositories.reduce((sum, repo) => sum + repo.total_bytes, 0), [repositories])
+  const readyCount = useMemo(() => repositories.filter((repo) => repositoryStatus(repo).status === 'ready').length, [repositories])
+  const memoryCurrentCount = useMemo(() => repositories.filter((repo) => explicitCurrent(repo, 'memory')).length, [repositories])
+  const intelligenceCurrentCount = useMemo(() => repositories.filter((repo) => explicitCurrent(repo, 'intelligence')).length, [repositories])
+  const memoryReadyCount = useMemo(() => repositories.filter((repo) => repo.memory_ready).length, [repositories])
+  const intelligenceReadyCount = useMemo(() => repositories.filter((repo) => repo.intelligence_ready).length, [repositories])
 
   return (
     <div className="h-full overflow-y-auto p-4 sm:p-6 lg:p-8">
@@ -287,11 +328,19 @@ export function RepositoriesPage() {
           </div>
 
           <div className="mt-6 flex flex-wrap items-center gap-3 border-t border-white/8 pt-5">
-            <span className="rounded-full border border-white/10 px-2.5 py-1 text-xs text-slate-400">
+            <span className="rounded-full border border-white/10 px-2.5 py-1 text-xs text-slate-300">
               {repositories.length} registered
             </span>
-            <span className="rounded-full border border-white/10 px-2.5 py-1 text-xs text-slate-400">{totalFiles} files</span>
-            <span className="rounded-full border border-white/10 px-2.5 py-1 text-xs text-slate-400">{formatBytes(totalBytes)}</span>
+            <span className="rounded-full border border-white/10 px-2.5 py-1 text-xs text-slate-300">{readyCount} ready</span>
+            <span className="rounded-full border border-white/10 px-2.5 py-1 text-xs text-slate-400">
+              {memoryCurrentCount > 0 ? `${memoryCurrentCount} Memory current` : `${memoryReadyCount} Memory ready · freshness pending`}
+            </span>
+            <span className="rounded-full border border-white/10 px-2.5 py-1 text-xs text-slate-400">
+              {intelligenceCurrentCount > 0
+                ? `${intelligenceCurrentCount} Intelligence current`
+                : `${intelligenceReadyCount} Intelligence ready · freshness pending`}
+            </span>
+            <span className="text-xs text-slate-500">{totalFiles} files · {formatBytes(totalBytes)}</span>
           </div>
         </section>
 
@@ -399,14 +448,22 @@ export function RepositoriesPage() {
                     {availability.status !== 'ready' && (
                       <p className="mt-2 text-xs leading-5 text-amber-200/80">{availability.detail}</p>
                     )}
-                    <div className="mt-3 flex flex-wrap items-center gap-2 text-xs text-slate-400">
-                      <span className="rounded-full border border-white/10 px-2 py-0.5">{repo.file_count} files</span>
-                      <span className="rounded-full border border-white/10 px-2 py-0.5">{formatBytes(repo.total_bytes)}</span>
-                      <span className="rounded-full border border-white/10 px-2 py-0.5">v{repo.indexed_version}</span>
-                      <span className="rounded-full border border-white/10 px-2 py-0.5">
-                        Updated {formatDate(new Date(repo.updated_at * 1000).toISOString())}
-                      </span>
+                    <div className="mt-3 grid grid-cols-3 gap-2 border-y border-white/6 py-2 text-xs">
+                      {(['snapshot', 'memory', 'intelligence'] as const).map((domain) => {
+                        const label = freshnessLabel(repo, domain)
+                        const title = domain === 'intelligence' ? 'Intelligence' : domain[0].toUpperCase() + domain.slice(1)
+                        return (
+                          <div key={domain} className="min-w-0">
+                            <p className="truncate text-[11px] text-slate-500">{title}</p>
+                            <p className={`mt-0.5 truncate font-medium ${freshnessTone(label)}`}>{label}</p>
+                          </div>
+                        )
+                      })}
                     </div>
+                    <p className="mt-2 text-xs leading-5 text-slate-500">
+                      {repo.file_count} files · {formatBytes(repo.total_bytes)} · v{repo.indexed_version} · Updated{' '}
+                      {formatDate(new Date(repo.updated_at * 1000).toISOString())}
+                    </p>
                     <details className="group mt-3 rounded-xl border border-white/8 bg-black/10 open:bg-white/[0.02]">
                       <summary
                         className={
