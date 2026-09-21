@@ -515,14 +515,14 @@ function ContextTabs({ pathname }: { pathname: string }) {
   return (
     <nav
       aria-label="Section navigation"
-      className="border-t border-white/6 bg-hive-surface/85 px-4 py-2 sm:px-6 sm:py-0"
+      className="border-t border-white/6 bg-hive-surface/85 px-4 py-1.5 sm:px-6 sm:py-0"
     >
       <label className="block sm:hidden">
         <span className="sr-only">Current workspace view</span>
         <select
           value={section.items.find((item) => item.to === pathname)?.to ?? section.items[0].to}
           onChange={(event) => navigate(event.target.value)}
-          className="h-10 w-full rounded-xl border border-white/8 bg-hive-panel px-3 text-sm text-slate-100 outline-none"
+          className="h-9 w-full rounded-lg border border-white/8 bg-hive-panel px-3 text-sm text-slate-100 outline-none"
         >
           {section.items.map((item) => <option key={item.to} value={item.to}>{item.label}</option>)}
         </select>
