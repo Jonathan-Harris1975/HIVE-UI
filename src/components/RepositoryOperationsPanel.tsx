@@ -18,7 +18,6 @@ import type {
   RepositoryBulkUploadResponse,
   RepositoryRefreshConfiguration,
   RepositoryRefreshJob,
-  RepositorySummary,
   RepositoryUploadResponse,
 } from '../types/api'
 
@@ -39,7 +38,6 @@ type QueueItem = {
 }
 
 interface RepositoryOperationsPanelProps {
-  repositories: RepositorySummary[]
   refreshConfig: RepositoryRefreshConfiguration | null
   refreshConfigError: string | null
   onRepositoriesChanged: () => Promise<void>
@@ -83,7 +81,6 @@ function resultForFile(results: RepositoryBulkUploadItemResult[], file: File, in
 }
 
 export function RepositoryOperationsPanel({
-  repositories,
   refreshConfig,
   refreshConfigError,
   onRepositoriesChanged,
