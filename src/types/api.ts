@@ -665,6 +665,27 @@ export interface RepositoryDependencyFinding {
   declared: string[]
 }
 
+export type RepositoryFreshnessState = 'current' | 'stale' | 'not_ready' | 'unknown' | string
+
+export interface RepositoryPipelineFailure {
+  stage?: string | null
+  error?: string | null
+  occurred_at?: string | null
+  retryable?: boolean
+}
+
+export interface RepositoryFreshness {
+  snapshot?: RepositoryFreshnessState
+  memory?: RepositoryFreshnessState
+  intelligence?: RepositoryFreshnessState
+  source_fingerprint?: string | null
+  memory_fingerprint?: string | null
+  intelligence_fingerprint?: string | null
+  indexed_version?: number | null
+  refreshed_at?: string | null
+  source_commit_sha?: string | null
+}
+
 export interface RepositorySummary {
   repository_id: string
   source_filename: string
@@ -682,6 +703,21 @@ export interface RepositorySummary {
   intelligence_ready?: boolean
   memory_ready?: boolean
   memory_populated_fields?: string[]
+  source?: string | null
+  source_commit_sha?: string | null
+  last_refresh_at?: string | null
+  snapshot_status?: RepositoryFreshnessState
+  snapshot_current?: boolean
+  memory_freshness?: RepositoryFreshnessState
+  memory_fingerprint?: string | null
+  intelligence_freshness?: RepositoryFreshnessState
+  intelligence_fingerprint?: string | null
+  intelligence_current?: boolean
+  repair_required?: boolean
+  pipeline_status?: string | null
+  last_pipeline_failure?: RepositoryPipelineFailure | string | null
+  freshness?: RepositoryFreshness
+  improvement_scope?: RepositoryImprovementScope
 }
 
 export interface RepositoryPipelineStage {
@@ -717,6 +753,40 @@ export interface RepositoryUploadResponse extends RepositoryManifest {
   r2_persisted?: boolean
   snapshot_persisted?: boolean
   pipeline?: RepositoryPipelineResult
+}
+
+export type RepositoryBulkUploadOutcome =
+  | 'success'
+  | 'failed'
+  | 'duplicate'
+  | 'unchanged'
+  | 'updated'
+  | string
+
+export interface RepositoryBulkUploadItemResult {
+  filename: string
+  status: RepositoryBulkUploadOutcome
+  repository_id?: string | null
+  fingerprint?: string | null
+  indexed_version?: number | null
+  memory_status?: string | null
+  intelligence_status?: string | null
+  pipeline?: RepositoryPipelineResult | null
+  error?: string | null
+  retryable?: boolean
+}
+
+export interface RepositoryBulkUploadResponse {
+  results: RepositoryBulkUploadItemResult[]
+  submitted_count?: number
+  completed_count?: number
+  success_count?: number
+  failed_count?: number
+  duplicate_count?: number
+  unchanged_count?: number
+  updated_count?: number
+  max_batch_count?: number
+  max_batch_bytes?: number
 }
 
 export interface RepositorySetupResponse {
@@ -841,6 +911,40 @@ export interface RepositoryImprovementArtifact {
   durable?: boolean
 }
 
+export type RepositoryImprovementExecutionMode = 'single_pass' | 'multi_pass'
+
+export interface RepositoryImprovementScope {
+  eligible_file_count?: number
+  configured_ratio?: number
+  effective_file_limit?: number
+  files_changed?: number
+  changed_ratio?: number
+}
+
+export interface RepositoryImprovementPassLedgerEntry {
+  pass_number: number
+  status?: string
+  model_used?: string | null
+  changed_files?: string[]
+  deleted_files?: string[]
+  changed_file_count?: number
+  findings_before?: number
+  findings_remaining?: number
+  qa_score_before?: number | null
+  qa_score_after?: number | null
+  security_status?: string | null
+  qa_status?: string | null
+  started_at?: string | null
+  finished_at?: string | null
+  error?: string | null
+  scope?: RepositoryImprovementScope
+}
+
+export interface RepositoryImprovementRunRequest {
+  execution_mode: RepositoryImprovementExecutionMode
+  max_work_passes?: number
+}
+
 export interface RepositoryImprovementJob {
   job_id: string
   repository_id: string
@@ -859,9 +963,31 @@ export interface RepositoryImprovementJob {
   remaining_risks?: string[]
   qa_score_after?: number
   error?: string
+  execution_mode?: RepositoryImprovementExecutionMode
+  configured_change_ratio?: number
+  eligible_file_count?: number
+  effective_file_limit?: number
+  changed_file_ratio?: number
+  max_work_passes?: number
+  current_work_pass?: number
+  completed_work_passes?: number
+  findings_remaining?: number
+  cumulative_changed_file_count?: number
+  cumulative_changed_file_ratio?: number
+  model_attempt?: number
+  max_model_attempts?: number
+  council_review?: number
+  max_council_reviews?: number
+  cancelled?: boolean
+  cancellation_supported?: boolean
+  cancel_path?: string | null
+  pass_ledger?: RepositoryImprovementPassLedgerEntry[]
+  remaining_external_ci_verification?: string[]
   artifacts?: {
     changed_files?: RepositoryImprovementArtifact
     updated_repository?: RepositoryImprovementArtifact
+    improvement_report?: RepositoryImprovementArtifact
+    pass_ledger?: RepositoryImprovementArtifact
   }
 }
 
@@ -885,18 +1011,41 @@ export interface RepositoryRefreshConfiguration {
   source_error?: string | null
 }
 
+export interface RepositoryRefreshResult {
+  repository_id: string
+  github_repository?: string | null
+  status?: string
+  ok?: boolean
+  stage?: string | null
+  download_status?: string | null
+  ingestion_status?: string | null
+  fingerprint?: string | null
+  memory_status?: string | null
+  qa_status?: string | null
+  council_status?: string | null
+  intelligence_status?: string | null
+  ai_search_status?: string | null
+  retryable?: boolean
+  started_at?: string | null
+  finished_at?: string | null
+  pipeline_status?: string | null
+  finding_count?: number | null
+  error?: string | null
+}
+
 export interface RepositoryRefreshJob {
   job_id: string
-  status: 'accepted' | 'running' | 'completed' | 'completed-with-failures' | 'failed' | string
+  status: 'accepted' | 'running' | 'completed' | 'completed-with-failures' | 'failed' | 'cancelled' | string
   repository_count: number
   completed_count: number
   failed_count: number
   ok?: boolean | null
+  stage?: string | null
   created_at?: string
   started_at?: string
   finished_at?: string
   error?: string
-  results?: Array<Record<string, unknown>>
+  results?: RepositoryRefreshResult[]
 }
 
 export interface ProvidersResponse {
