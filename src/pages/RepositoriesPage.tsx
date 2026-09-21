@@ -345,7 +345,6 @@ export function RepositoriesPage() {
         </section>
 
         <RepositoryOperationsPanel
-          repositories={repositories}
           refreshConfig={refreshConfig}
           refreshConfigError={refreshConfigError}
           onRepositoriesChanged={loadRepositories}
