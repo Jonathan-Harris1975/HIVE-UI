@@ -51,7 +51,7 @@ describe('Login / session flow', () => {
       </AuthProvider>,
     )
 
-    expect(await screen.findByRole('heading', { name: /enter the hive/i })).toBeInTheDocument()
+    expect(await screen.findByRole('heading', { name: /enter hive/i })).toBeInTheDocument()
     expect(screen.getByPlaceholderText(/enter access key/i)).toBeInTheDocument()
   })
 
