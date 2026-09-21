@@ -1,6 +1,5 @@
 import {
   Activity,
-  CalendarClock,
   Check,
   ChevronDown,
   Copy,
@@ -15,7 +14,6 @@ import {
   PanelRightOpen,
   Plus,
   Search,
-  SlidersHorizontal,
   Trash2,
   Workflow,
   Pencil,
@@ -50,8 +48,7 @@ const navigationGroups = [
     id: 'intelligence',
     label: 'Intelligence',
     items: [
-      { to: '/models', label: 'Models', icon: Cpu, routes: ['/models', '/council'] },
-      { to: '/optimisation', label: 'Optimisation', icon: SlidersHorizontal, routes: ['/optimisation'] },
+      { to: '/models', label: 'Models & optimisation', icon: Cpu, routes: ['/models', '/council', '/optimisation'] },
     ],
   },
   {
@@ -59,8 +56,7 @@ const navigationGroups = [
     label: 'System',
     items: [
       { to: '/execution', label: 'Execution', icon: Workflow, routes: ['/execution', '/execution-reviews', '/execution-simulation'] },
-      { to: '/ops', label: 'Operations', icon: Activity, routes: ['/ops', '/integrations'] },
-      { to: '/monthly-review', label: 'Review', icon: CalendarClock, routes: ['/monthly-review'] },
+      { to: '/ops', label: 'Operations & review', icon: Activity, routes: ['/ops', '/integrations', '/monthly-review'] },
     ],
   },
 ]
@@ -69,7 +65,14 @@ const navigation = navigationGroups.flatMap((group) => group.items)
 
 const sectionTabs = [
   { routes: ['/repositories', '/memory', '/intelligence'], items: [{ to: '/repositories', label: 'Overview' }, { to: '/intelligence', label: 'Memory & Intelligence' }] },
-  { routes: ['/models', '/council'], items: [{ to: '/models', label: 'Registry' }, { to: '/council', label: 'AI Council' }] },
+  {
+    routes: ['/models', '/council', '/optimisation'],
+    items: [
+      { to: '/models', label: 'Registry' },
+      { to: '/council', label: 'AI Council' },
+      { to: '/optimisation', label: 'Optimisation' },
+    ],
+  },
   {
     routes: ['/execution', '/execution-reviews', '/execution-simulation'],
     items: [
@@ -77,7 +80,14 @@ const sectionTabs = [
       { to: '/execution-reviews', label: 'Reviews' },
     ],
   },
-  { routes: ['/ops', '/integrations'], items: [{ to: '/ops', label: 'System' }, { to: '/integrations', label: 'Integrations' }] },
+  {
+    routes: ['/ops', '/integrations', '/monthly-review'],
+    items: [
+      { to: '/ops', label: 'System' },
+      { to: '/integrations', label: 'Integrations' },
+      { to: '/monthly-review', label: 'Monthly review' },
+    ],
+  },
 ]
 
 const pageMeta: Record<string, { title: string; subtitle: string }> = {
@@ -88,13 +98,13 @@ const pageMeta: Record<string, { title: string; subtitle: string }> = {
   '/intelligence': { title: 'Repositories', subtitle: 'Persistent memory and consolidated repository intelligence' },
   '/models': { title: 'Models', subtitle: 'Ranked models, providers and evidence-based model review' },
   '/council': { title: 'Models', subtitle: 'Ranked models, providers and evidence-based model review' },
-  '/optimisation': { title: 'Optimisation', subtitle: 'Recorded optimisation activity' },
+  '/optimisation': { title: 'Models', subtitle: 'Registry, Council and recorded optimisation activity' },
   '/execution': { title: 'Execution', subtitle: 'Plan, preview and review controlled production work' },
   '/execution-reviews': { title: 'Execution', subtitle: 'Plan, preview and review controlled production work' },
   '/execution-simulation': { title: 'Execution', subtitle: 'Plan, preview and review controlled production work' },
   '/ops': { title: 'Operations', subtitle: 'Live runtime health, infrastructure and integrations' },
   '/integrations': { title: 'Operations', subtitle: 'Live runtime health, infrastructure and integrations' },
-  '/monthly-review': { title: 'Review', subtitle: 'Consolidated monthly system, cost and governance review' },
+  '/monthly-review': { title: 'Operations', subtitle: 'Live runtime health, integrations and monthly governance review' },
   '/communications': { title: 'Communications', subtitle: 'AIMS Comms Hub conversations, approvals and channel operations' },
 }
 
@@ -498,26 +508,38 @@ function InspectorPanel() {
 }
 
 function ContextTabs({ pathname }: { pathname: string }) {
+  const navigate = useNavigate()
   const section = sectionTabs.find((entry) => entry.routes.includes(pathname))
   if (!section) return null
 
   return (
-    <nav aria-label="Section navigation" className="ui-scroll-region min-w-0 overflow-x-auto border-t border-white/6 bg-hive-surface/85 px-4 sm:px-6">
-      <div className="flex h-10 min-w-max items-center gap-1">
+    <nav
+      aria-label="Section navigation"
+      className="border-t border-white/6 bg-hive-surface/85 px-4 py-2 sm:px-6 sm:py-0"
+    >
+      <label className="block sm:hidden">
+        <span className="sr-only">Current workspace view</span>
+        <select
+          value={section.items.find((item) => item.to === pathname)?.to ?? section.items[0].to}
+          onChange={(event) => navigate(event.target.value)}
+          className="h-10 w-full rounded-xl border border-white/8 bg-hive-panel px-3 text-sm text-slate-100 outline-none"
+        >
+          {section.items.map((item) => <option key={item.to} value={item.to}>{item.label}</option>)}
+        </select>
+      </label>
+      <div className="ui-scroll-region hidden h-10 min-w-0 items-center gap-1 overflow-x-auto sm:flex">
         {section.items.map((item) => (
           <NavLink
             key={item.to}
             to={item.to}
-            className={
-              ({ isActive }) => [
-                "rounded-lg px-3 py-1.5 text-xs font-medium transition ",
-                String(
-                  isActive
-                    ? 'bg-cyan-300/10 text-cyan-100'
-                    : 'text-slate-400 hover:bg-white/[0.04] hover:text-slate-200',
-                ),
-              ].join('')
-            }
+            className={({ isActive }) => [
+              'rounded-lg px-3 py-1.5 text-xs font-medium transition ',
+              String(
+                isActive
+                  ? 'bg-cyan-300/10 text-cyan-100'
+                  : 'text-slate-400 hover:bg-white/[0.04] hover:text-slate-200',
+              ),
+            ].join('')}
           >
             {item.label}
           </NavLink>
