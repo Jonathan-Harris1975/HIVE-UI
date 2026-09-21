@@ -9,6 +9,7 @@ import {
   Plus,
   RefreshCcw,
   Trash2,
+  ChevronDown,
 } from 'lucide-react'
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { ConfirmDialog } from '../components/ConfirmDialog'
@@ -395,9 +396,9 @@ export function RepositoriesPage() {
                       </button>
                       <StatusBadge status={availability.status} label={availability.label} compact />
                     </div>
-                    <p className={`mt-2 text-xs leading-5 ${availability.status === 'ready' ? 'text-slate-500' : 'text-amber-200/80'}`}>
-                      {availability.detail}
-                    </p>
+                    {availability.status !== 'ready' && (
+                      <p className="mt-2 text-xs leading-5 text-amber-200/80">{availability.detail}</p>
+                    )}
                     <div className="mt-3 flex flex-wrap items-center gap-2 text-xs text-slate-400">
                       <span className="rounded-full border border-white/10 px-2 py-0.5">{repo.file_count} files</span>
                       <span className="rounded-full border border-white/10 px-2 py-0.5">{formatBytes(repo.total_bytes)}</span>
@@ -406,7 +407,14 @@ export function RepositoriesPage() {
                         Updated {formatDate(new Date(repo.updated_at * 1000).toISOString())}
                       </span>
                     </div>
-                    <div className="mt-3 flex flex-wrap gap-2">
+                    <details className="group mt-3 rounded-xl border border-white/8 bg-black/10 open:bg-white/[0.02]">
+                      <summary className="flex cursor-pointer list-none items-center justify-between px-3 py-2 text-xs font-semibold text-slate-300 hover:text-white [&::-webkit-details-marker]:hidden">
+                        <span>More information &amp; actions</span>
+                        <ChevronDown className="h-3.5 w-3.5 transition-transform group-open:rotate-180" />
+                      </summary>
+                      <div className="border-t border-white/8 px-3 pb-3 pt-2">
+                        <p className="mb-3 text-xs leading-5 text-slate-500">{availability.detail}</p>
+                        <div className="flex flex-wrap gap-2">
                       <button
                         type="button"
                         onClick={() => inspectRepository(repo)}
@@ -463,7 +471,9 @@ export function RepositoriesPage() {
                       >
                         <Trash2 className="h-3.5 w-3.5" /> Remove
                       </button>
-                    </div>
+                        </div>
+                      </div>
+                    </details>
                   </article>
                   )
                 })}
@@ -515,8 +525,12 @@ export function RepositoriesPage() {
                   </div>
                 </article>
 
-                <article className="rounded-2xl border border-white/8 bg-hive-panel/70 p-4">
-                  <h4 className="text-xs font-semibold uppercase tracking-[0.14em] text-slate-400">Language breakdown</h4>
+                <details open className="group rounded-2xl border border-white/8 bg-hive-panel/70">
+                  <summary className="flex cursor-pointer list-none items-center justify-between p-4 [&::-webkit-details-marker]:hidden">
+                    <h4 className="text-xs font-semibold uppercase tracking-[0.14em] text-slate-400">Language breakdown</h4>
+                    <ChevronDown className="h-4 w-4 text-slate-500 transition-transform group-open:rotate-180" />
+                  </summary>
+                  <div className="border-t border-white/8 px-4 pb-4">
                   {languageBreakdown(manifest.languages).length === 0 ? (
                     <p className="mt-2 text-xs text-slate-500">No languages detected.</p>
                   ) : (
@@ -534,10 +548,15 @@ export function RepositoriesPage() {
                       ))}
                     </div>
                   )}
-                </article>
+                  </div>
+                </details>
 
-                <article className="rounded-2xl border border-white/8 bg-hive-panel/70 p-4">
-                  <h4 className="text-xs font-semibold uppercase tracking-[0.14em] text-slate-400">Dependency manifests</h4>
+                <details className="group rounded-2xl border border-white/8 bg-hive-panel/70">
+                  <summary className="flex cursor-pointer list-none items-center justify-between p-4 [&::-webkit-details-marker]:hidden">
+                    <h4 className="text-xs font-semibold uppercase tracking-[0.14em] text-slate-400">Dependency manifests</h4>
+                    <ChevronDown className="h-4 w-4 text-slate-500 transition-transform group-open:rotate-180" />
+                  </summary>
+                  <div className="border-t border-white/8 px-4 pb-4">
                   {manifest.dependencies.length === 0 ? (
                     <p className="mt-2 text-xs text-slate-500">No dependency manifests found.</p>
                   ) : (
@@ -552,39 +571,45 @@ export function RepositoriesPage() {
                       ))}
                     </div>
                   )}
-                </article>
-
-                <article className="rounded-2xl border border-white/8 bg-hive-panel/70 p-4">
-                  <div className="flex items-center justify-between">
-                    <h4 className="text-xs font-semibold uppercase tracking-[0.14em] text-slate-400">Diff since last index</h4>
-                    <button
-                      type="button"
-                      onClick={() => void runDiff(manifest.repository_id)}
-                      disabled={diffLoading}
-                      className="flex h-7 items-center gap-1.5 rounded-lg border border-white/8 bg-white/[0.04] px-2.5 text-xs text-slate-300 hover:bg-white/[0.07] disabled:opacity-50"
-                    >
-                      {diffLoading ? <LoaderCircle className="h-3 w-3 animate-spin" /> : <ArrowRightLeft className="h-3 w-3" />} Preview
-                    </button>
                   </div>
-                  {diffError && <p className="mt-2 text-xs text-rose-300">{diffError}</p>}
-                  {!diff && !diffError && <p className="mt-2 text-xs text-slate-500">Run a preview to see changes without reindexing.</p>}
-                  {diff && (
-                    <div className="mt-3 grid grid-cols-3 gap-2 text-center text-xs">
-                      <div className="rounded-lg border border-emerald-300/15 bg-emerald-300/[0.04] px-2 py-2">
-                        <p className="flex items-center justify-center gap-1 font-semibold text-emerald-200"><Plus className="h-3 w-3" /> {diff.added.length}</p>
-                        <p className="mt-1 text-slate-500">Added</p>
-                      </div>
-                      <div className="rounded-lg border border-rose-300/15 bg-rose-300/[0.04] px-2 py-2">
-                        <p className="flex items-center justify-center gap-1 font-semibold text-rose-200"><Minus className="h-3 w-3" /> {diff.removed.length}</p>
-                        <p className="mt-1 text-slate-500">Removed</p>
-                      </div>
-                      <div className="rounded-lg border border-cyan-300/15 bg-cyan-300/[0.04] px-2 py-2">
-                        <p className="flex items-center justify-center gap-1 font-semibold text-cyan-200"><ArrowRightLeft className="h-3 w-3" /> {diff.changed.length}</p>
-                        <p className="mt-1 text-slate-500">Changed</p>
-                      </div>
+                </details>
+
+                <details className="group rounded-2xl border border-white/8 bg-hive-panel/70">
+                  <summary className="flex cursor-pointer list-none items-center justify-between p-4 [&::-webkit-details-marker]:hidden">
+                    <h4 className="text-xs font-semibold uppercase tracking-[0.14em] text-slate-400">Diff since last index</h4>
+                    <ChevronDown className="h-4 w-4 text-slate-500 transition-transform group-open:rotate-180" />
+                  </summary>
+                  <div className="border-t border-white/8 px-4 pb-4 pt-3">
+                    <div className="flex justify-end">
+                      <button
+                        type="button"
+                        onClick={() => void runDiff(manifest.repository_id)}
+                        disabled={diffLoading}
+                        className="flex h-7 items-center gap-1.5 rounded-lg border border-white/8 bg-white/[0.04] px-2.5 text-xs text-slate-300 hover:bg-white/[0.07] disabled:opacity-50"
+                      >
+                        {diffLoading ? <LoaderCircle className="h-3 w-3 animate-spin" /> : <ArrowRightLeft className="h-3 w-3" />} Preview
+                      </button>
                     </div>
-                  )}
-                </article>
+                    {diffError && <p className="mt-2 text-xs text-rose-300">{diffError}</p>}
+                    {!diff && !diffError && <p className="mt-2 text-xs text-slate-500">Run a preview to see changes without reindexing.</p>}
+                    {diff && (
+                      <div className="mt-3 grid grid-cols-3 gap-2 text-center text-xs">
+                        <div className="rounded-lg border border-emerald-300/15 bg-emerald-300/[0.04] px-2 py-2">
+                          <p className="flex items-center justify-center gap-1 font-semibold text-emerald-200"><Plus className="h-3 w-3" /> {diff.added.length}</p>
+                          <p className="mt-1 text-slate-500">Added</p>
+                        </div>
+                        <div className="rounded-lg border border-rose-300/15 bg-rose-300/[0.04] px-2 py-2">
+                          <p className="flex items-center justify-center gap-1 font-semibold text-rose-200"><Minus className="h-3 w-3" /> {diff.removed.length}</p>
+                          <p className="mt-1 text-slate-500">Removed</p>
+                        </div>
+                        <div className="rounded-lg border border-cyan-300/15 bg-cyan-300/[0.04] px-2 py-2">
+                          <p className="flex items-center justify-center gap-1 font-semibold text-cyan-200"><ArrowRightLeft className="h-3 w-3" /> {diff.changed.length}</p>
+                          <p className="mt-1 text-slate-500">Changed</p>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                </details>
               </div>
             ) : null}
           </section>

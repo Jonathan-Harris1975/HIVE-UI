@@ -664,7 +664,16 @@ export function RepositoryIntelligencePage() {
             <p className="mt-2 text-xs text-slate-500">Changing repository switches Memory, QA, Council, Intelligence and improvement history together.</p>
           </div>
 
-          <div className="mt-4 grid min-w-0 gap-3 lg:grid-cols-[1fr_1fr]">
+          <details className="group mt-4 rounded-2xl border border-white/8 bg-white/[0.015]">
+            <summary className="flex cursor-pointer list-none items-center justify-between gap-3 px-4 py-3 [&::-webkit-details-marker]:hidden">
+              <div>
+                <p className="text-xs font-semibold uppercase tracking-[0.14em] text-slate-300">Improvement settings</p>
+                <p className="mt-1 text-xs text-slate-500">{executionMode === 'multi_pass' ? `Multi-pass · up to ${maxWorkPasses} passes` : 'Single pass'} · {Math.round(configuredWorkScopeRatio * 100)}% per-pass scope</p>
+              </div>
+              <ChevronDown className="h-4 w-4 shrink-0 text-slate-500 transition-transform group-open:rotate-180" />
+            </summary>
+            <div className="border-t border-white/8 px-4 pb-4">
+              <div className="mt-4 grid min-w-0 gap-3 lg:grid-cols-[1fr_1fr]">
             <fieldset className="rounded-2xl border border-white/8 bg-white/[0.025] p-4">
               <legend className="px-1 text-xs font-semibold uppercase tracking-[0.14em] text-slate-400">Execution mode</legend>
               <div className="mt-1 grid gap-2 sm:grid-cols-2">
@@ -726,6 +735,9 @@ export function RepositoryIntelligencePage() {
               <p className="mt-3 leading-5 text-slate-500">The 12% value is a per-work-pass file-change budget. It is not a Council tolerance and does not reduce the QA target.</p>
             </div>
           </div>
+
+            </div>
+          </details>
 
           <div className="mt-4 flex flex-col gap-2 sm:flex-row sm:justify-end">
             <button
