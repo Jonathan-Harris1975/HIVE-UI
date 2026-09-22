@@ -60,7 +60,9 @@ const navigationGroups = [
   },
 ]
 
-const navigation = navigationGroups.flatMap((group) => group.items)
+const navigation = navigationGroups
+  .flatMap((group) => group.items)
+  .sort((a, b) => a.label.localeCompare(b.label, 'en-GB'))
 
 const sectionTabs = [
   { routes: ['/repositories', '/memory', '/intelligence'], items: [{ to: '/repositories', label: 'Overview' }, { to: '/intelligence', label: 'Memory & Intelligence' }] },
