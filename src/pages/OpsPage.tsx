@@ -612,6 +612,9 @@ export function OpsPage() {
                 <div className="min-w-0">
                   <h3 className="text-sm font-semibold text-white">Services</h3>
                   <p className="mt-0.5 text-[11px] text-slate-500">Live and production-ready state</p>
+                  <p className="mt-1 text-[11px] text-slate-400">
+                    Each service reports liveness and readiness separately.
+                  </p>
                 </div>
                 <div className="flex items-center gap-2">
                   <span className="text-xs text-slate-400">{repoHealth?.repos?.filter((item) => ['healthy', 'busy'].includes(item.status)).length ?? 0}/{repoHealth?.repos?.length ?? 0} healthy</span>
