@@ -611,9 +611,7 @@ export function OpsPage() {
               <div className="flex items-center justify-between gap-3">
                 <div className="min-w-0">
                   <h3 className="text-sm font-semibold text-white">Services</h3>
-                  <p className="mt-0.5 text-[11px] text-slate-500">
-                    Each service reports liveness and readiness separately
-                  </p>
+                  <p className="mt-0.5 text-[11px] text-slate-500">Live and production-ready state</p>
                 </div>
                 <div className="flex items-center gap-2">
                   <span className="text-xs text-slate-400">{repoHealth?.repos?.filter((item) => ['healthy', 'busy'].includes(item.status)).length ?? 0}/{repoHealth?.repos?.length ?? 0} healthy</span>
@@ -631,7 +629,12 @@ export function OpsPage() {
               {repoHealth?.repos?.length ? (
                 <div className="mt-3 grid grid-cols-1 gap-2 sm:grid-cols-2">
                   {repoHealth.repos.map((item) => (
-                    <RepoHealthCard key={item.repo} item={item} onInspect={() => inspect(`${item.repo} health`, item, item.description)} onRefresh={() => void loadOps(true)} />
+                    <RepoHealthCard
+                      key={item.repo}
+                      item={item}
+                      onInspect={() => inspect(`${item.repo} health`, item, item.description)}
+                      onRefresh={() => void loadOps(true)}
+                    />
                   ))}
                 </div>
               ) : (
@@ -753,8 +756,8 @@ export function OpsPage() {
               </summary>
               <div className="border-t border-rose-300/10 p-4">
                 <p className="text-xs leading-5 text-slate-400">
-                  Permanently clears application data from database-hive, database-comms-hub and HIVE PostgreSQL
-                  while preserving schemas and migration history.
+                  Permanently clears application data from database-hive, database-comms-hub and HIVE PostgreSQL while
+                  preserving schemas and migration history.
                 </p>
                 {purgeResult?.ok && <p className="mt-2 text-xs font-medium text-emerald-200" role="status">Database reset completed successfully.</p>}
                 {purgeError && !purgeDialogOpen && <p className="mt-2 text-xs text-rose-200" role="alert">{purgeError}</p>}
