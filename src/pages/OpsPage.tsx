@@ -612,6 +612,9 @@ export function OpsPage() {
                 <div className="min-w-0">
                   <h3 className="text-sm font-semibold text-white">Services</h3>
                   <p className="mt-0.5 text-[11px] text-slate-500">Live and production-ready state</p>
+                  <p className="mt-1 text-[11px] text-slate-400">
+                    Each service reports liveness and readiness separately.
+                  </p>
                 </div>
                 <div className="flex items-center gap-2">
                   <span className="text-xs text-slate-400">{repoHealth?.repos?.filter((item) => ['healthy', 'busy'].includes(item.status)).length ?? 0}/{repoHealth?.repos?.length ?? 0} healthy</span>
@@ -629,7 +632,12 @@ export function OpsPage() {
               {repoHealth?.repos?.length ? (
                 <div className="mt-3 grid grid-cols-1 gap-2 sm:grid-cols-2">
                   {repoHealth.repos.map((item) => (
-                    <RepoHealthCard key={item.repo} item={item} onInspect={() => inspect(`${item.repo} health`, item, item.description)} onRefresh={() => void loadOps(true)} />
+                    <RepoHealthCard
+                      key={item.repo}
+                      item={item}
+                      onInspect={() => inspect(`${item.repo} health`, item, item.description)}
+                      onRefresh={() => void loadOps(true)}
+                    />
                   ))}
                 </div>
               ) : (
@@ -689,7 +697,10 @@ export function OpsPage() {
                   </p>
                   <span className="text-[10px] uppercase tracking-wider text-slate-500">Services healthy</span>
                 </button>
-                <Link to="/execution-reviews" className="rounded-xl border border-white/8 bg-hive-surface p-3 text-left">
+                <Link
+                  to="/execution-reviews"
+                  className="rounded-xl border border-white/8 bg-hive-surface p-3 text-left"
+                >
                   <ShieldCheck className="h-4 w-4 text-violet-300" />
                   <p className="mt-2 text-lg font-semibold text-white">{openReviewCount}</p>
                   <span className="text-[10px] uppercase tracking-wider text-slate-500">Open reviews</span>
@@ -727,7 +738,9 @@ export function OpsPage() {
                 </button>
                 <button
                   type="button"
-                  onClick={() => inspect('Default coding model', { model: runtimeStats?.model_registry?.default_coding_model })}
+                  onClick={() => inspect('Default coding model', {
+                    model: runtimeStats?.model_registry?.default_coding_model,
+                  })}
                   className="rounded-xl border border-white/8 bg-hive-surface p-3 text-left"
                 >
                   <Activity className="h-4 w-4 text-amber-300" />
