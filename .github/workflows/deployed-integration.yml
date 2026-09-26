@@ -47,7 +47,7 @@ jobs:
         run: |
           set -euo pipefail
           expected="${EXPECTED_DEPLOYMENT_SHA:0:12}"
-          for attempt in $(seq 1 60); do
+          for _ in $(seq 1 60); do
             body="$(curl --fail --silent --show-error --max-time 15 "${HIVE_UI_E2E_BASE_URL%/}/health" || true)"
             deployed="$(printf '%s' "$body" | jq -r '.commit // empty' 2>/dev/null || true)"
             if [ "$deployed" = "$expected" ]; then
