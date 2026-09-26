@@ -56,10 +56,10 @@
     "vite": "^8.0.12",
     "vitest": "^4.1.10"
   },
-  "packageManager": "npm@10.9.4",
+  "packageManager": "npm@10.9.9",
   "engines": {
     "node": "22.22.0",
-    "npm": "10.9.4"
+    "npm": "10.9.9"
   },
   "overrides": {
     "browserslist": "^4.28.7"
