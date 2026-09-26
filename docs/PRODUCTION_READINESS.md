@@ -64,7 +64,7 @@ Operationally, a limiter outage blocks new login completion rather than reducing
 - JavaScript and CSS gzip output are measured from every production build, written to `dist/bundle-metrics.json`, surfaced in the GitHub Actions step summary and constrained by reviewed hard budgets in `config/bundle-budget.json`.
 - The npm lockfile is restricted to the public HTTPS npm registry.
 - CI performs TypeScript, ESLint, security tests, production build, dist verification, measured bundle-budget enforcement and dependency audit.
-- Dependabot checks npm dependencies weekly.
+- Mend Renovate owns dependency updates and lockfile maintenance in the Sunday 03:00-04:00 Europe/London window. Dependabot remains configured with open-pull-requests-limit: 0 for repository/supply-chain posture only.
 
 ## Routing compatibility
 
