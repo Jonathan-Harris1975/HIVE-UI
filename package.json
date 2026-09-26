@@ -54,7 +54,7 @@
     "typescript": "~6.0.2",
     "typescript-eslint": "^8.59.2",
     "vite": "^8.0.12",
-    "vitest": "^5.0.2"
+    "vitest": "^4.1.10"
   },
   "packageManager": "npm@10.9.9",
   "engines": {
