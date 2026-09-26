@@ -7,7 +7,7 @@ updates:
       day: wednesday
       time: "18:40"
       timezone: Europe/London
-    open-pull-requests-limit: 10
+    open-pull-requests-limit: 0
     versioning-strategy: increase-if-necessary
     groups:
       react-family:
@@ -47,6 +47,6 @@ updates:
       day: wednesday
       time: "18:40"
       timezone: Europe/London
-    open-pull-requests-limit: 10
+    open-pull-requests-limit: 0
     commit-message:
       prefix: "deps(ci)"
