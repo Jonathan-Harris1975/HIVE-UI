@@ -56,3 +56,9 @@ The Gitleaks job produces a redacted JSON artifact on findings before failing th
 OWASP ZAP
 ---------
 ZAP remains an ecosystem-level monthly DAST control rather than a per-PR HIVE-UI repository check. No ZAP secret is introduced by this update.
+
+Cloudflare production build toolchain
+- Cloudflare's build environment must not infer/install npm from package.json. The production build log on 2026-09-26 detected npm 12.1.0 and failed during tool installation before dependency installation or the application build began.
+- Node remains repository-pinned to 22.22.0 via .node-version and package.json engines.node.
+- The npm packageManager and engines.npm declarations are intentionally omitted from package.json so Cloudflare uses the npm bundled with the pinned Node runtime instead of attempting a separate npm tool installation.
+- GitHub CI remains deterministic: its workflows explicitly install and assert npm 10.9.9 before npm ci. Do not re-add packageManager or engines.npm without first validating Cloudflare's build-tool detection.
