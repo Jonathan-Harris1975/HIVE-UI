@@ -57,7 +57,7 @@
     "vitest": "^4.1.10"
   },
   "engines": {
-    "node": "22.22.0"
+    "node": "24.21.0"
   },
   "overrides": {
     "browserslist": "^4.28.7"

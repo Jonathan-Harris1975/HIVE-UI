@@ -24,7 +24,7 @@ jobs:
       - name: Use Node.js 22
         uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6.5.0
         with:
-          node-version: 22.22.0
+          node-version: 24.21.0
           cache: npm
 
       - name: Reject committed literal secrets
@@ -70,7 +70,7 @@ jobs:
       - name: Use Node.js 22
         uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6.5.0
         with:
-          node-version: 22.22.0
+          node-version: 24.21.0
           cache: npm
 
       - name: Install repository-pinned npm
