@@ -36,7 +36,7 @@ jobs:
 
       - name: Verify pinned Node/npm toolchain
         run: |
-          test "$(node --version)" = "v22.22.0"
+          test "$(node --version)" = "v24.21.0"
           test "$(npm --version)" = "10.9.9"
       - name: Install locked dependencies
         run: npm ci --no-audit --no-fund
