@@ -554,11 +554,11 @@ async function handleCommsIdentity(request: Request, env: Env, requestId: string
 
 function buildUpstreamHeaders(request: Request, adminToken: string, requestId: string): Headers {
   const headers = new Headers()
-  for (const [name, value] of request.headers.entries()) {
+  request.headers.forEach((value, name) => {
     const lowerName = name.toLowerCase()
-    if (REQUEST_HEADER_DENYLIST.has(lowerName) || lowerName.startsWith('cf-') || lowerName.startsWith('x-forwarded-')) continue
+    if (REQUEST_HEADER_DENYLIST.has(lowerName) || lowerName.startsWith('cf-') || lowerName.startsWith('x-forwarded-')) return
     headers.append(name, value)
-  }
+  })
   headers.set('authorization', `Bearer ${adminToken}`)
   headers.set('x-request-id', requestId)
   headers.set('x-hive-ui-version', UI_VERSION)
@@ -567,11 +567,11 @@ function buildUpstreamHeaders(request: Request, adminToken: string, requestId: s
 
 function buildResponseHeaders(upstreamHeaders: Headers, requestId: string): Headers {
   const headers = new Headers()
-  for (const [name, value] of upstreamHeaders.entries()) {
+  upstreamHeaders.forEach((value, name) => {
     const lowerName = name.toLowerCase()
-    if (RESPONSE_HEADER_DENYLIST.has(lowerName) || lowerName.startsWith('cf-') || lowerName.startsWith('x-envoy-')) continue
+    if (RESPONSE_HEADER_DENYLIST.has(lowerName) || lowerName.startsWith('cf-') || lowerName.startsWith('x-envoy-')) return
     headers.append(name, value)
-  }
+  })
   return hardenHeaders(headers, requestId)
 }
 
