@@ -62,3 +62,12 @@ Cloudflare production build toolchain
 - Node remains repository-pinned to 22.22.0 via .node-version and package.json engines.node.
 - The npm packageManager and engines.npm declarations are intentionally omitted from package.json so Cloudflare uses the npm bundled with the pinned Node runtime instead of attempting a separate npm tool installation.
 - GitHub CI remains deterministic: its workflows explicitly install and assert npm 10.9.9 before npm ci. Do not re-add packageManager or engines.npm without first validating Cloudflare's build-tool detection.
+
+AUTONOMOUS PROVING-GROUP SETUP
+- Scheduled window: Saturday 21:30 UTC; 2.5 hours reserved before the next repository starts.
+- KiloConnect + Kilo Code Bot: authorise both GitHub integrations for this repository. Failed CI/deployment-watch runs create one deduplicated repair issue mentioning @kilocode-bot.
+- Kilo may prepare dependency-manifest/lockfile/build fixes when evidence requires them, but all changes remain PR-only and must pass existing gates.
+- Mergify config handles explicit superseded/obsolete PR cleanup only; it is not the merge authority.
+- GitHub native branch/ruleset protections remain authoritative. Native Merge Queue can be enabled after required checks are confirmed stable.
+- R2 Council ingestion/publishing is deferred to the HIVE Council implementation; no R2 credentials are introduced by this phase.
+- Codecov and OWASP ZAP are intentionally NOT enabled.
