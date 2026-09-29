@@ -4,9 +4,7 @@ import {
   Database,
   HardDrive,
   LoaderCircle,
-  Monitor,
   Network,
-  ServerCog,
   PlayCircle,
   RefreshCw,
   ShieldCheck,
@@ -17,7 +15,6 @@ import {
 import { useCallback, useEffect, useMemo, useState, type FormEvent } from 'react'
 import { Link } from 'react-router'
 import { ConfirmDialog } from '../components/ConfirmDialog'
-import { EmptyState } from '../components/EmptyState'
 import { StatusBadge } from '../components/StatusBadge'
 import { WorkflowGraph } from '../components/WorkflowGraph'
 import { useAuth } from '../context/AuthContext'
@@ -32,8 +29,6 @@ import type {
   OpsEventItem,
   OpsEventsResponse,
   HealthResponse,
-  RepoHealthItem,
-  RepoHealthResponse,
   RuntimeStatsResponse,
   WorkflowGraphResponse,
   WorkflowNode,
@@ -118,45 +113,6 @@ function configuredText(status: FlagStatus, readyText: string, notReadyText: str
   return 'Backend health contract did not include this helper flag.'
 }
 
-function RepoIcon({ category }: { category?: string }) {
-  if (category === 'frontend') return <Monitor className="h-3.5 w-3.5" />
-  if (category === 'static_service') return <HardDrive className="h-3.5 w-3.5" />
-  if (category === 'background_api' || category === 'background_worker') return <ServerCog className="h-3.5 w-3.5" />
-  return <Activity className="h-3.5 w-3.5" />
-}
-
-function RepoHealthCard({ item }: { item: RepoHealthItem }) {
-  const category = item.category === 'background_worker'
-    ? 'Background Worker'
-    : item.category === 'background_api'
-      ? 'Background API'
-      : item.category === 'static_service'
-        ? 'Public service'
-        : item.category === 'frontend'
-          ? 'Frontend'
-          : 'Core API'
-
-  return (
-    <article className="min-w-0 rounded-xl border border-white/8 bg-hive-surface p-3">
-      <div className="flex items-center gap-2.5">
-        <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg border border-cyan-300/12 bg-cyan-300/6 text-cyan-200" aria-hidden="true">
-          <RepoIcon category={item.category} />
-        </span>
-        <span className="min-w-0 flex-1">
-          <span className="flex items-center gap-1.5">
-            <span className="truncate text-xs font-semibold text-white">{item.label || item.repo}</span>
-            <span className="truncate text-xs uppercase tracking-[0.12em] text-slate-400">{category}</span>
-          </span>
-          <span className="mt-0.5 block truncate text-xs text-slate-400" title={item.detail || item.description}>
-            {item.detail || item.description || 'No health detail returned.'}
-          </span>
-        </span>
-        <StatusBadge status={item.status} compact />
-      </div>
-    </article>
-  )
-}
-
 function OpsEventCard({ item, onInspect }: { item: OpsEventItem; onInspect: () => void }) {
   const severity = item.severity || 'warning'
   const border = severity === 'critical' ? 'border-rose-300/20' : severity === 'warning' ? 'border-amber-300/20' : 'border-cyan-300/15'
@@ -203,7 +159,6 @@ export function OpsPage() {
   const { setPayload, setOpen } = useInspector()
   const [tab, setTab] = useState<OpsTab>('overview')
   const [health, setHealth] = useState<HealthResponse | null>(null)
-  const [repoHealth, setRepoHealth] = useState<RepoHealthResponse | null>(null)
   const [opsEvents, setOpsEvents] = useState<OpsEventsResponse | null>(null)
   const [runtimeStats, setRuntimeStats] = useState<RuntimeStatsResponse | null>(null)
   const [templates, setTemplates] = useState<Record<string, WorkflowTemplate>>({})
@@ -216,7 +171,7 @@ export function OpsPage() {
   const [purgeError, setPurgeError] = useState<string | null>(null)
   const [purgeResult, setPurgeResult] = useState<DatabasePurgeResetResponse | null>(null)
 
-  const [task, setTask] = useState('Review the HIVE repository and produce a safe, review-gated improvement plan.')
+  const [task, setTask] = useState('Prepare a safe, review-gated operational workflow plan.')
   const [repo, setRepo] = useState('HIVE')
   const [template, setTemplate] = useState('repo_debug')
   const [workflowPreset, setWorkflowPreset] = useState('')
@@ -226,21 +181,14 @@ export function OpsPage() {
   const [buildingGraph, setBuildingGraph] = useState(false)
   const [buildingPreview, setBuildingPreview] = useState(false)
 
-  const loadOps = useCallback(async (forceRepoHealth = false) => {
+  const loadOps = useCallback(async () => {
     setLoading(true)
     setError(null)
     try {
-      const [healthResult, templateResult, reviewResult, repoHealthResult, opsEventsResult, runtimeStatsResult] = await Promise.all([
+      const [healthResult, templateResult, reviewResult, opsEventsResult, runtimeStatsResult] = await Promise.all([
         apiFetch<HealthResponse>('/health'),
         apiFetch<WorkflowTemplatesResponse>('/v1/workflow-graphs/templates'),
         apiFetch<ExecutionReviewsResponse>('/v1/execution-reviews?limit=50'),
-        apiFetch<RepoHealthResponse>(`/v1/system/repo-health?force_refresh=${forceRepoHealth}`).catch(
-          (caught): RepoHealthResponse => ({
-            ok: false,
-            overall_status: 'error',
-            error: caught instanceof Error ? caught.message : 'Repo health could not be loaded.',
-          }),
-        ),
         apiFetch<OpsEventsResponse>('/v1/system/ops-events?limit=30').catch(
           (caught): OpsEventsResponse => ({
             ok: false,
@@ -250,7 +198,6 @@ export function OpsPage() {
         apiFetch<RuntimeStatsResponse>('/v1/system/runtime-stats').catch(() => null),
       ])
       setHealth(healthResult)
-      setRepoHealth(repoHealthResult)
       setOpsEvents(opsEventsResult)
       setRuntimeStats(runtimeStatsResult)
       const activeReviews = (reviewResult.items ?? []).filter(isOpenReview)
@@ -282,7 +229,7 @@ export function OpsPage() {
       }
       setPurgeDialogOpen(false)
       setPurgeConfirmation('')
-      await loadOps(true)
+      await loadOps()
     } catch (caught) {
       setPurgeError(caught instanceof Error ? caught.message : 'Database purge/reset failed.')
     } finally {
@@ -291,7 +238,7 @@ export function OpsPage() {
   }, [loadOps, purgeConfirmation])
 
   useEffect(() => {
-    void loadOps(false)
+    void loadOps()
   }, [loadOps])
 
   const templateEntries = useMemo(() => Object.entries(templates), [templates])
@@ -454,13 +401,13 @@ export function OpsPage() {
           <div className="min-w-0">
             <div className="flex items-center gap-2">
               <p className="text-sm font-semibold text-white">System operations</p>
-              <StatusBadge status={repoHealth?.overall_status || 'not_configured'} variant="operational" compact />
+              <StatusBadge status={health?.ok ? 'healthy' : loading ? 'checking' : 'down'} variant="operational" compact />
             </div>
             <p className="mt-0.5 truncate text-[11px] text-slate-500">{health?.build ?? (loading ? 'checking…' : 'unavailable')} · {health?.env ?? 'environment unavailable'}</p>
           </div>
           <button
             type="button"
-            onClick={() => void loadOps(true)}
+            onClick={() => void loadOps()}
             aria-label="Refresh operational status"
             title="Refresh status"
             className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border border-white/8 bg-white/[0.04] text-slate-300 hover:bg-white/[0.07]"
@@ -491,46 +438,6 @@ export function OpsPage() {
           <div className="flex items-center justify-center py-20 text-slate-400"><LoaderCircle className="mr-2 h-5 w-5 animate-spin" /> Loading operational state</div>
         ) : tab === 'overview' ? (
           <>
-            <section className="mt-4 rounded-2xl border border-white/8 bg-hive-panel/60 p-3 sm:p-4">
-              <div className="flex items-center justify-between gap-3">
-                <div className="min-w-0">
-                  <h3 className="text-sm font-semibold text-white">Services</h3>
-                  <p className="mt-0.5 text-[11px] text-slate-500">Live and production-ready state</p>
-                  <p className="mt-1 text-[11px] text-slate-400">
-                    Repository health is automated; HIVE-UI shows status only. Repair, wake and recovery actions remain in backend automation.
-                  </p>
-                </div>
-                <div className="flex items-center gap-2">
-                  <span className="text-xs text-slate-400">{repoHealth?.repos?.filter((item) => ['healthy', 'busy'].includes(item.status)).length ?? 0}/{repoHealth?.repos?.length ?? 0} healthy</span>
-                  {repoHealth?.error && (
-                    <button
-                      type="button"
-                      onClick={() => void loadOps(true)}
-                      className="inline-flex h-8 items-center gap-1 rounded-lg border border-amber-300/15 px-2 text-xs text-amber-100"
-                    >
-                      <RefreshCw className="h-3.5 w-3.5" /> Retry
-                    </button>
-                  )}
-                </div>
-              </div>
-              {repoHealth?.repos?.length ? (
-                <div className="mt-3 grid grid-cols-1 gap-2 sm:grid-cols-2">
-                  {repoHealth.repos.map((item) => (
-                    <RepoHealthCard key={item.repo} item={item} />
-                  ))}
-                </div>
-              ) : (
-                <div className="mt-3">
-                  <EmptyState
-                    icon={<ServerCog className="h-7 w-7" />}
-                    title="Repository health unavailable"
-                    body="Repo health could not be loaded or is not configured on this HIVE backend."
-                    action={{ label: 'Retry', onClick: () => void loadOps(true) }}
-                  />
-                </div>
-              )}
-            </section>
-
             {opsEvents?.items?.length ? (
               <details className="group mt-3 rounded-2xl border border-amber-300/15 bg-hive-panel/60">
                 <summary className="flex cursor-pointer list-none items-center justify-between gap-3 px-4 py-3">
@@ -564,14 +471,6 @@ export function OpsPage() {
                 <span className="text-xs text-slate-400">{openReviewCount} reviews · {runtimeStats?.providers?.count ?? 0} providers</span>
               </summary>
               <div className="grid grid-cols-2 gap-2 border-t border-white/6 p-3 sm:grid-cols-3">
-                <div className="rounded-xl border border-white/8 bg-hive-surface p-3 text-left">
-                  <Activity className="h-4 w-4 text-emerald-300" />
-                  <p className="mt-2 text-lg font-semibold text-white">
-                    {repoHealth?.repos?.filter((item) => ['healthy', 'busy'].includes(item.status)).length ?? 0}/
-                    {repoHealth?.repos?.length ?? 0}
-                  </p>
-                  <span className="text-[10px] uppercase tracking-wider text-slate-500">Services healthy</span>
-                </div>
                 <Link
                   to="/execution-reviews"
                   className="rounded-xl border border-white/8 bg-hive-surface p-3 text-left"
@@ -580,17 +479,6 @@ export function OpsPage() {
                   <p className="mt-2 text-lg font-semibold text-white">{openReviewCount}</p>
                   <span className="text-[10px] uppercase tracking-wider text-slate-500">Open reviews</span>
                 </Link>
-                <button
-                  type="button"
-                  onClick={() => inspect('Repository runtime', runtimeStats?.repository_manager ?? {})}
-                  className="rounded-xl border border-white/8 bg-hive-surface p-3 text-left"
-                >
-                  <Database className="h-4 w-4 text-cyan-300" />
-                  <p className="mt-2 text-lg font-semibold text-white">
-                    {runtimeStats?.repository_manager?.registered_count ?? 0}
-                  </p>
-                  <span className="text-[10px] uppercase tracking-wider text-slate-500">Repositories</span>
-                </button>
                 <button
                   type="button"
                   onClick={() => inspect('Model Registry', runtimeStats?.model_registry ?? {})}
@@ -610,6 +498,30 @@ export function OpsPage() {
                   <Network className="h-4 w-4 text-violet-300" />
                   <p className="mt-2 text-lg font-semibold text-white">{runtimeStats?.providers?.count ?? 0}</p>
                   <span className="text-[10px] uppercase tracking-wider text-slate-500">Providers</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => inspect('Operational events', opsEvents ?? {})}
+                  className="rounded-xl border border-white/8 bg-hive-surface p-3 text-left"
+                >
+                  <BellRing className="h-4 w-4 text-amber-300" />
+                  <p className="mt-2 text-lg font-semibold text-white">{opsEvents?.count ?? 0}</p>
+                  <span className="text-[10px] uppercase tracking-wider text-slate-500">Recent events</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => inspect('Integration readiness', {
+                    ready: flags.filter((flag) => flag.status === 'ready').length,
+                    total: flags.length,
+                    flags,
+                  })}
+                  className="rounded-xl border border-white/8 bg-hive-surface p-3 text-left"
+                >
+                  <Activity className="h-4 w-4 text-cyan-300" />
+                  <p className="mt-2 text-lg font-semibold text-white">
+                    {flags.filter((flag) => flag.status === 'ready').length}/{flags.length}
+                  </p>
+                  <span className="text-[10px] uppercase tracking-wider text-slate-500">Integrations ready</span>
                 </button>
                 <button
                   type="button"
