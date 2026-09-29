@@ -65,7 +65,6 @@ const navigation = navigationGroups
   .sort((a, b) => a.label.localeCompare(b.label, 'en-GB'))
 
 const sectionTabs = [
-  { routes: ['/repositories', '/memory', '/intelligence'], items: [{ to: '/repositories', label: 'Overview' }, { to: '/intelligence', label: 'Memory & Intelligence' }] },
   {
     routes: ['/models', '/council', '/optimisation'],
     items: [
@@ -94,9 +93,9 @@ const sectionTabs = [
 const pageMeta: Record<string, { title: string; subtitle: string }> = {
   '/chat': { title: 'Chat', subtitle: 'Private model routing and persistent conversations' },
   '/files': { title: 'Files', subtitle: 'Authenticated files and storage' },
-  '/repositories': { title: 'Repositories', subtitle: 'Snapshots, memory, QA and repository intelligence' },
-  '/memory': { title: 'Repositories', subtitle: 'Persistent memory and consolidated repository intelligence' },
-  '/intelligence': { title: 'Repositories', subtitle: 'Persistent memory and consolidated repository intelligence' },
+  '/repositories': { title: 'Repositories', subtitle: 'Automated repository estate overview' },
+  '/memory': { title: 'Repositories', subtitle: 'Automated repository estate overview' },
+  '/intelligence': { title: 'Repositories', subtitle: 'Automated repository estate overview' },
   '/models': { title: 'Models', subtitle: 'Ranked models, providers and evidence-based model review' },
   '/council': { title: 'Models', subtitle: 'Ranked models, providers and evidence-based model review' },
   '/optimisation': { title: 'Models', subtitle: 'Registry, Council and recorded optimisation activity' },
