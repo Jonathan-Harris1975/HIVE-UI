@@ -125,104 +125,7 @@ function RepoIcon({ category }: { category?: string }) {
   return <Activity className="h-3.5 w-3.5" />
 }
 
-type WakeTicket = {
-  ticket_id: string
-  repo: string
-  status: 'running' | 'ready' | 'timeout' | 'failed'
-  phase: string
-  events: Array<{ phase: string; [key: string]: unknown }>
-  result?: { ready: boolean; already_online: boolean; elapsed_seconds: number; attempts: number } | null
-  error?: string | null
-}
-
-function wakePhaseLabel(phase: string): string {
-  switch (phase) {
-    case 'queued': return 'Queued'
-    case 'already-online': return 'Already online'
-    case 'requesting-resume': return 'Requesting Koyeb resume'
-    case 'resume-request-failed': return 'Resume request failed'
-    case 'starting': return 'Starting'
-    case 'polling': return 'Waiting for health check'
-    case 'ready': return 'Ready'
-    case 'timeout': return 'Timed out'
-    default: return phase.replace(/-/g, ' ')
-  }
-}
-
-/** RAMS remains manually recoverable from Operations. HIVE and AIMS lifecycle
- * is session-owned and therefore has no manual wake/sleep control in the UI. */
-function ServiceWakeControl({ repo, onWoken }: { repo: 'RAMS'; onWoken: () => void }) {
-  const [ticket, setTicket] = useState<WakeTicket | null>(null)
-  const [starting, setStarting] = useState(false)
-
-  useEffect(() => {
-    if (!ticket || ticket.status !== 'running' || !ticket.ticket_id) return
-    const timer = setTimeout(async () => {
-      try {
-        const next = await apiFetch<WakeTicket>(`/v1/services/${repo}/ensure-ready/${ticket.ticket_id}`)
-        setTicket(next)
-        if (next.status === 'ready') onWoken()
-      } catch {
-        setTicket((current) => (current ? { ...current, status: 'failed', error: 'Lost connection while polling.' } : current))
-      }
-    }, 2000)
-    return () => clearTimeout(timer)
-  }, [ticket, repo, onWoken])
-
-  const start = useCallback(async () => {
-    setStarting(true)
-    try {
-      const response = await apiFetch<{ wake_id: string }>(`/v1/services/${repo}/ensure-ready`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({}),
-      })
-      setTicket({ ticket_id: response.wake_id, repo, status: 'running', phase: 'queued', events: [] })
-    } catch {
-      setTicket({ ticket_id: '', repo, status: 'failed', phase: 'failed', events: [], error: 'Could not start wake-up request.' })
-    } finally {
-      setStarting(false)
-    }
-  }, [repo])
-
-  if (!ticket) {
-    return (
-      <button
-        type="button"
-        onClick={(event) => { event.stopPropagation(); void start() }}
-        disabled={starting}
-        className={
-          "mt-2 inline-flex items-center gap-1.5 rounded-lg border border-violet-300/20 bg-violet-300/8 " +
-          "px-2.5 py-1 text-xs text-violet-200 transition hover:bg-violet-300/12 disabled:opacity-50"
-        }
-      >
-        <RefreshCw className={`h-3 w-3 ${starting ? 'animate-spin' : ''}`} /> {starting ? 'Requesting…' : 'Wake up'}
-      </button>
-    )
-  }
-
-  const tone = ticket.status === 'ready' ? 'text-emerald-200 border-emerald-300/15 bg-emerald-300/5'
-    : ticket.status === 'timeout' || ticket.status === 'failed' ? 'text-rose-200 border-rose-300/15 bg-rose-300/5'
-    : 'text-violet-200 border-violet-300/15 bg-violet-300/5'
-
-  return (
-    <div className={`mt-2 rounded-lg border px-2.5 py-1.5 text-xs ${tone}`}>
-      {ticket.status === 'ready'
-        ? `Ready in ${ticket.result?.elapsed_seconds ?? 0}s`
-        : ticket.status === 'timeout'
-          ? 'Wake-up timed out — try again shortly.'
-          : ticket.status === 'failed'
-            ? (ticket.error || 'Wake-up failed.')
-            : `${wakePhaseLabel(ticket.phase)}…`}
-    </div>
-  )
-}
-
-function RepoHealthCard({ item, onInspect, onRefresh }: { item: RepoHealthItem; onInspect: () => void; onRefresh: () => void }) {
-  const latency = item.liveness?.latency_ms
-  const livenessStatus = item.liveness?.status || item.status
-  const readinessStatus = item.readiness?.status || item.operational?.status || item.status
-  const operationalStatus = item.operational?.status
+function RepoHealthCard({ item }: { item: RepoHealthItem }) {
   const category = item.category === 'background_worker'
     ? 'Background Worker'
     : item.category === 'background_api'
@@ -234,42 +137,23 @@ function RepoHealthCard({ item, onInspect, onRefresh }: { item: RepoHealthItem; 
           : 'Core API'
 
   return (
-    <div className="min-w-0 rounded-xl border border-white/8 bg-hive-surface p-1.5 transition hover:border-cyan-300/20">
-      <button
-        type="button"
-        onClick={onInspect}
-        className="w-full rounded-lg p-1.5 text-left transition hover:bg-hive-panel-deep focus-visible:bg-hive-panel-deep"
-        aria-label={`Inspect ${item.label || item.repo} health`}
-      >
-        <div className="flex items-center gap-2.5">
-          <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg border border-cyan-300/12 bg-cyan-300/6 text-cyan-200" aria-hidden="true">
-            <RepoIcon category={item.category} />
-          </span>
-          <span className="min-w-0 flex-1">
-            <span className="flex items-center gap-1.5">
-              <span className="truncate text-xs font-semibold text-white">{item.label || item.repo}</span>
-              <span className="truncate text-xs uppercase tracking-[0.12em] text-slate-400">{category}</span>
-            </span>
-            <span className="mt-0.5 block truncate text-xs text-slate-400" title={item.detail || item.description}>{item.detail || item.description || 'No health detail returned.'}</span>
-          </span>
-          <span className="flex shrink-0 flex-col items-end gap-0.5 sm:flex-row sm:items-center sm:gap-2">
-            <StatusBadge status={livenessStatus} variant="liveness" compact />
-            <StatusBadge status={readinessStatus} variant="readiness" compact />
-          </span>
-        </div>
-        <span className="mt-2 flex items-center gap-2 text-xs text-slate-400">
-          <span>{typeof latency === 'number' ? `${latency} ms` : 'No latency'}</span>
-          {item.category === 'background_worker'
-            ? <span>Worker heartbeat</span>
-            : operationalStatus && <span>{operationalStatus.replace(/_/g, ' ')}</span>}
+    <article className="min-w-0 rounded-xl border border-white/8 bg-hive-surface p-3">
+      <div className="flex items-center gap-2.5">
+        <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg border border-cyan-300/12 bg-cyan-300/6 text-cyan-200" aria-hidden="true">
+          <RepoIcon category={item.category} />
         </span>
-      </button>
-      {item.repo === 'RAMS' && !['healthy', 'busy'].includes(item.status) && (
-        <div className="px-1.5 pb-1.5">
-          <ServiceWakeControl repo="RAMS" onWoken={onRefresh} />
-        </div>
-      )}
-    </div>
+        <span className="min-w-0 flex-1">
+          <span className="flex items-center gap-1.5">
+            <span className="truncate text-xs font-semibold text-white">{item.label || item.repo}</span>
+            <span className="truncate text-xs uppercase tracking-[0.12em] text-slate-400">{category}</span>
+          </span>
+          <span className="mt-0.5 block truncate text-xs text-slate-400" title={item.detail || item.description}>
+            {item.detail || item.description || 'No health detail returned.'}
+          </span>
+        </span>
+        <StatusBadge status={item.status} compact />
+      </div>
+    </article>
   )
 }
 
@@ -613,7 +497,7 @@ export function OpsPage() {
                   <h3 className="text-sm font-semibold text-white">Services</h3>
                   <p className="mt-0.5 text-[11px] text-slate-500">Live and production-ready state</p>
                   <p className="mt-1 text-[11px] text-slate-400">
-                    Each service reports liveness and readiness separately.
+                    Repository health is automated; HIVE-UI shows status only. Repair, wake and recovery actions remain in backend automation.
                   </p>
                 </div>
                 <div className="flex items-center gap-2">
@@ -632,12 +516,7 @@ export function OpsPage() {
               {repoHealth?.repos?.length ? (
                 <div className="mt-3 grid grid-cols-1 gap-2 sm:grid-cols-2">
                   {repoHealth.repos.map((item) => (
-                    <RepoHealthCard
-                      key={item.repo}
-                      item={item}
-                      onInspect={() => inspect(`${item.repo} health`, item, item.description)}
-                      onRefresh={() => void loadOps(true)}
-                    />
+                    <RepoHealthCard key={item.repo} item={item} />
                   ))}
                 </div>
               ) : (
@@ -685,18 +564,14 @@ export function OpsPage() {
                 <span className="text-xs text-slate-400">{openReviewCount} reviews · {runtimeStats?.providers?.count ?? 0} providers</span>
               </summary>
               <div className="grid grid-cols-2 gap-2 border-t border-white/6 p-3 sm:grid-cols-3">
-                <button
-                  type="button"
-                  onClick={() => inspect('Repository health', repoHealth)}
-                  className="rounded-xl border border-white/8 bg-hive-surface p-3 text-left"
-                >
+                <div className="rounded-xl border border-white/8 bg-hive-surface p-3 text-left">
                   <Activity className="h-4 w-4 text-emerald-300" />
                   <p className="mt-2 text-lg font-semibold text-white">
                     {repoHealth?.repos?.filter((item) => ['healthy', 'busy'].includes(item.status)).length ?? 0}/
                     {repoHealth?.repos?.length ?? 0}
                   </p>
                   <span className="text-[10px] uppercase tracking-wider text-slate-500">Services healthy</span>
-                </button>
+                </div>
                 <Link
                   to="/execution-reviews"
                   className="rounded-xl border border-white/8 bg-hive-surface p-3 text-left"
