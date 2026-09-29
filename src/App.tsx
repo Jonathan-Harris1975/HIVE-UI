@@ -16,9 +16,6 @@ const ModelRegistryPage = lazy(() =>
 const RepositoriesPage = lazy(() =>
   import('./pages/RepositoriesPage').then((module) => ({ default: module.RepositoriesPage })),
 )
-const RepositoryIntelligencePage = lazy(() =>
-  import('./pages/RepositoryIntelligencePage').then((module) => ({ default: module.RepositoryIntelligencePage })),
-)
 const IntegrationsPage = lazy(() =>
   import('./pages/IntegrationsPage').then((module) => ({ default: module.IntegrationsPage })),
 )
@@ -41,9 +38,9 @@ const CommunicationsPage = lazy(() =>
   import('./pages/CommunicationsPage').then((module) => ({ default: module.CommunicationsPage })),
 )
 
-function LegacyRepositoryMemoryRedirect() {
+function LegacyRepositoriesRedirect() {
   const location = useLocation()
-  return <Navigate to={`/intelligence${location.search}`} replace />
+  return <Navigate to={`/repositories${location.search}`} replace />
 }
 
 function LoadingScreen({ compact = false }: { compact?: boolean }) {
@@ -69,9 +66,9 @@ export default function App() {
               <Route index element={<Navigate to="/chat" replace />} />
               <Route path="chat" element={<ChatPage />} />
               <Route path="files" element={<FilesPage />} />
-              <Route path="memory" element={<LegacyRepositoryMemoryRedirect />} />
+              <Route path="memory" element={<LegacyRepositoriesRedirect />} />
               <Route path="repositories" element={<RepositoriesPage />} />
-              <Route path="intelligence" element={<RepositoryIntelligencePage />} />
+              <Route path="intelligence" element={<LegacyRepositoriesRedirect />} />
               <Route path="integrations" element={<IntegrationsPage />} />
               <Route path="council" element={<CouncilPage />} />
               <Route path="execution" element={<ExecutionPlanPage />} />
