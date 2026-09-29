@@ -88,13 +88,14 @@ test('model picker escapes composer clipping with a viewport-positioned portal',
 })
 
 
-test('operations health cards expose aggregate status and no tier branding', () => {
+test('operations repository health is status-only and keeps remediation in backend automation', () => {
   const ops = source('src/pages/OpsPage.tsx')
   const apiTypes = source('src/types/api.ts')
-  assert.match(ops, /status=\{livenessStatus\} variant="liveness"/)
-  assert.match(ops, /status=\{readinessStatus\} variant="readiness"/)
-  assert.match(ops, /Each service reports liveness and readiness separately/)
+  assert.match(ops, /Repository health is automated; HIVE-UI shows status only/)
+  assert.match(ops, /<StatusBadge status=\{item\.status\} compact \/>/)
+  assert.match(ops, /<RepoHealthCard key=\{item\.repo\} item=\{item\} \/>/)
   assert.match(ops, /grid-cols-1 gap-2 sm:grid-cols-2/)
+  assert.doesNotMatch(ops, /ServiceWakeControl|wakePhaseLabel|Wake RAMS|onInspect=\{\(\) => inspect\(item\.label/)
   const removedTierField = ['free', 'tier', 'safe'].join('_')
   assert.doesNotMatch(ops, new RegExp(removedTierField, 'i'))
   assert.doesNotMatch(apiTypes, new RegExp(removedTierField, 'i'))
