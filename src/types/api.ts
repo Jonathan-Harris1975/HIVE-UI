@@ -1420,10 +1420,6 @@ export interface RuntimeStatsResponse {
   ok: boolean
   build?: string
   sampled_at?: number
-  repository_manager?: {
-    registered_count: number
-    latest_updated_at?: number | null
-  }
   model_registry?: {
     total_models: number
     categories_populated: string[]
