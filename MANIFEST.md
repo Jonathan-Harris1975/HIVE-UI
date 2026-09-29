@@ -1,40 +1,35 @@
 # HIVE-UI snapshot notes
 
-## Execution and optimisation tidy-up
+## Repository automation overview tidy-up
 
-The former three-tab Optimisation workspace has been split by responsibility:
+Repository administration is now intentionally read-only in HIVE-UI. The governed repository estate is fully automated through scheduled refresh, repository CI/security gates, CodeQL-to-Kilo repair, deployment verification and Council evidence generation.
 
-- **Execution → Plan**: deterministic planning estimate and saved preview flow.
-- **Execution → Reviews**: review, approval, audit trail and evidence-pack workflow.
-- **Optimisation**: recorded decision and experiment history only.
+The UI therefore has one repository surface:
 
-`/execution-simulation` remains as a compatibility redirect to `/execution`.
+- **Repositories**: snapshot, Memory, Intelligence, automation and service-health overview only.
+- Legacy `/memory` and `/intelligence` routes redirect to `/repositories` and preserve the query string.
+- Manual upload, bulk refresh, reindex, setup repair, Memory editing, manual Intelligence runs, improvement runs and repository deletion controls are removed from HIVE-UI.
 
-The Execution Plan flow now persists a preview before creating a review plan and
-passes the persisted preview/simulation provenance into the review record. The
-review page also unwraps stored D1 metadata correctly when opening a plan.
+Operations has also been separated from repository status:
 
-Optimisation no longer labels a ledger status change as an external rollback.
-The UI uses **Mark reverted** and the backend exposes `/revert`; the legacy
-`/rollback` endpoint remains as a backwards-compatible alias.
+- repository-health cards are no longer rendered on Operations;
+- repository-manager counts are no longer requested or displayed on Operations;
+- Operations remains responsible for HIVE runtime state, integration readiness, operational events, reviews, model/provider runtime data, workflow planning and the explicitly confirmed database reset.
 
-## Files changed in this tidy-up
+## Files removed
 
-- scripts/ui-overhaul.test.mjs
-- src/App.tsx
-- src/components/AppShell.tsx
-- src/pages/ExecutionPlanPage.tsx (replaces ExecutionSimulationPage.tsx)
-- src/pages/ExecutionReviewsPage.tsx
-- src/pages/OpsPage.tsx
-- src/pages/OptimisationPage.tsx
-- src/types/api.ts
+- `RepositoriesPage.tsx` (stale repository-root copy)
+- `RepositoryIntelligencePage.tsx` (stale repository-root copy)
+- `src/components/RepositoryOperationsPanel.tsx`
+- `src/pages/RepositoryIntelligencePage.tsx`
+- `src/pages/RepositoryMemoryPage.tsx`
 
 ## Validation completed
 
-- HIVE-UI source/UX contract tests: 17 passed in this historical tidy-up snapshot; this is not the current release-gate count.
-- HIVE-UI source verification: passed.
-- Backend test suite in the paired HIVE repository: 433 passed.
+- `node --test scripts/ux-contract.test.mjs scripts/ui-overhaul.test.mjs`: 16/16 passed.
+- `npm run verify:lock`: passed.
+- `npm run verify:source`: passed.
+- `python3 scripts/secret_scan.py`: passed.
+- TypeScript source line-length contract: passed.
 
-The full UI dependency install/typecheck/build was not run in this workspace
-because its Node runtime is v22.16.0 while this repository requires Node
->=22.22.0. CI or local validation should use the engine declared in package.json.
+A complete dependency-backed typecheck/build was not run in this workspace because dependencies are not installed and the local Node runtime is v22.16.0 while the repository pins Node 24.21.0. CI remains the authoritative build gate.

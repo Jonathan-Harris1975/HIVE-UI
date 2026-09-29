@@ -1,0 +1,5 @@
+RepositoriesPage.tsx
+RepositoryIntelligencePage.tsx
+src/components/RepositoryOperationsPanel.tsx
+src/pages/RepositoryIntelligencePage.tsx
+src/pages/RepositoryMemoryPage.tsx
