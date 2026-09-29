@@ -15,3 +15,5 @@ After deployment, verify signed login, representative protected routes, alert ca
 New logins depend on the `LOGIN_RATE_LIMITER` Durable Object binding and the exported `LoginRateLimiter` class. The limiter persists failed-login state for the implemented fixed 10-minute window and blocks from the fifth failure until that window expires. The binding and SQLite migration are defined in `wrangler.toml` and are deployment requirements.
 
 `login_rate_limiter_unavailable` with HTTP 503 means the authentication protection path is unavailable. Treat it as a Worker/Durable Object incident: verify the binding, migration and Durable Object availability, then restore the protected path. Do not bypass the limiter or convert the failure to a permissive login path. Existing signed sessions are not revalidated through this limiter and remain subject to their normal absolute/idle expiry and downstream-service availability.
+Repository-health controls are intentionally status-only in HIVE-UI. Automated CI, deployment watchers and repair workflows own remediation; the UI does not wake, repair, approve or otherwise mutate repository/service health state.
+

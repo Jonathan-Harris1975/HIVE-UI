@@ -20,3 +20,5 @@ The repository-health request is optional within the overview load. A temporary 
 ## Responsive check
 
 Both card groups use a two-column grid. Verify the deployed screen on the narrowest supported Android viewport; labels and details are intentionally truncated with complete values available in the inspector.
+Repository-health controls are intentionally status-only in HIVE-UI. Automated CI, deployment watchers and repair workflows own remediation; the UI does not wake, repair, approve or otherwise mutate repository/service health state.
+
