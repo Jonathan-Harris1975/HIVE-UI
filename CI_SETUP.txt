@@ -23,7 +23,7 @@ DEPENDENCY / LOCKFILE POLICY
 - Renovate lockFileMaintenance is enabled and may automerge only after required CI permits the PR to merge.
 - npm patch/minor updates may automerge after required CI passes.
 - npm major updates remain manual.
-- GitHub Actions updates remain manual because Actions execute CI code.
+- GitHub Actions patch/minor/digest updates follow the committed Renovate automerge policy and remain gated by repository checks; major updates remain manual.
 - package.json and package-lock.json remain synchronised in the same Renovate PR. Existing npm ci and verify:lock checks fail inconsistent lockfiles.
 - The deployed-integration recovery workflow now recognises merged Renovate PRs instead of Dependabot PRs before opening a validated revert PR.
 
@@ -47,7 +47,7 @@ CI TOOLS ADDED
 
 PRE-EMPTIVE TOOLCHAIN CORRECTION
 --------------------------------
-package.json and package-lock.json require npm 10.9.9, while existing workflows asserted npm 10.9.4. CI and deployed-integration now explicitly install npm 10.9.9 after Node setup before asserting the toolchain. This prevents the stale npm assertion failure already encountered during the IRS rollout.
+The repository pins Node.js 24.21.0 while GitHub workflows explicitly install and assert npm 10.9.9 before npm ci. npm is intentionally workflow-pinned rather than declared as packageManager/engines metadata so Cloudflare does not attempt a separate incompatible npm tool installation.
 
 GITLEAKS DIAGNOSTICS
 --------------------
@@ -59,7 +59,7 @@ ZAP remains an ecosystem-level monthly DAST control rather than a per-PR HIVE-UI
 
 Cloudflare production build toolchain
 - Cloudflare's build environment must not infer/install npm from package.json. The production build log on 2026-09-26 detected npm 12.1.0 and failed during tool installation before dependency installation or the application build began.
-- Node remains repository-pinned to 22.22.0 via .node-version and package.json engines.node.
+- Node remains repository-pinned to 24.21.0 via .node-version and package.json engines.node.
 - The npm packageManager and engines.npm declarations are intentionally omitted from package.json so Cloudflare uses the npm bundled with the pinned Node runtime instead of attempting a separate npm tool installation.
 - GitHub CI remains deterministic: its workflows explicitly install and assert npm 10.9.9 before npm ci. Do not re-add packageManager or engines.npm without first validating Cloudflare's build-tool detection.
 
@@ -76,24 +76,18 @@ AUTONOMOUS PROVING-GROUP SETUP
 - Enable Kilo Code Reviews for this repository and enable REVIEW.md guidance in the Kilo Code Reviews configuration.
 - Kilo Code Reviewer is review-only; the repair PR also invokes @kilocode-bot in PR context for implementation. Bot-generated PR review behaviour must be verified in Kilo settings because Kilo documents bot-created PRs as ignored by default by automatic Code Reviews.
 
-AUTONOMOUS REPAIR AUTHENTICATION
-- Required repository variable: AUTONOMY_REPAIR_APP_ID
-- Required repository secret: the GitHub App private-key secret referenced by `.github/workflows/autonomous-repair.yml`
-- The installed Autonomy Repair GitHub App needs Contents read/write, Pull requests read/write and Issues read/write for this repository.
-- Repair PRs are created with the GitHub App installation token, not GITHUB_TOKEN, so pull_request workflows start without the manual approval loop applied to workflow-created GITHUB_TOKEN PRs.
-- Mergify auto-merges an autonomy:repair PR only after the Autonomous repair marker gate succeeds and no active checks remain failed or pending. Kilo Code Review remains useful when it runs, but is not a mandatory named check because bot-generated PR review behaviour can vary. GitHub branch protection/rulesets remain authoritative.
-- The old Renovate-specific deployment-revert PR path has been removed where present so a failed deployment produces one repair path rather than competing recovery PRs.
-
-AUTONOMOUS MERGE SETTINGS
-- Kilo Code Review should remain enabled for repository pull requests with REVIEW.md guidance, but autonomous merging does not depend on that named check being present.
-- Mergify must have repository access. `.mergify.yml` auto-merges only validated `autonomy:repair` PRs after the repair-marker gate succeeds and all active checks are clear.
-- Protect `main` with the repository's normal required checks. At minimum, the aggregate release/CI gate, the Autonomous repair marker gate, the repository security checks, and Kilo/Socket checks that are configured as merge gates should be required.
-- Keep GitHub's workflow-approval security policy enabled; App-created repair PRs no longer depend on the workflow `GITHUB_TOKEN`.
-- Enable GitHub's automatic deletion of head branches after merge to keep autonomous repair branches tidy.
-CODEQL / TRUSTED PR AUTOMATION
-- CodeQL open alerts are enforced by the CodeQL workflow and feed the autonomous repair/Kilo loop.
-- The Autonomy Repair App creates the carrier PR with an installation token. GitHub documents that App-token-created automation PRs start normal pull_request workflows without the manual approval loop associated with workflow GITHUB_TOKEN-created PRs.
-- Kilo implementation mode may update the carrier or open one linked implementation PR. Prefer a same-repository branch when supported; a separate Kilo PR must still pass every repository check and must link back to the carrier evidence.
-- For public-fork workflow approval, use Repository Settings -> Actions -> General -> Approval for running fork pull request workflows from contributors. To remove the first-time-contributor prompt for the established Kilo bot without sending secrets/write tokens to forks, use the narrowest policy that fits: require approval only for first-time contributors who are new to GitHub. Keep fork secrets and write tokens disabled.
-- If a new App-created carrier PR still asks for approval, stop and treat it as a configuration defect. If only a Kilo implementation fork asks, record it in the Sunday automation evidence rather than weakening fork security controls.
-
+AUTONOMOUS REPAIR + TRUSTED PR AUTOMATION
+-----------------------------------------
+- Required repository variable: AUTONOMY_REPAIR_APP_ID.
+- Required repository secret: AUTONOMY_REPAIR_APP_PRIVATE_KEY containing the PEM private key for the installed Autonomous Repair Bot GitHub App.
+- Required GitHub App repository permissions: Contents read/write, Pull requests read/write, Issues read/write, Actions read/write, and Metadata read-only (automatic).
+- Actions read/write is used only by `.github/workflows/trusted-automation.yml` to admit workflow runs that GitHub has placed in `action_required` for a verified automation PR, with a safe rerun fallback for the same exact trusted PR/SHA. It is not a branch-protection bypass.
+- The trusted workflow runs from the default branch, never checks out or executes PR code, and admits only: exact same-repository Mend Renovate PRs, autonomous carrier PRs created by the repair App, and Kilo implementation PRs that are explicitly linked from an autonomous repair carrier.
+- Fork secrets and write tokens remain disabled. An unlinked Kilo PR or any unknown bot/user PR is not automatically admitted.
+- Renovate PRs may be admitted to run CI regardless of update type. Native auto-approval/auto-merge is requested only when the Renovate PR body explicitly reports `Automerge: Enabled.`; major/manual Renovate PRs remain manual as defined by committed `renovate.json` policy.
+- A verified linked Kilo implementation PR may be approved only after the current head SHA has successful repository CI, CodeQL and repository-security workflows and no current failing/pending checks.
+- Kilo/carrier changes to workflows, Renovate/Mergify configuration, CodeQL/security policy, secret-scanner controls, CODEOWNERS, SECURITY.md or autonomy governance files automatically receive `autonomy:human-hold` instead of autonomous merge.
+- `.mergify.yml` performs lifecycle housekeeping only: it may close `autonomy:superseded` and `autonomy:obsolete` PRs, but it does not merge code.
+- Native GitHub auto-merge / Merge Queue is the final merge authority. Trusted automation can request native auto-merge only after the exact-head checks are green; GitHub branch/ruleset protections remain authoritative.
+- Keep GitHub automatic deletion of merged head branches enabled where desired to remove completed automation branches.
+- CodeQL open alerts remain an independent gate and feed the CodeQL-to-Kilo repair handoff. Alert dismissal, broad suppressions, allowlist changes and security-policy decisions remain human-controlled.
