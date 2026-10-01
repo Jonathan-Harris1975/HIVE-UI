@@ -2,7 +2,7 @@ name: Autonomous PR issue repair
 
 on:
   workflow_run:
-    workflows: ["HIVE-UI CI", "HIVE-UI deployed integration", "CodeQL", "Security and repository quality"]
+    workflows: ["HIVE-UI CI", "CodeQL", "Security and repository quality"]
     types: [completed]
   issue_comment:
     types: [created]
