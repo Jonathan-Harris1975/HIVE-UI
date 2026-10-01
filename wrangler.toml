@@ -19,6 +19,8 @@ HIVE_UI_SESSION_TTL_SECONDS = "43200"
 KOYEB_SERVICE_ID_AIMS = "5102061c-a0d2-4195-84d3-0f75b8b8eaa2"
 KOYEB_SERVICE_ID_HIVE = "fafd45aa-a95f-4356-9faf-24b42c6dd847"
 VITE_APP_NAME = "HIVE"
+
+[observability]
 enabled = true
 head_sampling_rate = 1
 
