@@ -126,9 +126,10 @@ jobs:
           docker run --rm hive:ci node -e "process.exit(Number(process.versions.node.split('.')[0]) >= 20 ? 0 : 1)"
       - name: Boot API and probe HIVE health
         run: |
+          HIVE_ADMIN_BEARER_TOKEN="$(openssl rand -hex 32)"
           docker run -d --name hive-ci-api -p 8000:8080 \
             -e APP_ENV='test' \
-            -e ADMIN_BEARER_TOKEN='ci-local-hive-key' \
+            -e ADMIN_BEARER_TOKEN="${HIVE_ADMIN_BEARER_TOKEN}" \
             -e DATABASE_ENABLED='false' \
             -e D1_ENABLED='false' \
             -e VECTORIZE_ENABLED='false' \
@@ -147,7 +148,7 @@ jobs:
           done
           test "$started" = "true"
           curl -fsS http://127.0.0.1:8000/health | tee /tmp/health.json
-          curl -fsS -H 'Authorization: Bearer ci-local-hive-key' http://127.0.0.1:8000/v1/system/runtime-stats | tee /tmp/runtime.json
+          curl -fsS -H "Authorization: Bearer ${HIVE_ADMIN_BEARER_TOKEN}" http://127.0.0.1:8000/v1/system/runtime-stats | tee /tmp/runtime.json
           python - <<'PY2'
           import json
           from pathlib import Path
