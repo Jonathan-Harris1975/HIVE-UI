@@ -11,14 +11,14 @@ custom_domain = true
 [vars]
 HIVE_API_BASE_URL = "https://liable-loreen-jonathanharris-57884580.koyeb.app"
 HIVE_API_TIMEOUT_MS = "10000"
-# HIVE_API_FALLBACK_URLS may be set in the Cloudflare dashboard as a comma-separated
-# list of secondary HTTPS origins. The Worker retries only GET/HEAD requests.
-HIVE_UI_SESSION_TTL_SECONDS = "43200"
-HIVE_UI_IDLE_TIMEOUT_SECONDS = "1800"
 HIVE_COMMS_ACTOR = "hive-owner"
 HIVE_COMMS_ROLE = "admin"
 HIVE_COMMS_URL = "https://chat.jonathan-harris.online/console/"
-[observability]
+HIVE_UI_IDLE_TIMEOUT_SECONDS = "1800"
+HIVE_UI_SESSION_TTL_SECONDS = "43200"
+KOYEB_SERVICE_ID_AIMS = "5102061c-a0d2-4195-84d3-0f75b8b8eaa2"
+KOYEB_SERVICE_ID_HIVE = "fafd45aa-a95f-4356-9faf-24b42c6dd847"
+VITE_APP_NAME = "HIVE"
 enabled = true
 head_sampling_rate = 1
 
@@ -47,11 +47,3 @@ class_name = "LoginRateLimiter"
 tag = "login-rate-limiter-v1"
 new_sqlite_classes = ["LoginRateLimiter"]
 
-# Configure these as encrypted Cloudflare Worker secrets, never in this file:
-# HIVE_ADMIN_TOKEN
-# HIVE_UI_ACCESS_KEY
-# HIVE_UI_SESSION_SECRET (required; independent session-signing key)
-# KOYEB_TOKEN
-# KOYEB_SERVICE_ID_HIVE (normal variable in Cloudflare dashboard)
-# KOYEB_SERVICE_ID_AIMS (normal variable in Cloudflare dashboard)
-# HIVE_COMMS_HANDOFF_SECRET (required; independent handoff-signing key)
