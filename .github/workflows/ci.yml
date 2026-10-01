@@ -1,218 +1,150 @@
-name: CI
+name: HIVE-UI CI
 
 on:
   push:
-    branches: ["**"]
+    branches: [main]
   pull_request:
-    branches: ["**"]
-
   schedule:
-    - cron: '0 0 * * 0'
+    - cron: '30 21 * * 6'
+  workflow_dispatch:
 
 permissions:
   contents: read
 
+concurrency:
+  group: hive-ui-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
-  test:
+  verify:
     permissions:
       contents: read
       id-token: write
-    name: Test (Python ${{ matrix.python-version }})
     runs-on: ubuntu-latest
-    strategy:
-      matrix:
-        python-version: ["3.11.16", "3.12.14", "3.13.15", "3.14.7"]
-
+    timeout-minutes: 15
     steps:
-      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6.1.0
-      - name: Set up Python ${{ matrix.python-version }}
-        uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Use Node.js 24
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
         with:
-          python-version: ${{ matrix.python-version }}
-          cache: "pip"
-      - name: Install dependencies
+          node-version: 24.21.0
+          cache: npm
+
+      - name: Reject committed literal secrets
+        run: python3 scripts/secret_scan.py
+
+      - name: Install repository-pinned npm
+        run: npm install --global npm@10.9.9
+
+      - name: Verify pinned Node/npm toolchain
         run: |
-          python -m pip install --disable-pip-version-check "pip==26.2.1"
-          python -m pip install --disable-pip-version-check -r requirements-dev.txt
-          python -m pip check
-      - name: Run tests with coverage
-        env:
-          PYTHONPATH: backend
-          APP_ENV: test
-        run: |
-          python -V
-          python -m compileall -q backend/app backend/tests
-          python -m pytest backend/tests -q --tb=short --cov=app --cov-report=term-missing --cov-report=xml:coverage.xml --cov-fail-under=74
+          test "$(node --version)" = "v24.21.0"
+          test "$(npm --version)" = "10.9.9"
+
+      - name: Install locked dependencies
+        run: npm ci --no-audit --no-fund
+
+      - name: Typecheck, lint, build and verify
+        run: npm run check
 
       - name: Upload coverage to Codecov
-        if: matrix.python-version == '3.14.7'
         uses: codecov/codecov-action@fb8b3582c8e4def4969c97caa2f19720cb33a72f # v7.0.0
         with:
           use_oidc: true
-          files: coverage.xml
+          files: coverage/lcov.info
           flags: unit
           fail_ci_if_error: false
 
-  performance:
-    name: API performance regression gate (Python 3.14)
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6.1.0
-      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+      - name: Enforce production bundle size budget
+        run: npm run check:bundle-budget
+
+      - name: Audit dependencies
+        run: npm audit --audit-level=high
+
+      - name: Upload production bundle
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
-          python-version: "3.14.7"
-          cache: "pip"
-      - name: Install dependencies
-        run: |
-          python -m pip install --disable-pip-version-check "pip==26.2.1"
-          python -m pip install --disable-pip-version-check -r requirements-dev.txt
-          python -m pip check
-      - name: Enforce API latency SLOs
-        env:
-          PYTHONPATH: backend
-          HIVE_PERF_REPORT_PATH: hive-performance.json
-        run: python scripts/performance_gate.py
-      - name: Retain performance evidence
-        if: always()
-        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
-        with:
-          name: hive-performance-${{ github.sha }}
-          path: hive-performance.json
+          name: hive-ui-dist-${{ github.sha }}
+          path: dist
           if-no-files-found: error
-          retention-days: 90
+          retention-days: 14
 
-  lint:
-    name: Lint, type and security checks
+  e2e:
+    name: Playwright end-to-end
+    needs: [verify]
     runs-on: ubuntu-latest
+    timeout-minutes: 15
     steps:
-      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6.1.0
-      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
-        with:
-          python-version: "3.14.7"
-          cache: "pip"
-      - name: Reject committed literal secrets
-        run: python scripts/secret_scan.py
-      - name: Install tooling
-        run: |
-          python -m pip install --disable-pip-version-check "pip==26.2.1"
-          python -m pip install --disable-pip-version-check -r requirements-dev.txt
-      - name: Verify production dependency lock
-        run: python scripts/verify_dependency_lock.py --compile
-      - name: Ruff
-        env:
-          PYTHONPATH: backend
-        run: python -m ruff check backend/app backend/tests scripts --select E4,E7,E9,F
-      - name: Mypy
-        env:
-          PYTHONPATH: backend
-        run: python scripts/mypy_guard.py
-      - name: Bandit
-        run: python -m bandit -q -r backend/app -ll
-      - name: Dependency audit
-        run: python -m pip_audit -r requirements.txt
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
-  docker:
-    name: Docker runtime and API smoke
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6.1.0
-      - name: Build Docker image
-        run: docker build --target runtime -t hive:ci .
-      - name: Verify runtime engineering binaries
-        run: |
-          docker run --rm hive:ci python --version
-          docker run --rm hive:ci node --version
-          docker run --rm hive:ci npm --version
-          docker run --rm hive:ci node -e "process.exit(Number(process.versions.node.split('.')[0]) >= 20 ? 0 : 1)"
-      - name: Boot API and probe HIVE health
-        run: |
-          HIVE_ADMIN_BEARER_TOKEN="$(openssl rand -hex 32)"
-          docker run -d --name hive-ci-api -p 8000:8080 \
-            -e APP_ENV='test' \
-            -e ADMIN_BEARER_TOKEN="${HIVE_ADMIN_BEARER_TOKEN}" \
-            -e DATABASE_ENABLED='false' \
-            -e D1_ENABLED='false' \
-            -e VECTORIZE_ENABLED='false' \
-            -e EMBEDDINGS_ENABLED='false' \
-            -e AI_SEARCH_ENABLED='false' \
-            -e ALLOWED_HOSTS='127.0.0.1,localhost' \
-            hive:ci
-          trap 'docker logs hive-ci-api || true; docker rm -f hive-ci-api || true' EXIT
-          started=false
-          for _ in {1..30}; do
-            if curl -fsS http://127.0.0.1:8000/livez >/tmp/livez.json; then
-              started=true
-              break
-            fi
-            sleep 1
-          done
-          test "$started" = "true"
-          curl -fsS http://127.0.0.1:8000/health | tee /tmp/health.json
-          curl -fsS -H "Authorization: Bearer ${HIVE_ADMIN_BEARER_TOKEN}" http://127.0.0.1:8000/v1/system/runtime-stats | tee /tmp/runtime.json
-          python - <<'PY2'
-          import json
-          from pathlib import Path
-          health = json.loads(Path('/tmp/health.json').read_text())
-          runtime = json.loads(Path('/tmp/runtime.json').read_text())
-          assert health['ok'] is True
-          assert health['app'] == 'HIVE'
-          assert runtime['ok'] is True
-          assert 'repository_manager' not in runtime
-          assert 'model_registry' in runtime
-          assert 'providers' in runtime
-          PY2
-      - name: Install pinned Trivy CLI
-        run: python scripts/install_ci_tools.py trivy
-      - name: Scan built production image for fixable high-severity vulnerabilities
-        run: >-
-          .ci-tools/bin/trivy image hive:ci
-          --format table
-          --output trivy-hive-image.txt
-          --exit-code 1
-          --ignore-unfixed
-          --pkg-types os,library
-          --severity CRITICAL,HIGH
-          --no-progress
-      - name: Print production image vulnerability report
-        if: always()
-        run: |
-          if [ -f trivy-hive-image.txt ]; then
-            cat trivy-hive-image.txt
-          fi
-      - name: Retain production image vulnerability report
-        if: always()
-        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+      - name: Use Node.js 24
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
         with:
-          name: hive-image-vulnerability-report-${{ github.sha }}
-          path: trivy-hive-image.txt
-          if-no-files-found: warn
-          retention-days: 90
+          node-version: 24.21.0
+          cache: npm
+
+      - name: Install repository-pinned npm
+        run: npm install --global npm@10.9.9
+
+      - name: Verify pinned Node/npm toolchain
+        run: |
+          test "$(node --version)" = "v24.21.0"
+          test "$(npm --version)" = "10.9.9"
+
+      - name: Install locked dependencies
+        run: npm ci --no-audit --no-fund
+
+      - name: Install Playwright browsers
+        run: npx playwright install --with-deps chromium
+
+      - name: Build production bundle
+        run: npm run build
+
+      - name: Run Playwright e2e suite
+        run: npm run test:e2e
+        # To run this against a real Cloudflare Worker preview deployment
+        # instead of a local preview server, set HIVE_UI_E2E_BASE_URL to
+        # that deployment's URL (e.g. via a repository variable populated
+        # by the Cloudflare Worker deploy step for this PR).
+        env:
+          HIVE_UI_E2E_BASE_URL: ''
+
+      - name: Upload Playwright report
+        if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: playwright-report-${{ github.sha }}
+          path: playwright-report
+          retention-days: 14
 
   notify_failure:
     name: Notify central operations on CI failure
-    needs: [test, performance, lint, docker]
+    needs: [verify, e2e]
     if: ${{ always() && (contains(needs.*.result, 'failure') || contains(needs.*.result, 'cancelled')) }}
     runs-on: ubuntu-latest
     continue-on-error: true
     steps:
-      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6.1.0
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - name: Send redacted HIVE operational event
         env:
-          OPS_ALERT_WEBHOOK_URL: ${{ vars.OPS_ALERT_WEBHOOK_URL || secrets.OPS_ALERT_WEBHOOK_URL || 'https://hive.jonathan-harris.online/v1/ops/events' }}
-          OPS_ALERT_WEBHOOK_TOKEN: ${{ secrets.OPS_ALERT_WEBHOOK_TOKEN || secrets.OPS_EVENT_INGEST_TOKEN }}
+          OPS_ALERT_WEBHOOK_URL: ${{ secrets.OPS_ALERT_WEBHOOK_URL }}
+          OPS_ALERT_WEBHOOK_TOKEN: ${{ secrets.OPS_ALERT_WEBHOOK_TOKEN }}
         run: >-
           python scripts/ops_notify.py
-          --service HIVE
+          --service HIVE-UI
           --event-type ci_failed
-          --title "HIVE GitHub Actions failed"
-          --summary "The HIVE CI workflow failed. Open the linked run for the failing job and logs."
+          --title "HIVE-UI GitHub Actions failed"
+          --summary "The governed CI workflow failed. Open the linked run for the failing job and logs."
           --event-id "github:${{ github.repository }}:${{ github.run_id }}:${{ github.run_attempt }}"
           --release-id "${{ github.sha }}"
           --url "${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
 
   release_gate:
     name: Release gate (exact SHA)
-    needs: [test, performance, lint, docker]
+    needs: [verify, e2e]
     if: ${{ always() }}
     runs-on: ubuntu-latest
     permissions:
@@ -220,47 +152,29 @@ jobs:
     steps:
       - name: Require all release checks to be green
         env:
-          RESULT_TEST: ${{ needs.test.result }}
-          RESULT_PERFORMANCE: ${{ needs.performance.result }}
-          RESULT_LINT: ${{ needs.lint.result }}
-          RESULT_DOCKER: ${{ needs.docker.result }}
+          RESULT_VERIFY: ${{ needs.verify.result }}
+          RESULT_E2E: ${{ needs.e2e.result }}
         run: |
-          test "$RESULT_TEST" = "success"
-          test "$RESULT_PERFORMANCE" = "success"
-          test "$RESULT_LINT" = "success"
-          test "$RESULT_DOCKER" = "success"
+          test "$RESULT_VERIFY" = "success"
+          test "$RESULT_E2E" = "success"
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - name: Assert checked-out commit is the workflow SHA
         run: |
           test "$(git rev-parse HEAD)" = "$GITHUB_SHA"
           printf '{"repository":"%s","sha":"%s","workflow_run":"%s","status":"green"}\n' "$GITHUB_REPOSITORY" "$GITHUB_SHA" "$GITHUB_RUN_ID" > release-attestation.json
       - name: Retain exact-SHA release attestation
-        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: release-attestation-${{ github.sha }}
           path: release-attestation.json
           retention-days: 90
-
-  ci_gate:
-    name: ci-gate
-    needs: [release_gate]
-    if: ${{ always() }}
-    runs-on: ubuntu-latest
-    steps:
-      - name: Enforce aggregate CI result
-        env:
-          RELEASE_GATE_RESULT: ${{ needs.release_gate.result }}
-        run: |
-          set -euo pipefail
-          test "$RELEASE_GATE_RESULT" = "success" || { echo "release_gate was $RELEASE_GATE_RESULT" >&2; exit 1; }
-
 
   autonomous_repair_guard:
     name: Autonomous repair marker gate
     if: github.event_name == 'pull_request'
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
         with:
           fetch-depth: 0
       - name: Require autonomous repair request to be resolved
@@ -269,11 +183,32 @@ jobs:
           set -euo pipefail
           base_sha="${{ github.event.pull_request.base.sha }}"
           head_sha="${{ github.event.pull_request.head.sha }}"
-          git fetch --no-tags origin "$base_sha" "$head_sha"
+          # Fork PR commits may be absent even with a full checkout.
+          for sha in "$base_sha" "$head_sha"; do
+            git cat-file -e "${sha}^{commit}" 2>/dev/null || git fetch --no-tags origin "$sha"
+          done
           merge_base="$(git merge-base "$base_sha" "$head_sha")"
-          changed_markers="$(git diff --name-only --diff-filter=AMR "$merge_base" "$head_sha" -- '.autonomy/repair-request-*.md')"
+          changed_markers="$(git diff --name-only --diff-filter=AMR "$merge_base" "$head_sha" -- '.autonomy/repair-request-*.md' '.autonomy/repair-requests/*.md')"
           if [ -n "$changed_markers" ]; then
             echo "::error::This PR introduces an unresolved autonomous repair request. Fix the underlying failure, then remove the repair-request marker."
             printf '%s\n' "$changed_markers"
             exit 1
+          fi
+
+  ci_gate:
+    name: ci-gate
+    needs: [release_gate, autonomous_repair_guard]
+    if: ${{ always() }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Enforce aggregate CI result
+        env:
+          RELEASE_GATE_RESULT: ${{ needs.release_gate.result }}
+          REPAIR_GUARD_RESULT: ${{ needs.autonomous_repair_guard.result }}
+          EVENT_NAME: ${{ github.event_name }}
+        run: |
+          set -euo pipefail
+          test "$RELEASE_GATE_RESULT" = "success"
+          if [ "$EVENT_NAME" = "pull_request" ]; then
+            test "$REPAIR_GUARD_RESULT" = "success"
           fi

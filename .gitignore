@@ -23,3 +23,15 @@ dist-ssr
 *.sln
 *.sw?
 .security-test/
+
+.ci-tools/
+
+__pycache__/
+
+*.pyc
+
+coverage/
+
+playwright-report/
+
+test-results/

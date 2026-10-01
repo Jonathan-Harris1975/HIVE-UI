@@ -2,10 +2,8 @@ version: 2
 
 # Limit Socket PR analysis to dependency-policy surfaces used by this repository.
 triggerPaths:
-  - "requirements.in"
-  - "requirements.txt"
-  - "requirements-dev.txt"
-  - "pyproject.toml"
+  - "package.json"
+  - "package-lock.json"
   - "renovate.json"
   - ".github/dependabot.yml"
 
