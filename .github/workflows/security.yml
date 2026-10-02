@@ -48,7 +48,9 @@ jobs:
           trap 'rm -rf "$fixture"' EXIT
           # Assemble a synthetic PAT only at runtime so the repository itself
           # never contains a token-shaped fixture. The detector must reject it.
-          printf 'token = "ghp_%s"\n' 'aBcDeFgHiJkLmNoPqRsTuVwXyZ0123456789' > "$fixture/known-secret.txt"
+          # The body must not contain a default-config stopword (for example the
+          # sequential alphabet), otherwise Gitleaks correctly allowlists it.
+          printf 'token = "ghp_%s"\n' 'Zq7mK2vXr9Tn4Bw8Ls6Pd3Gc5Yh1Jf0Ua2Ex' > "$fixture/known-secret.txt"
           set +e
           .ci-tools/bin/gitleaks dir "$fixture" --redact --no-banner --exit-code 10 >/dev/null 2>&1
           status=$?
