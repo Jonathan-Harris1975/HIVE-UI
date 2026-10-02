@@ -40,26 +40,49 @@ jobs:
           --ignore-unfixed
           --exit-code 1
           --no-progress
+      - name: Verify pinned Gitleaks detector is functional
+        shell: bash
+        run: |
+          set -euo pipefail
+          fixture="$(mktemp -d)"
+          trap 'rm -rf "$fixture"' EXIT
+          # Assemble a synthetic PAT only at runtime so the repository itself
+          # never contains a token-shaped fixture. The detector must reject it.
+          printf 'token = "ghp_%s"\n' 'aBcDeFgHiJkLmNoPqRsTuVwXyZ0123456789' > "$fixture/known-secret.txt"
+          set +e
+          .ci-tools/bin/gitleaks dir "$fixture" --redact --no-banner --exit-code 10 >/dev/null 2>&1
+          status=$?
+          set -e
+          test "$status" -eq 10 || { echo "::error::Pinned Gitleaks detector failed its synthetic-secret self-test (exit $status)."; exit 1; }
       - name: Gitleaks full-history secret scan
         id: gitleaks
-        continue-on-error: true
-        run: >-
-          .ci-tools/bin/gitleaks git .
-          --redact
-          --no-banner
-          --report-format json
-          --report-path gitleaks-report.json
-          --exit-code 1
+        shell: bash
+        run: |
+          set -euo pipefail
+          set +e
+          .ci-tools/bin/gitleaks git . \
+            --redact \
+            --no-banner \
+            --report-format json \
+            --report-path gitleaks-report.json \
+            --exit-code 10
+          status=$?
+          set -e
+          case "$status" in
+            0)  echo 'result=clean' >> "$GITHUB_OUTPUT" ;;
+            10) echo 'result=findings' >> "$GITHUB_OUTPUT" ;;
+            *)  echo "::error::Gitleaks scanner error (exit $status). This is not a secret finding."; exit "$status" ;;
+          esac
       - name: Upload redacted Gitleaks diagnostic report
-        if: always() && hashFiles('gitleaks-report.json') != ''
+        if: steps.gitleaks.outputs.result == 'findings'
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: gitleaks-redacted-diagnostic-${{ github.run_id }}
           path: gitleaks-report.json
           if-no-files-found: error
           retention-days: 14
-      - name: Enforce Gitleaks result
-        if: steps.gitleaks.outcome == 'failure'
+      - name: Enforce Gitleaks findings
+        if: steps.gitleaks.outputs.result == 'findings'
         run: |
           echo 'Gitleaks detected potential secrets. Download the redacted diagnostic artifact for rule, file, commit, line and fingerprint metadata.' >&2
           exit 1
