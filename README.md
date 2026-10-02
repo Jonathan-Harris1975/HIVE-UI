@@ -1,4 +1,4 @@
-# HIVE-UI.
+# HIVE-UI
 
 HIVE-UI is the private React/TypeScript operator interface for HIVE. The browser application is built with Vite and React Router, while a Cloudflare Worker gateway serves the production assets, owns authentication/session handling, and proxies approved HIVE API paths without exposing the HIVE admin bearer token to browser JavaScript.
 
