@@ -37,7 +37,7 @@ SCHEDULE
 CI TOOLS ADDED
 --------------
 - Trivy 0.74.0: direct pinned CLI; filesystem dependency and misconfiguration scanning.
-- Gitleaks 8.30.1: direct pinned CLI; full-history scan with a redacted diagnostic artifact if a finding occurs.
+- Gitleaks 8.30.0: direct pinned CLI; full-history scan with a redacted diagnostic artifact if a finding occurs.
 - actionlint 1.7.12: direct pinned binary.
 - Lychee 0.24.2: direct pinned binary for HIVE-UI documentation/link integrity.
 - OpenSSF Scorecard 5.5.0: direct pinned CLI build/run.
