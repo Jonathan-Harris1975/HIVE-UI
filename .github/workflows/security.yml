@@ -78,7 +78,12 @@ jobs:
         echo 'Gitleaks detected potential secrets. Download the redacted diagnostic artifact for rule, file, commit, line and fingerprint metadata.' >&2
         exit 1
     - name: Validate GitHub Actions workflows
-      run: .ci-tools/bin/actionlint -color
+      run: |
+        set +e
+        .ci-tools/bin/actionlint  -format '{{json .}}' > "$RUNNER_TEMP/security-raw/actionlint.json"
+        status=$?
+        if [ "$status" -eq 0 ]; then printf "[]\n" > "$RUNNER_TEMP/security-raw/actionlint.json"; fi
+        exit "$status"
       id: actionlint
       continue-on-error: true
       if: ${{ !cancelled() && steps.install_security_tools.outcome == 'success' }}
