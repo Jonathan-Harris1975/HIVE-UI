@@ -25,10 +25,13 @@ jobs:
           cache: npm
       - name: Install repository-pinned npm and locked dependencies
         run: |
-          npm install --global npm@10.9.9
+          npm ci --prefix .github/ci-toolchain --ignore-scripts --no-audit --no-fund
+          export PATH="$GITHUB_WORKSPACE/.github/ci-toolchain/node_modules/.bin:$PATH"
           npm ci --no-audit --no-fund
       - name: Apply repository-native ESLint fixes
-        run: npm run lint -- --fix
+        run: |
+          export PATH="$GITHUB_WORKSPACE/.github/ci-toolchain/node_modules/.bin:$PATH"
+          npm run lint -- --fix
       - name: Submit autofix patch
         uses: autofix-ci/action@c5b2d67aa2274e7b5a18224e8171550871fc7e4a
         with:

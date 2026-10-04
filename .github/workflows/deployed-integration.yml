@@ -33,21 +33,28 @@ jobs:
           node-version: 24.21.0
           cache: npm
       - name: Install repository-pinned npm
-        run: npm install --global npm@10.9.9
-
+        run: |
+          npm ci --prefix .github/ci-toolchain --ignore-scripts --no-audit --no-fund
+          export PATH="$GITHUB_WORKSPACE/.github/ci-toolchain/node_modules/.bin:$PATH"
       - name: Verify pinned Node/npm toolchain
         run: |
+          export PATH="$GITHUB_WORKSPACE/.github/ci-toolchain/node_modules/.bin:$PATH"
           test "$(node --version)" = "v24.21.0"
-          test "$(npm --version)" = "10.9.9"
+          test "$(npm --version)" = "$(node -p 'require("./.github/ci-toolchain/package-lock.json").packages["node_modules/npm"].version')"
       - name: Install locked dependencies
-        run: npm ci --no-audit --no-fund
+        run: |
+          export PATH="$GITHUB_WORKSPACE/.github/ci-toolchain/node_modules/.bin:$PATH"
+          npm ci --no-audit --no-fund
       - name: Install Playwright Chromium
-        run: npx playwright install --with-deps chromium
+        run: |
+          export PATH="$GITHUB_WORKSPACE/.github/ci-toolchain/node_modules/.bin:$PATH"
+          npx playwright install --with-deps chromium
       - name: Wait for the exact Worker release
         env:
           HIVE_UI_E2E_BASE_URL: ${{ vars.HIVE_UI_E2E_BASE_URL || 'https://hive.jonathan-harris.online' }}
           EXPECTED_DEPLOYMENT_SHA: ${{ inputs.expected_sha || github.event.workflow_run.head_sha || github.sha }}
         run: |
+          export PATH="$GITHUB_WORKSPACE/.github/ci-toolchain/node_modules/.bin:$PATH"
           set -euo pipefail
           expected="${EXPECTED_DEPLOYMENT_SHA:0:12}"
           for _ in $(seq 1 60); do
@@ -67,12 +74,14 @@ jobs:
           HIVE_UI_E2E_ACCESS_KEY: ${{ secrets.HIVE_UI_ACCESS_KEY }}
           EXPECTED_DEPLOYMENT_SHA: ${{ inputs.expected_sha || github.event.workflow_run.head_sha || github.sha }}
         run: |
+          export PATH="$GITHUB_WORKSPACE/.github/ci-toolchain/node_modules/.bin:$PATH"
           test -n "${HIVE_UI_E2E_ACCESS_KEY:-}" || { echo "HIVE_UI_ACCESS_KEY is required" >&2; exit 1; }
           npm run test:e2e -- --grep "HIVE-UI deployed gateway"
       - name: Record deployed-integration attestation
         env:
           EXPECTED_DEPLOYMENT_SHA: ${{ inputs.expected_sha || github.event.workflow_run.head_sha || github.sha }}
         run: |
+          export PATH="$GITHUB_WORKSPACE/.github/ci-toolchain/node_modules/.bin:$PATH"
           printf '{"repository":"%s","sha":"%s","workflow_run":"%s","status":"deployed-integration-green"}\n' \
             "$GITHUB_REPOSITORY" "$EXPECTED_DEPLOYMENT_SHA" "$GITHUB_RUN_ID" > deployed-integration-attestation.json
       - name: Retain deployed-integration attestation
@@ -87,6 +96,7 @@ jobs:
           ECOSYSTEM_SMOKE_REPOSITORY: ${{ vars.ECOSYSTEM_SMOKE_REPOSITORY }}
           SOURCE_SHA: ${{ inputs.expected_sha || github.event.workflow_run.head_sha || github.sha }}
         run: |
+          export PATH="$GITHUB_WORKSPACE/.github/ci-toolchain/node_modules/.bin:$PATH"
           set -euo pipefail
           if [ -z "${ECOSYSTEM_SMOKE_DISPATCH_TOKEN:-}" ]; then
             echo "::notice::Optional MAST ecosystem smoke dispatch is not configured; production deployment evidence is retained."

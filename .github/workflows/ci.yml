@@ -36,19 +36,23 @@ jobs:
         run: python3 scripts/secret_scan.py
 
       - name: Install repository-pinned npm
-        run: npm install --global npm@10.9.9
-
+        run: |
+          npm ci --prefix .github/ci-toolchain --ignore-scripts --no-audit --no-fund
+          export PATH="$GITHUB_WORKSPACE/.github/ci-toolchain/node_modules/.bin:$PATH"
       - name: Verify pinned Node/npm toolchain
         run: |
+          export PATH="$GITHUB_WORKSPACE/.github/ci-toolchain/node_modules/.bin:$PATH"
           test "$(node --version)" = "v24.21.0"
-          test "$(npm --version)" = "10.9.9"
+          test "$(npm --version)" = "$(node -p 'require("./.github/ci-toolchain/package-lock.json").packages["node_modules/npm"].version')"
 
       - name: Install locked dependencies
-        run: npm ci --no-audit --no-fund
-
+        run: |
+          export PATH="$GITHUB_WORKSPACE/.github/ci-toolchain/node_modules/.bin:$PATH"
+          npm ci --no-audit --no-fund
       - name: Typecheck, lint, build and verify
-        run: npm run check
-
+        run: |
+          export PATH="$GITHUB_WORKSPACE/.github/ci-toolchain/node_modules/.bin:$PATH"
+          npm run check
       - name: Upload coverage to Codecov
         uses: codecov/codecov-action@303a32d7a59b442fa8d48b6a1cc6825c09c847a5 # v7.1.1
         with:
@@ -58,11 +62,13 @@ jobs:
           fail_ci_if_error: false
 
       - name: Enforce production bundle size budget
-        run: npm run check:bundle-budget
-
+        run: |
+          export PATH="$GITHUB_WORKSPACE/.github/ci-toolchain/node_modules/.bin:$PATH"
+          npm run check:bundle-budget
       - name: Audit dependencies
-        run: npm audit --audit-level=high
-
+        run: |
+          export PATH="$GITHUB_WORKSPACE/.github/ci-toolchain/node_modules/.bin:$PATH"
+          npm audit --audit-level=high
       - name: Upload production bundle
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
@@ -89,24 +95,31 @@ jobs:
           cache: npm
 
       - name: Install repository-pinned npm
-        run: npm install --global npm@10.9.9
-
+        run: |
+          npm ci --prefix .github/ci-toolchain --ignore-scripts --no-audit --no-fund
+          export PATH="$GITHUB_WORKSPACE/.github/ci-toolchain/node_modules/.bin:$PATH"
       - name: Verify pinned Node/npm toolchain
         run: |
+          export PATH="$GITHUB_WORKSPACE/.github/ci-toolchain/node_modules/.bin:$PATH"
           test "$(node --version)" = "v24.21.0"
-          test "$(npm --version)" = "10.9.9"
+          test "$(npm --version)" = "$(node -p 'require("./.github/ci-toolchain/package-lock.json").packages["node_modules/npm"].version')"
 
       - name: Install locked dependencies
-        run: npm ci --no-audit --no-fund
-
+        run: |
+          export PATH="$GITHUB_WORKSPACE/.github/ci-toolchain/node_modules/.bin:$PATH"
+          npm ci --no-audit --no-fund
       - name: Install Playwright browsers
-        run: npx playwright install --with-deps chromium
-
+        run: |
+          export PATH="$GITHUB_WORKSPACE/.github/ci-toolchain/node_modules/.bin:$PATH"
+          npx playwright install --with-deps chromium
       - name: Build production bundle
-        run: npm run build
-
+        run: |
+          export PATH="$GITHUB_WORKSPACE/.github/ci-toolchain/node_modules/.bin:$PATH"
+          npm run build
       - name: Run Playwright e2e suite
-        run: npm run test:e2e
+        run: |
+          export PATH="$GITHUB_WORKSPACE/.github/ci-toolchain/node_modules/.bin:$PATH"
+          npm run test:e2e
         # To run this against a real Cloudflare Worker preview deployment
         # instead of a local preview server, set HIVE_UI_E2E_BASE_URL to
         # that deployment's URL (e.g. via a repository variable populated
