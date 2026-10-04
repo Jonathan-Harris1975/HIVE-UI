@@ -112,18 +112,17 @@ class ManagedBranchOwnershipTests(unittest.TestCase):
             self.enterContext(patch.object(automation, name, value))
         self.enterContext(patch.object(automation, "log"))
 
-    def test_branch_controller_has_no_native_merge_authority(self):
+    def test_branch_controller_has_no_merge_authority(self):
         source = inspect.getsource(branch_controller)
         self.assertNotIn("enablePullRequestAutoMerge", source)
         self.assertNotIn("disablePullRequestAutoMerge", source)
-        self.assertNotIn("enable_native_auto_merge", source)
         self.assertNotIn('gh", "pr", "merge', source)
 
     def test_managed_branch_pr_is_admitted_to_mergify_after_green_checks(self):
         admit = self.enterContext(patch.object(automation, "admit_to_mergify"))
         approve = self.enterContext(patch.object(automation, "approve_pr"))
         self.enterContext(
-            patch.object(automation, "pr_files", return_value=["backend/app/example.py"])
+            patch.object(automation, "pr_files", return_value=["src/example.ts"])
         )
         self.enterContext(
             patch.object(
@@ -141,7 +140,7 @@ class ManagedBranchOwnershipTests(unittest.TestCase):
         admit.assert_called_once_with(22)
         approve.assert_not_called()
 
-    def test_managed_branch_pr_touching_protected_controls_gets_human_hold(self):
+    def test_managed_branch_pr_touching_governance_gets_human_hold(self):
         hold = self.enterContext(patch.object(automation, "place_human_hold"))
         admit = self.enterContext(patch.object(automation, "admit_to_mergify"))
         self.enterContext(

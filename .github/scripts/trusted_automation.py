@@ -145,7 +145,7 @@ def renovate_automerge_enabled(pr: dict[str, Any]) -> bool:
 
 
 def is_managed_branch_pr(pr: dict[str, Any]) -> bool:
-    """Recognise trusted same-repository implementation PRs without giving them merge authority."""
+    """Recognise trusted implementation PRs without giving them merge authority."""
     labels = issue_labels(pr)
     branch = str(pr.get("head", {}).get("ref", ""))
     return (
@@ -332,7 +332,7 @@ def all_required_checks_green(pr: dict[str, Any]) -> tuple[bool, str]:
         if run.get("status") != "completed" or run.get("conclusion") != "success":
             return False, f"required workflow {name!r} is {run.get('status')}/{run.get('conclusion')}"
 
-    # Mergify and the repository ruleset evaluate any additional required contexts.
+    # GitHub's native ruleset/auto-merge checks any additional required contexts.
     # Optional review, link and external-service checks cannot become an extra gate here.
     return True, "required CI and security workflows succeeded"
 

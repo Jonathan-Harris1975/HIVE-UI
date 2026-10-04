@@ -2,9 +2,9 @@
 """Create pull requests for approved development branches without merge authority.
 
 This script is executed only by the trusted default-branch controller. It
-never checks out or executes code from the pushed branch, never enables native
-auto-merge, and never merges a pull request. Mergify is the sole automated
-merge arbiter after trusted admission.
+never checks out or executes code from the pushed branch and never enables or
+performs a merge. Mergify is the sole automated merge arbiter after trusted
+admission.
 """
 from __future__ import annotations
 
@@ -82,7 +82,6 @@ def get(path: str) -> Any:
 
 def post(path: str, data: Any | None = None, expected: tuple[int, ...] = (200, 201)) -> Any:
     return request("POST", path, data=data, expected=expected)
-
 
 
 
