@@ -38,10 +38,10 @@ jobs:
         env:
           EVENT_NAME: ${{ github.event_name }}
           MANUAL_PHASE: ${{ inputs.phase || '' }}
+          SCHEDULE_EXPR: ${{ github.event.schedule || '' }}
         shell: bash
         run: |
           set -euo pipefail
-          now="$(TZ=Europe/London date '+%a %H:%M')"
           phase=""; workflow=""
           if [ "$EVENT_NAME" = "workflow_dispatch" ]; then
             phase="$MANUAL_PHASE"
@@ -52,12 +52,18 @@ jobs:
               *) echo "::error::Unsupported phase $phase"; exit 1 ;;
             esac
           else
-          if [ "$now" = "Sat 08:30" ]; then phase="ci"; workflow="ci.yml"; fi
-          if [ "$now" = "Sun 04:00" ]; then phase="dast"; workflow="dast.yml"; fi
-          if [ "$now" = "Sun 11:00" ]; then phase="council"; workflow="council.yml"; fi
+            london_offset="$(TZ=Europe/London date '+%z')"
+            case "${SCHEDULE_EXPR}:${london_offset}" in
+              "30 7 * * 6:+0100"|"30 8 * * 6:+0000")
+                phase="ci"; workflow="ci.yml" ;;
+              "0 3 * * 0:+0100"|"0 4 * * 0:+0000")
+                phase="dast"; workflow="dast.yml" ;;
+              "0 10 * * 0:+0100"|"0 11 * * 0:+0000")
+                phase="council"; workflow="council.yml" ;;
+            esac
           fi
           if [ -z "$phase" ]; then
-            echo "Scheduled UTC/DST duplicate is outside the intended London slot; no action."
+            echo "Scheduled UTC/DST duplicate is outside the intended Europe/London slot; no action."
             echo "run=false" >> "$GITHUB_OUTPUT"
             exit 0
           fi
