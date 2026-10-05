@@ -167,7 +167,8 @@ def recover(number):
     comments = router.all_pages(f"/repos/{router.REPO}/issues/{number}/comments")
     receipts = verified_receipts(comments, sha, base)
     resolved = []
-    if receipts and required_checks_pass(pr):
+    checks_pass = required_checks_pass(pr)
+    if receipts and checks_pass:
         for thread in bot_threads:
             if thread["id"] not in receipts:
                 continue
@@ -202,7 +203,8 @@ def recover(number):
     # A dispatch receipt records attempted recovery; it does not prove the GitHub thread was resolved.
     remaining = [t for t in bot_threads if t["id"] not in resolved]
     request = None
-    if remaining:
+    # Preserve unresolved blockers while checks are red, but do not dispatch duplicate repair work.
+    if remaining and checks_pass:
         evidence = [
             f"Thread {t['id']} at {t['path']}:{t.get('line') or 'historical line'} (outdated={t['isOutdated']}): "
             + router.review_evidence(t["comments"]["nodes"][0]["body"], t["path"])[:3500]
