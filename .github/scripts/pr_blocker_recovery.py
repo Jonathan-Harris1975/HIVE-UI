@@ -203,8 +203,9 @@ def recover(number):
     # A dispatch receipt records attempted recovery; it does not prove the GitHub thread was resolved.
     remaining = [t for t in bot_threads if t["id"] not in resolved]
     request = None
-    # Preserve unresolved blockers while checks are red, but do not dispatch duplicate repair work.
-    if remaining and checks_pass:
+    # Route unresolved work when no verified repair receipt exists. If a receipt already exists,
+    # preserve the blocker while checks are red without dispatching duplicate repair work.
+    if remaining and (checks_pass or not receipts):
         evidence = [
             f"Thread {t['id']} at {t['path']}:{t.get('line') or 'historical line'} (outdated={t['isOutdated']}): "
             + router.review_evidence(t["comments"]["nodes"][0]["body"], t["path"])[:3500]
