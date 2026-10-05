@@ -1,6 +1,6 @@
 version: 2
 updates:
-  - package-ecosystem: npm # zizmor: ignore[dependabot-cooldown] Renovate owns version updates; Dependabot remains for security updates.
+  - package-ecosystem: npm # Renovate owns version updates; Dependabot remains for security updates.
     directory: /
     schedule:
       interval: weekly
@@ -40,7 +40,7 @@ updates:
           - "@vitejs/plugin-react"
         update-types: [patch, minor]
 
-  - package-ecosystem: github-actions # zizmor: ignore[dependabot-cooldown] Renovate owns version updates; Dependabot remains for security updates.
+  - package-ecosystem: github-actions # Renovate owns version updates; Dependabot remains for security updates.
     directory: /
     schedule:
       interval: weekly
