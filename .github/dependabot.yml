@@ -7,6 +7,8 @@ updates:
       day: wednesday
       time: "18:40"
       timezone: Europe/London
+    cooldown:
+      default-days: 7
     open-pull-requests-limit: 0
     versioning-strategy: increase-if-necessary
     groups:
@@ -47,6 +49,8 @@ updates:
       day: wednesday
       time: "18:40"
       timezone: Europe/London
+    cooldown:
+      default-days: 7
     open-pull-requests-limit: 0
     commit-message:
       prefix: "deps(ci)"
