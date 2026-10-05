@@ -1,14 +1,12 @@
 version: 2
 updates:
-  - package-ecosystem: npm
+  - package-ecosystem: npm # zizmor: ignore[dependabot-cooldown] Renovate owns version updates; Dependabot remains for security updates.
     directory: /
     schedule:
       interval: weekly
       day: wednesday
       time: "18:40"
       timezone: Europe/London
-    cooldown:
-      default-days: 7
     open-pull-requests-limit: 0
     versioning-strategy: increase-if-necessary
     groups:
@@ -42,15 +40,13 @@ updates:
           - "@vitejs/plugin-react"
         update-types: [patch, minor]
 
-  - package-ecosystem: github-actions
+  - package-ecosystem: github-actions # zizmor: ignore[dependabot-cooldown] Renovate owns version updates; Dependabot remains for security updates.
     directory: /
     schedule:
       interval: weekly
       day: wednesday
       time: "18:40"
       timezone: Europe/London
-    cooldown:
-      default-days: 7
     open-pull-requests-limit: 0
     commit-message:
       prefix: "deps(ci)"
