@@ -18,18 +18,11 @@ jobs:
     permissions:
       contents: read
       id-token: write
-      attestations: write
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
-      - name: Harden runner
-        uses: step-security/harden-runner@e14015d583714f6e62063499dc959a02595150a1 # v2
-        with:
-          egress-policy: audit
       - name: Checkout
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-        with:
-          persist-credentials: false
 
       - name: Use Node.js 24
         uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
@@ -68,40 +61,6 @@ jobs:
       - name: Audit dependencies
         run: npm audit --audit-level=high
 
-      - name: Package production bundle for provenance
-        run: tar -C dist -czf "hive-ui-dist-${GITHUB_SHA}.tar.gz" .
-
-      - name: Generate production bundle SBOM
-        uses: anchore/sbom-action@e22c389904149dbc22b58101806040fa8d37a610 # v0
-        with:
-          path: dist
-          format: spdx-json
-          output-file: hive-ui.sbom.spdx.json
-          upload-artifact: false
-
-      - name: Attest production bundle provenance
-        if: github.event_name != 'pull_request'
-        uses: actions/attest-build-provenance@977bb373ede98d70efdf65b84cb5f73e068dcc2a # v3
-        with:
-          subject-path: hive-ui-dist-${{ github.sha }}.tar.gz
-
-      - name: Attest production bundle SBOM
-        if: github.event_name != 'pull_request'
-        uses: actions/attest-sbom@4651f806c01d8637787e274ac3bdf724ef169f34 # v3
-        with:
-          subject-path: hive-ui-dist-${{ github.sha }}.tar.gz
-          sbom-path: hive-ui.sbom.spdx.json
-
-      - name: Retain supply-chain evidence
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
-        with:
-          name: hive-ui-supply-chain-${{ github.sha }}
-          path: |
-            hive-ui-dist-${{ github.sha }}.tar.gz
-            hive-ui.sbom.spdx.json
-          if-no-files-found: error
-          retention-days: 14
-
       - name: Upload production bundle
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
@@ -116,14 +75,8 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
-      - name: Harden runner
-        uses: step-security/harden-runner@e14015d583714f6e62063499dc959a02595150a1 # v2
-        with:
-          egress-policy: audit
       - name: Checkout
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-        with:
-          persist-credentials: false
 
       - name: Use Node.js 24
         uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
@@ -172,13 +125,7 @@ jobs:
     runs-on: ubuntu-latest
     continue-on-error: true
     steps:
-      - name: Harden runner
-        uses: step-security/harden-runner@e14015d583714f6e62063499dc959a02595150a1 # v2
-        with:
-          egress-policy: audit
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-      with:
-        persist-credentials: false
       - name: Send redacted HIVE operational event
         env:
           OPS_ALERT_WEBHOOK_URL: ${{ secrets.OPS_ALERT_WEBHOOK_URL }}
@@ -201,10 +148,6 @@ jobs:
     permissions:
       contents: read
     steps:
-      - name: Harden runner
-        uses: step-security/harden-runner@e14015d583714f6e62063499dc959a02595150a1 # v2
-        with:
-          egress-policy: audit
       - name: Require all release checks to be green
         env:
           RESULT_VERIFY: ${{ needs.verify.result }}
@@ -213,8 +156,6 @@ jobs:
           test "$RESULT_VERIFY" = "success"
           test "$RESULT_E2E" = "success"
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-      with:
-        persist-credentials: false
       - name: Assert checked-out commit is the workflow SHA
         run: |
           test "$(git rev-parse HEAD)" = "$GITHUB_SHA"
@@ -231,13 +172,7 @@ jobs:
     if: github.event_name == 'pull_request'
     runs-on: ubuntu-latest
     steps:
-      - name: Harden runner
-        uses: step-security/harden-runner@e14015d583714f6e62063499dc959a02595150a1 # v2
-        with:
-          egress-policy: audit
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
-      with:
-        persist-credentials: false
         with:
           fetch-depth: 0
       - name: Require autonomous repair request to be resolved
@@ -264,10 +199,6 @@ jobs:
     if: ${{ always() }}
     runs-on: ubuntu-latest
     steps:
-      - name: Harden runner
-        uses: step-security/harden-runner@e14015d583714f6e62063499dc959a02595150a1 # v2
-        with:
-          egress-policy: audit
       - name: Enforce aggregate CI result
         env:
           RELEASE_GATE_RESULT: ${{ needs.release_gate.result }}
