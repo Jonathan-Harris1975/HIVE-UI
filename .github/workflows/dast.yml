@@ -54,7 +54,7 @@ jobs:
         run: |
           set -euo pipefail
           mkdir -p .r2-evidence/dast
-          jq -n             --arg repository "$REPOSITORY"             --arg sha "$TARGET_SHA"             --argjson run_id "$RUN_ID"             --argjson run_attempt "$RUN_ATTEMPT"             --arg scan_outcome "$SCAN_OUTCOME"             '{
+          jq -n             --arg repository "$REPOSITORY"             --arg sha "$TARGET_SHA"             --arg run_id "$RUN_ID"             --arg run_attempt "$RUN_ATTEMPT"             --arg scan_outcome "$SCAN_OUTCOME"             '{
               kind:"dast",
               repository:$repository,
               default_sha:$sha,
@@ -63,7 +63,11 @@ jobs:
               scan_outcome:$scan_outcome,
               target_configured:true
             }' > .r2-evidence/dast/evidence.json
-          find . -maxdepth 2 -type f \( -name 'report_*.html' -o -name 'report_*.json' -o -name 'report_*.md' -o -name 'zap*.log' \)             -exec cp {} .r2-evidence/dast/ \; || true
+          while IFS= read -r -d '' report; do
+            cp "$report" ".r2-evidence/dast/$(basename "$report")"
+          done < <(
+            find . -type f               ! -path './.r2-evidence/*'               \( -name 'report_*.html' -o -name 'report_*.json' -o -name 'report_*.md' -o -name 'zap*.log' \)               -print0
+          )
 
       - name: Persist DAST evidence to hive-repositories R2
         if: always()
