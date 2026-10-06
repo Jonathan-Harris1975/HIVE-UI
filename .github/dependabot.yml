@@ -1,12 +1,14 @@
 version: 2
 updates:
-  - package-ecosystem: npm
+  - package-ecosystem: npm # Renovate owns all dependency PRs; Dependabot is passive with PR creation disabled.
     directory: /
     schedule:
       interval: weekly
       day: wednesday
       time: "18:40"
       timezone: Europe/London
+    cooldown:
+      default-days: 7
     open-pull-requests-limit: 0
     versioning-strategy: increase-if-necessary
     groups:
@@ -40,13 +42,15 @@ updates:
           - "@vitejs/plugin-react"
         update-types: [patch, minor]
 
-  - package-ecosystem: github-actions
+  - package-ecosystem: github-actions # Renovate owns all dependency PRs; Dependabot is passive with PR creation disabled.
     directory: /
     schedule:
       interval: weekly
       day: wednesday
       time: "18:40"
       timezone: Europe/London
+    cooldown:
+      default-days: 7
     open-pull-requests-limit: 0
     commit-message:
       prefix: "deps(ci)"
