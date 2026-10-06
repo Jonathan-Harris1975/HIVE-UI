@@ -27,6 +27,7 @@ jobs:
         with:
           ref: ${{ github.event.repository.default_branch }}
           persist-credentials: false
+
       - name: Resolve exact target SHA
         id: target
         env:
@@ -40,6 +41,7 @@ jobs:
           target="${REQUESTED_SHA:-$current}"
           test "$target" = "$current" || { echo "::error::Council target must be the current default-branch SHA."; exit 1; }
           echo "sha=$target" >> "$GITHUB_OUTPUT"
+
       - name: Require exact-SHA CI/security evidence
         env:
           GH_TOKEN: ${{ github.token }}
@@ -55,6 +57,7 @@ jobs:
             result="$(jq -r --arg name "$workflow" '[.[] | select(.name == $name and .event != "pull_request")] | sort_by(.run_number,.run_attempt) | last | if .status == "completed" then .conclusion else "missing" end' <<< "$runs")"
             test "$result" = success || { echo "::error::$workflow exact-SHA evidence is $result"; exit 1; }
           done
+
       - name: Refuse unresolved autonomy state
         env:
           GH_TOKEN: ${{ github.token }}
@@ -62,13 +65,16 @@ jobs:
           set -euo pipefail
           blockers="$(gh pr list --state open --limit 1000 --json number,labels,url --jq '[.[] | select(any(.labels[]?; .name == "autonomy:human-hold") or (any(.labels[]?; .name == "autonomy:repair") and (any(.labels[]?; .name == "autonomy:obsolete" or .name == "autonomy:superseded") | not)))]')"
           test "$(jq length <<< "$blockers")" -eq 0 || { jq . <<< "$blockers"; exit 1; }
+
       - name: Validate Kilo Council trigger
         env:
           KILO_REPAIR_TRIGGER_URL: ${{ secrets.KILO_REPAIR_TRIGGER_URL }}
         run: |
           test -n "${KILO_REPAIR_TRIGGER_URL:-}"
           python3 .github/scripts/kilo_webhook_url.py
+
       - name: Dispatch Council contract to Kilo
+        id: dispatch
         env:
           REPO: ${{ github.repository }}
           TARGET_SHA: ${{ steps.target.outputs.sha }}
@@ -80,3 +86,37 @@ jobs:
           payload="$(jq -n --arg repository "$REPO" --arg sha "$TARGET_SHA" --arg task "$task" '{repository:$repository,target_sha:$sha,kind:"repository-council",task:$task}')"
           code="$(curl --silent --show-error --output /dev/null --write-out '%{http_code}' --max-time 30 -X POST -H 'Content-Type: application/json' --data "$payload" "$KILO_REPAIR_TRIGGER_URL")"
           [[ "$code" == 2?? ]] || { echo "::error::Kilo Council trigger returned HTTP $code"; exit 1; }
+          echo "http_code=$code" >> "$GITHUB_OUTPUT"
+
+      - name: Build exact-run Council evidence
+        env:
+          REPOSITORY: ${{ github.repository }}
+          TARGET_SHA: ${{ steps.target.outputs.sha }}
+          RUN_ID: ${{ github.run_id }}
+          RUN_ATTEMPT: ${{ github.run_attempt }}
+          DISPATCH_HTTP_CODE: ${{ steps.dispatch.outputs.http_code }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p .r2-evidence/council
+          jq -n             --arg repository "$REPOSITORY"             --arg sha "$TARGET_SHA"             --argjson run_id "$RUN_ID"             --argjson run_attempt "$RUN_ATTEMPT"             --arg dispatch_http_code "$DISPATCH_HTTP_CODE"             '{
+              kind:"council",
+              repository:$repository,
+              default_sha:$sha,
+              workflow_run_id:$run_id,
+              workflow_run_attempt:$run_attempt,
+              exact_sha_gates:"passed",
+              autonomy_state:"clear",
+              council_dispatch:"accepted",
+              dispatch_http_code:$dispatch_http_code
+            }' > .r2-evidence/council/evidence.json
+          cp .council/council.md .r2-evidence/council/council-contract.md
+
+      - name: Persist Council evidence to hive-repositories R2
+        env:
+          R2_ENDPOINT_URL: ${{ vars.CF_R2_ENDPOINT_URL || vars.R2_ENDPOINT_URL }}
+          R2_ACCESS_KEY_ID: ${{ secrets.CF_R2_ACCESS_KEY_ID || secrets.R2_ACCESS_KEY_ID }}
+          R2_SECRET_ACCESS_KEY: ${{ secrets.CF_R2_SECRET_ACCESS_KEY || secrets.R2_SECRET_ACCESS_KEY }}
+          R2_BUCKET: hive-repositories
+        shell: bash
+        run: bash .github/scripts/persist_r2_evidence.sh council "${{ steps.target.outputs.sha }}" .r2-evidence/council
