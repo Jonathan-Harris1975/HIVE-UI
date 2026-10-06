@@ -60,6 +60,7 @@
     "node": "24.21.0"
   },
   "overrides": {
-    "browserslist": "^4.28.7"
+    "browserslist": "^4.28.7",
+    "source-map-js": "1.2.2"
   }
 }
