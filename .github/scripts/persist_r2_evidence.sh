@@ -44,9 +44,19 @@ aws s3 cp "$source_dir/" "s3://${R2_BUCKET}/${prefix}/" \
   --endpoint-url "$R2_ENDPOINT_URL" \
   --only-show-errors
 
-aws s3api head-object \
-  --bucket "$R2_BUCKET" \
-  --key "$prefix/evidence.json" \
-  --endpoint-url "$R2_ENDPOINT_URL" >/dev/null
+verified=0
+while IFS= read -r -d '' file; do
+  relative="${file#"$source_dir"/}"
+  aws s3api head-object \
+    --bucket "$R2_BUCKET" \
+    --key "$prefix/$relative" \
+    --endpoint-url "$R2_ENDPOINT_URL" >/dev/null
+  verified=$((verified + 1))
+done < <(find "$source_dir" -type f -print0)
 
-printf 'R2 evidence persisted: s3://%s/%s/\n' "$R2_BUCKET" "$prefix"
+test "$verified" -gt 0 || {
+  echo "::error::No evidence files were available for R2 verification."
+  exit 1
+}
+
+printf 'R2 evidence persisted and verified: s3://%s/%s/ (%s files)\n' "$R2_BUCKET" "$prefix" "$verified"
