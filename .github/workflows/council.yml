@@ -85,7 +85,57 @@ jobs:
         run: |
           set -euo pipefail
           prompt="$(cat .council/council.md)"
-          IMPORTANT COMPLETION RETURN CONTRACT: after producing the real completed Council assessment, return it to this repository by dispatching workflow "council-result-r2.yml" on the default branch. Supply target_sha=${TARGET_SHA}, source_council_run_id=${GITHUB_RUN_ID}, disposition=<real Council disposition>, report_md_b64=<base64 of the completed Markdown report>, and report_json_b64=<base64 of the completed JSON report>. The JSON must include repository and exact_evaluated_sha. Do not report Council persistence complete unless that return workflow succeeds and verifies R2 storage.
+          prompt="${prompt}"
+          task="Run the checked-in Council contract for $REPO@$TARGET_SHA. Do not create a cosmetic PR.\n\n$prompt"
+          payload="$(jq -n --arg repository "$REPO" --arg sha "$TARGET_SHA" --arg task "$task" '{repository:$repository,target_sha:$sha,kind:"repository-council",task:$task}')"
+          code="$(curl --silent --show-error --output /dev/null --write-out '%{http_code}' --max-time 30 -X POST -H 'Content-Type: application/json' --data "$payload" "$KILO_REPAIR_TRIGGER_URL")"
+          echo "http_code=$code" >> "$GITHUB_OUTPUT"
+          [[ "$code" =~ ^2[0-9]{2}$ ]] || { echo "::error::Kilo Council trigger returned HTTP $code"; exit 1; }
+
+      - name: Build exact-run Council evidence
+        if: ${{ always() && steps.target.outputs.sha != '' }}
+        env:
+          REPOSITORY: ${{ github.repository }}
+          TARGET_SHA: ${{ steps.target.outputs.sha }}
+          RUN_ID: ${{ github.run_id }}
+          RUN_ATTEMPT: ${{ github.run_attempt }}
+          GATES_OUTCOME: ${{ steps.gates.outcome }}
+          AUTONOMY_OUTCOME: ${{ steps.autonomy.outcome }}
+          TRIGGER_OUTCOME: ${{ steps.trigger.outcome }}
+          DISPATCH_OUTCOME: ${{ steps.dispatch.outcome }}
+          DISPATCH_HTTP_CODE: ${{ steps.dispatch.outputs.http_code }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p .r2-evidence/council
+          jq -n             --arg repository "$REPOSITORY"             --arg sha "$TARGET_SHA"             --arg run_id "$RUN_ID"             --arg run_attempt "$RUN_ATTEMPT"             --arg gates_outcome "$GATES_OUTCOME"             --arg autonomy_outcome "$AUTONOMY_OUTCOME"             --arg trigger_outcome "$TRIGGER_OUTCOME"             --arg dispatch_outcome "$DISPATCH_OUTCOME"             --arg dispatch_http_code "$DISPATCH_HTTP_CODE"             '{
+              kind:"council",
+              repository:$repository,
+              default_sha:$sha,
+              workflow_run_id:$run_id,
+              workflow_run_attempt:$run_attempt,
+              exact_sha_gates:$gates_outcome,
+              autonomy_state:$autonomy_outcome,
+              trigger_validation:$trigger_outcome,
+              council_dispatch:$dispatch_outcome,
+              dispatch_http_code:$dispatch_http_code
+            }' > .r2-evidence/council/evidence.json
+          if test -f .council/council.md; then
+            cp .council/council.md .r2-evidence/council/council-contract.md
+          else
+            echo "::warning::Council contract not found at .council/council.md"
+          fi
+
+      - name: Persist Council evidence to hive-repositories R2
+        if: ${{ always() && steps.target.outputs.sha != '' }}
+        env:
+          R2_ENDPOINT_URL: ${{ vars.CF_R2_ENDPOINT_URL || vars.R2_ENDPOINT_URL }}
+          R2_ACCESS_KEY_ID: ${{ secrets.CF_R2_ACCESS_KEY_ID || secrets.R2_ACCESS_KEY_ID }}
+          R2_SECRET_ACCESS_KEY: ${{ secrets.CF_R2_SECRET_ACCESS_KEY || secrets.R2_SECRET_ACCESS_KEY }}
+          R2_BUCKET: hive-repositories
+        shell: bash
+        run: bash .github/scripts/persist_r2_evidence.sh council "${{ steps.target.outputs.sha }}" .r2-evidence/council
+\\n\\n'"IMPORTANT COMPLETION RETURN CONTRACT: after producing the real completed Council assessment, return it to this repository by dispatching workflow council-result-r2.yml on the default branch. Supply target_sha=${TARGET_SHA}, source_council_run_id=${GITHUB_RUN_ID}, disposition=<real Council disposition>, report_md_b64=<base64 of the completed Markdown report>, and report_json_b64=<base64 of the completed JSON report>. The JSON must include repository and exact_evaluated_sha. Do not report Council persistence complete unless that return workflow succeeds and verifies R2 storage."
 
           task="Run the checked-in Council contract for $REPO@$TARGET_SHA. Do not create a cosmetic PR.\n\n$prompt"
           payload="$(jq -n --arg repository "$REPO" --arg sha "$TARGET_SHA" --arg task "$task" '{repository:$repository,target_sha:$sha,kind:"repository-council",task:$task}')"
