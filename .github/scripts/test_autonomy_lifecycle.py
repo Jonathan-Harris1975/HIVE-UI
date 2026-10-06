@@ -1,6 +1,8 @@
 """Regression checks for repair retirement; all GitHub writes are mocked."""
 import copy
 import inspect
+import json
+from pathlib import Path
 import os
 import unittest
 from unittest.mock import patch
@@ -155,6 +157,48 @@ class ManagedBranchOwnershipTests(unittest.TestCase):
 
         hold.assert_called_once()
         admit.assert_not_called()
+
+
+class KiloPermissionPolicyTests(unittest.TestCase):
+    @classmethod
+    def setUpClass(cls):
+        root = Path(__file__).resolve().parents[2]
+        cls.policy = json.loads((root / "kilo.jsonc").read_text(encoding="utf-8"))
+
+    def test_kilo_is_non_interactive_and_governance_is_not_self_editable(self):
+        permission = self.policy["permission"]
+        self.assertEqual(permission["question"], "deny")
+        self.assertEqual(permission["external_directory"], "deny")
+        for tool in ("edit", "write", "apply_patch"):
+            rules = permission[tool]
+            self.assertEqual(rules["*"], "allow")
+            for path in ("kilo.jsonc", ".github/workflows/*", ".github/scripts/*", ".mergify.yml", "renovate.json"):
+                self.assertEqual(rules[path], "deny")
+
+    def test_shell_is_deny_by_default_with_only_safe_branch_pushes(self):
+        bash = self.policy["permission"]["bash"]
+        self.assertEqual(bash["*"], "deny")
+        for command in (
+            "git push origin HEAD",
+            "git push --set-upstream origin HEAD",
+            "git push -u origin HEAD",
+        ):
+            self.assertEqual(bash[command], "allow")
+        for command in (
+            "git push *:*",
+            "git push +*",
+            "git push --force",
+            "git push -f",
+            "git push --force-with-lease",
+            "git push --mirror",
+            "git push --delete",
+            "bash -c *",
+            "sh -c *",
+            "gh pr merge *",
+            "wrangler deploy *",
+            "npx wrangler deploy *",
+        ):
+            self.assertEqual(bash[command], "deny")
 
 
 if __name__ == "__main__":
