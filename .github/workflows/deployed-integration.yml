@@ -1,7 +1,7 @@
 name: HIVE-UI deployed integration
 
 on:
-  workflow_run:
+  workflow_run: # zizmor: ignore[dangerous-triggers] exact-main successful same-repository CI gate
     workflows: ["HIVE-UI CI"]
     types: [completed]
   workflow_dispatch:
