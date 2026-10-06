@@ -170,6 +170,7 @@ class Recovery(unittest.TestCase):
             patch.object(m.router, "api", side_effect=self.api) as api,
             patch.object(m, "review_threads", return_value=[self.thread]),
             patch.object(m.router, "all_pages", return_value=[]),
+            patch.object(m, "required_checks_pass", return_value=False),
             patch.object(m.router, "dispatch") as dispatch,
         ):
             self.assertEqual(m.recover(7)["bot_threads_remaining"], 1)
