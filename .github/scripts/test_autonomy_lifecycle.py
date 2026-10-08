@@ -172,8 +172,11 @@ class KiloPermissionPolicyTests(unittest.TestCase):
         for tool in ("edit", "write", "apply_patch"):
             rules = permission[tool]
             self.assertEqual(rules["*"], "allow")
-            for path in ("kilo.jsonc", ".github/workflows/*", ".github/scripts/*", ".mergify.yml", "renovate.json"):
+            for path in ("kilo.jsonc", ".github/workflows/*", ".github/scripts/*", ".github/production-governance.json", ".mergify.yml", "renovate.json"):
                 self.assertEqual(rules[path], "deny")
+
+    def test_production_governance_contract_is_sensitive(self):
+        self.assertTrue(automation.sensitive_file(".github/production-governance.json"))
 
     def test_shell_is_deny_by_default_with_only_safe_branch_pushes(self):
         bash = self.policy["permission"]["bash"]
