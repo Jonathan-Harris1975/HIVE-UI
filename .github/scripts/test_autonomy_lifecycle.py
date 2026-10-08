@@ -172,8 +172,11 @@ class KiloPermissionPolicyTests(unittest.TestCase):
         for tool in ("edit", "write", "apply_patch"):
             rules = permission[tool]
             self.assertEqual(rules["*"], "allow")
-            for path in ("kilo.jsonc", ".github/workflows/*", ".github/scripts/*", ".mergify.yml", "renovate.json"):
+            for path in ("kilo.jsonc", ".github/workflows/*", ".github/scripts/*", ".github/production-governance.json", ".mergify.yml", "renovate.json"):
                 self.assertEqual(rules[path], "deny")
+
+    def test_production_governance_contract_is_sensitive(self):
+        self.assertTrue(automation.sensitive_file(".github/production-governance.json"))
 
     def test_shell_is_deny_by_default_with_only_safe_branch_pushes(self):
         bash = self.policy["permission"]["bash"]
@@ -199,6 +202,16 @@ class KiloPermissionPolicyTests(unittest.TestCase):
             "npx wrangler deploy *",
         ):
             self.assertEqual(bash[command], "deny")
+
+
+class ProductionGovernanceProtectionTests(unittest.TestCase):
+    def test_contract_is_sensitive_and_kilo_cannot_mutate_it(self):
+        path = ".github/production-governance.json"
+        self.assertTrue(automation.sensitive_file(path))
+        root = Path(__file__).resolve().parents[2]
+        policy = json.loads((root / "kilo.jsonc").read_text(encoding="utf-8"))
+        for tool in ("edit", "write", "apply_patch"):
+            self.assertEqual(policy["permission"][tool][path], "deny")
 
 
 if __name__ == "__main__":
