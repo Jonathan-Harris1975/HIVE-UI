@@ -2,6 +2,7 @@ import { AlertTriangle, Gauge, History, LoaderCircle, Plus, Sparkles, TrendingUp
 import { useCallback, useEffect, useState } from 'react'
 import { EmptyState } from '../components/EmptyState'
 import { apiFetch } from '../lib/api'
+import { isCouncilRunVerified } from '../lib/governance'
 import { formatDate } from '../lib/format'
 import type {
   AiCouncilHistoryResponse,
@@ -71,9 +72,18 @@ export function CouncilPage() {
     try {
       const report = await apiFetch<AiCouncilRunReport>('/v1/ai-council/run', { method: 'POST' })
       setLatestRun(report)
-      setNotice(
-        `Council run complete: ${report.providers_discovered} providers, ${report.models_seen} models seen, ${report.promotions.length} promoted.`,
-      )
+      const verified = isCouncilRunVerified(report)
+      if (verified) {
+        setNotice(
+          `Council run verified: ${report.providers_discovered} providers, ${report.models_seen} models seen, ${report.promotions.length} promoted. AIMS/RAMS synchronisation confirmed.`,
+        )
+      } else {
+        const reasons: string[] = []
+        if (report.completion_status !== 'completed') reasons.push(`completion status: ${report.completion_status ?? 'unknown'}`)
+        if (report.downstream_sync?.enabled !== true) reasons.push('downstream synchronisation disabled or unconfirmed')
+        if (report.downstream_sync?.ok !== true) reasons.push(report.downstream_sync?.error ?? 'downstream synchronisation failed')
+        setError(`Council run not verified: ${reasons.join('; ')}.`)
+      }
       await loadHistory()
     } catch (caught) {
       setError(caught instanceof Error ? caught.message : 'AI Council run failed.')

@@ -3,6 +3,7 @@ import { useCallback, useEffect, useState } from 'react'
 import { EmptyState } from '../components/EmptyState'
 import { useInspector } from '../context/InspectorContext'
 import { apiFetch, ApiError } from '../lib/api'
+import { isCouncilRunVerified } from '../lib/governance'
 import { formatDate } from '../lib/format'
 import type { MonthlyReviewHistoryResponse, MonthlyReviewReport, MonthlyReviewSummary } from '../types/api'
 
@@ -56,7 +57,21 @@ export function MonthlyReviewPage() {
     setError(null)
     try {
       const query = period.trim() ? `?period=${encodeURIComponent(period.trim())}` : ''
-      await apiFetch<MonthlyReviewReport>(`/v1/monthly-review/generate${query}`, { method: 'POST' })
+      const report = await apiFetch<MonthlyReviewReport>(`/v1/monthly-review/generate${query}`, { method: 'POST' })
+      const failures: string[] = []
+      if (report.ok !== true) failures.push('report unsuccessful')
+      if (report.sections_total <= 0 || report.sections_ok !== report.sections_total) {
+        failures.push(`sections incomplete (${report.sections_ok}/${report.sections_total})`)
+      }
+      if (report.council_cycle?.ok !== true) failures.push('Council cycle unsuccessful')
+      if (!isCouncilRunVerified(report.council_cycle?.run)) failures.push('Council downstream synchronisation not verified')
+      if (!report.r2_object) failures.push('R2 archive missing')
+      if (report.d1_index?.ok !== true) failures.push('D1 index unconfirmed')
+      if (failures.length > 0) {
+        await load()
+        setError(`Monthly Review verification failed: ${failures.join('; ')}.`)
+        return
+      }
       setPeriod('')
       await load()
     } catch (caught) {
