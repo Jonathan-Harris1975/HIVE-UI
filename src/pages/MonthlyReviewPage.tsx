@@ -56,7 +56,21 @@ export function MonthlyReviewPage() {
     setError(null)
     try {
       const query = period.trim() ? `?period=${encodeURIComponent(period.trim())}` : ''
-      await apiFetch<MonthlyReviewReport>(`/v1/monthly-review/generate${query}`, { method: 'POST' })
+      const report = await apiFetch<MonthlyReviewReport>(`/v1/monthly-review/generate${query}`, { method: 'POST' })
+      const verified = report.ok === true
+        && report.sections_total > 0
+        && report.sections_ok === report.sections_total
+        && report.council_cycle?.ok === true
+        && report.council_cycle?.run?.completion_status === 'completed'
+        && report.council_cycle?.run?.downstream_sync?.enabled === true
+        && report.council_cycle?.run?.downstream_sync?.ok === true
+        && Boolean(report.r2_object)
+        && report.d1_index?.ok === true
+      if (!verified) {
+        setError('Monthly Review returned without verified Council synchronisation, complete sections, R2 archive and D1 index. Check the report before treating this month as complete.')
+        await load()
+        return
+      }
       setPeriod('')
       await load()
     } catch (caught) {
