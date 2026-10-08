@@ -71,9 +71,20 @@ export function CouncilPage() {
     try {
       const report = await apiFetch<AiCouncilRunReport>('/v1/ai-council/run', { method: 'POST' })
       setLatestRun(report)
-      setNotice(
-        `Council run complete: ${report.providers_discovered} providers, ${report.models_seen} models seen, ${report.promotions.length} promoted.`,
-      )
+      const verified = report.completion_status === 'completed'
+        && report.downstream_sync?.enabled === true
+        && report.downstream_sync?.ok === true
+      if (verified) {
+        setNotice(
+          `Council run verified: ${report.providers_discovered} providers, ${report.models_seen} models seen, ${report.promotions.length} promoted. AIMS/RAMS synchronisation confirmed.`,
+        )
+      } else {
+        setError(
+          report.downstream_sync?.error
+            ? `Council run not verified: ${report.downstream_sync.error}`
+            : 'Council run not verified: downstream AIMS/RAMS synchronisation was not confirmed.',
+        )
+      }
       await loadHistory()
     } catch (caught) {
       setError(caught instanceof Error ? caught.message : 'AI Council run failed.')
