@@ -13,10 +13,11 @@ Framework preset: Vite
 Build command: npm run build
 Build output directory: dist
 Root directory: /
-Node.js: 22
+Node.js: 24.21.0
+npm: 10.9.9
 ```
 
-The repository pins Node and npm versions, uses a locked dependency tree and rejects non-public package registry URLs.
+The repository pins Node 24.21.0 and npm 10.9.9 in its CI workflow and package manifest, uses a locked dependency tree and rejects non-public package registry URLs. Configure Cloudflare Workers Builds with the same toolchain to avoid building a different release than CI. A successful GitHub CI release attestation is not proof that Cloudflare deployed the commit; confirm the production Worker deployment separately.
 
 ## 2. Cloudflare Worker variables and secrets
 
