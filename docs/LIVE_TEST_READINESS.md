@@ -63,3 +63,19 @@ Baseline: `350ee077fa374a55b0a0afd4261731b990ca0403` on `Jonathan-Harris1975/HIV
 Local checks before session reset passed: `npm run check` (37 unit tests plus security/UX/artifact checks), 66 Python automation tests, `npm audit --audit-level=high` (zero vulnerabilities), secret scan and bundle budget. Local Node was 24.19.0/npm 11.9.0, not CI's pinned 24.21.0/npm 10.9.9. Chromium download returned an invalid ZIP; no local browser success is claimed. Baseline GitHub CI and deployed integration provide separate browser evidence.
 
 **NOT READY**: staging rollback, privileged-operation isolation, durable incident escalation, provider recovery and cross-repository proof remain mandatory gates. Do not inject a live failure or infer readiness from green no-op automation runs.
+
+## Browser privilege isolation follow-up
+
+Baseline inspected: `dfcc39b32f100d63eb369489360977b5e099862e`. PR #130 is merged. Baseline [CI](https://github.com/Jonathan-Harris1975/HIVE-UI/actions/runs/38057550257), [security](https://github.com/Jonathan-Harris1975/HIVE-UI/actions/runs/38057552911), [CodeQL](https://github.com/Jonathan-Harris1975/HIVE-UI/actions/runs/38057551537) and [deployed integration](https://github.com/Jonathan-Harris1975/HIVE-UI/actions/runs/38043082478) succeeded. These results do not attest the follow-up commit.
+
+The HIVE contract inspected at `20d87ef79d5918d2982e169afaa020146cb8e41e` exposes `POST /v1/execution-reviews/{plan_id}/decision` behind `require_admin` and a service proxy behind the same credential. HIVE-UI previously supplied that admin credential for browser requests. The gateway now rejects review decisions, arbitrary service proxy requests and privileged operation path segments before session or upstream processing. Encoded aliases are checked after decoding; ambiguous double encoding is rejected. The UI disables decision controls and explains the operator-channel requirement. Denials log a request identifier without credentials or request bodies.
+
+| Requirement | Status | Implementation / regression evidence | Remaining gate |
+| --- | --- | --- | --- |
+| Browser cannot submit review approvals or forge reviewer through this gateway | verified | `workers/gateway/index.ts` calls `isPrivilegedBrowserPath` before forwarding; `workers/gateway/proxy-policy.ts`; `workers/gateway/gateway.test.ts` sends a signed-session approval with a forged reviewer and asserts HTTP 403 and zero upstream calls | Exact follow-up SHA CI and deployment verification |
+| Encoded paths cannot bypass privilege policy | verified | Gateway tests exercise encoded decision/proxy routes, double encoding and malformed input | Backend and alternate ingress authorisation remain independently required |
+| Ordinary evidence and UI route policy remains available | verified | Explicit tests preserve review listing/detail/audit, execution preview, chat, files, models and service wake route policy | End-to-end UI checks for follow-up SHA |
+| Non-production failure/recovery and rollback | blocked | No isolated staging environment, rollback artifact identifier or witnessed rehearsal supplied | Deployment owner must configure isolated staging, select a known-good artifact and execute the runbook |
+| Provider repair acceptance | blocked | Earlier HTTP 403 remains the last observed attempted Kilo delivery; successful no-op sweeps are not delivery evidence | Provider owner must validate the configured webhook authorisation and record an accepted controlled request |
+
+Validation of this follow-up: 48 unit tests passed; 66 Python automation tests passed; dependency audit found zero vulnerabilities; secret scan passed. Local browser download and production health access are network-blocked. GitHub CI remains the authoritative pinned-toolchain/browser gate. No production failure injection has been performed. **NOT READY** until the mandatory external rehearsal/provider gates and broader contract evidence are satisfied.

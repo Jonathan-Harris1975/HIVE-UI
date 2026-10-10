@@ -15,6 +15,7 @@ import {
   verifySessionToken,
   type SessionPayload,
 } from './security'
+import { isPrivilegedBrowserPath } from './proxy-policy'
 import { HIVE_UI_VERSION } from '../../shared/version'
 import { HIVE_UI_BUILD_BRANCH, HIVE_UI_BUILD_SHA } from './build-meta'
 import { backendTimeoutMs, configuredBackends, isRetryableUpstreamStatus, isTimeoutError } from './upstream'
@@ -584,6 +585,10 @@ async function handleApi(request: Request, env: Env, path: string): Promise<Resp
 
   if (!['GET', 'HEAD', 'POST', 'PUT', 'PATCH', 'DELETE'].includes(request.method)) {
     return errorResponse('method_not_allowed', 'This HTTP method is not supported by the HIVE proxy.', 405, requestId)
+  }
+  if (isPrivilegedBrowserPath(path)) {
+    console.warn('Privileged browser operation denied', { request_id: requestId })
+    return errorResponse('privileged_operation_denied', 'Use the trusted operator channel for approvals, repairs and deployments.', 403, requestId)
   }
   if (!isSafeProxyPath(path)) {
     return errorResponse('proxy_path_denied', 'This API path is not available through HIVE-UI.', 404, requestId)
