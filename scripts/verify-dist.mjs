@@ -31,7 +31,7 @@ for (const header of ['Content-Security-Policy', 'X-Robots-Tag', 'X-Frame-Option
   if (!headers.includes(header)) throw new Error(`Missing security header: ${header}`)
 }
 
-const assets = await readdir(resolve('dist/assets'))
+const assets = await readdir(resolve('dist/assets'), { recursive: true })
 if (assets.some((name) => extname(name) === '.map')) throw new Error('Production source maps must not be published.')
 
 
@@ -43,7 +43,7 @@ for (const asset of referencedAssets) {
   }
   await access(resolve('dist', asset.slice(1)))
 }
-const jsEntries = referencedAssets.filter((asset) => asset.endsWith('.js'))
+const jsEntries = referencedAssets.filter((asset) => /\.m?js$/.test(asset))
 if (jsEntries.length === 0) throw new Error('Production HTML does not reference a JavaScript entry point.')
 const assetNames = new Set(assets)
 for (const asset of referencedAssets) {
@@ -52,7 +52,7 @@ for (const asset of referencedAssets) {
   }
 }
 
-for (const name of assets.filter((item) => item.endsWith('.js'))) {
+for (const name of assets.filter((item) => /\.m?js$/.test(item))) {
   const source = await readFile(resolve('dist/assets', name), 'utf8')
   for (const forbidden of ['HIVE_ADMIN_TOKEN', 'HIVE_UI_ACCESS_KEY', 'HIVE_UI_SESSION_SECRET']) {
     if (source.includes(forbidden)) throw new Error(`Browser bundle contains forbidden server secret name: ${forbidden}`)
