@@ -34,6 +34,24 @@ for (const header of ['Content-Security-Policy', 'X-Robots-Tag', 'X-Frame-Option
 const assets = await readdir(resolve('dist/assets'))
 if (assets.some((name) => extname(name) === '.map')) throw new Error('Production source maps must not be published.')
 
+
+const referencedAssets = [...index.matchAll(/(?:src|href)=["'](\/assets\/[^"'?#]+)(?:[?#][^"']*)?["']/g)].map((match) => match[1])
+if (referencedAssets.length === 0) throw new Error('Production HTML does not reference a bundled entry point.')
+for (const asset of referencedAssets) {
+  if (!/^\/assets\/[a-zA-Z0-9._/-]+$/.test(asset) || asset.includes('..')) {
+    throw new Error(`Invalid bundled asset reference: ${asset}`)
+  }
+  await access(resolve('dist', asset.slice(1)))
+}
+const jsEntries = referencedAssets.filter((asset) => asset.endsWith('.js'))
+if (jsEntries.length === 0) throw new Error('Production HTML does not reference a JavaScript entry point.')
+const assetNames = new Set(assets)
+for (const asset of referencedAssets) {
+  if (!assetNames.has(asset.slice('/assets/'.length))) {
+    throw new Error(`Referenced asset is absent from the bundle directory: ${asset}`)
+  }
+}
+
 for (const name of assets.filter((item) => item.endsWith('.js'))) {
   const source = await readFile(resolve('dist/assets', name), 'utf8')
   for (const forbidden of ['HIVE_ADMIN_TOKEN', 'HIVE_UI_ACCESS_KEY', 'HIVE_UI_SESSION_SECRET']) {
