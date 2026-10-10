@@ -45,7 +45,7 @@ function dotTone(status: string, variant?: StatusBadgeProps['variant']): string 
     if (['down', 'failed', 'error', 'critical'].includes(value)) return 'bg-rose-300'
   }
 
-  if (['complete', 'completed', 'approved', 'healthy', 'ready', 'ready_for_execution', 'ok', 'active', 'low'].includes(value)) return 'bg-emerald-300'
+  if (['verified', 'complete', 'completed', 'approved', 'healthy', 'ready', 'ready_for_execution', 'ok', 'active', 'low'].includes(value)) return 'bg-emerald-300'
   if (['blocked', 'rejected', 'failed', 'error', 'high', 'down', 'critical'].includes(value)) return 'bg-rose-300'
   if (['planned', 'queued', 'readonly', 'proposed'].includes(value)) return 'bg-cyan-300'
   return 'bg-slate-500'
@@ -63,7 +63,11 @@ function textTone(status: string): string {
 
 function display(status: string, variant?: StatusBadgeProps['variant']): string {
   const value = normalise(status)
-  if (value === 'unknown') return 'Checking'
+  if (value === 'unknown') return 'Unknown'
+  if (value === 'skipped') return 'Skipped'
+  if (value === 'verified') return 'Verified'
+  if (value === 'failed') return 'Failed'
+  if (value === 'blocked') return 'Blocked'
   if (value === 'checking') return 'Checking'
   if (value === 'disabled') return 'Disabled'
   if (value === 'unavailable') return 'Unavailable'

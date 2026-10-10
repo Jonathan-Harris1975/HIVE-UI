@@ -742,6 +742,7 @@ function handleHealth(request: Request, env: Env): Response {
     version: UI_VERSION,
     branch: HIVE_UI_BUILD_BRANCH !== 'development' ? HIVE_UI_BUILD_BRANCH : (env.HIVE_UI_BUILD_BRANCH ?? null),
     commit: (HIVE_UI_BUILD_SHA !== 'development' ? HIVE_UI_BUILD_SHA : env.HIVE_UI_BUILD_SHA)?.slice(0, 12) ?? null,
+    source_sha: HIVE_UI_BUILD_SHA !== 'development' ? HIVE_UI_BUILD_SHA : (env.HIVE_UI_BUILD_SHA ?? null),
     time: new Date().toISOString(),
   }), { status: 200, headers: healthHeaders() })
 }

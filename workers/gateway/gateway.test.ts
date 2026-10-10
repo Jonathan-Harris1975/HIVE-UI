@@ -41,3 +41,18 @@ test('privilege policy preserves ordinary UI and evidence routes', () => {
     'v1/services/AIMS/ensure-ready',
   ]) expect(isPrivilegedBrowserPath(path), path).toBe(false)
 })
+
+
+test('health exposes the complete source SHA and retains the legacy short commit', async () => {
+  const { HIVE_UI_BUILD_SHA } = await import('./build-meta')
+  const configuredSha = '0123456789abcdef0123456789abcdef01234567'
+  const expectedSha = HIVE_UI_BUILD_SHA === 'development' ? configuredSha : HIVE_UI_BUILD_SHA
+  const env = { HIVE_UI_BUILD_SHA: configuredSha } as Parameters<typeof gateway.fetch>[1]
+  const response = await gateway.fetch(new Request('https://hive.example/health'), env)
+  expect(response.status).toBe(200)
+  const health = await response.json() as { source_sha: string; commit: string }
+  expect(health.source_sha).toBe(expectedSha)
+  expect(health.source_sha).toHaveLength(40)
+  expect(health.commit).toBe(expectedSha.slice(0, 12))
+  expect(response.headers.get('cache-control')).toContain('no-store')
+})
