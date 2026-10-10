@@ -38,3 +38,10 @@ Updated: 2026-10-10 UTC. Repository: Jonathan-Harris1975/HIVE-UI. This ledger is
 - GitHub reports PR #129 as open and mergeable. Combined commit status query returned zero statuses for `f5249706c6f70e8a5b07be30fc453bde14ff5371`; no passing CI conclusion has been established.
 - Local checkout could not connect to github.com due to DNS resolution failure. No local npm checks or browser smoke tests have been run.
 - Required next gate: run CI/security and staging tests for the PR head SHA; inspect GitHub Actions conclusions, external provider trust, and rollback rehearsal. **NOT READY** until evidenced.
+
+## 2026-10-10 completed PR-head CI evidence
+
+- GitHub Actions for commit `4d8f88568d99ab09e4aad3180f9d7839b3573767` returned **success** for Security and repository quality (`38013646165`), autofix.ci (`38013646171`), Item 6 hardening (`38013646229`), CodeQL (`38013646253`), and HIVE-UI CI (`38013646268`).
+- HIVE-UI CI jobs `verify`, `Playwright end-to-end`, `Release gate (exact SHA)` and `ci-gate` all returned **success**. Central operations failure notification was skipped on this successful run.
+- **Evidence boundary:** these runs apply to the referenced commit; the ledger itself has since changed the PR head. Require checks for the final merged SHA or current PR head. Staging deployment, real provider OIDC acceptance, rollback and recovery rehearsal remain unverified.
+- PR #129 remains open and reported mergeable at inspection. **Controlled live-test readiness: NOT READY** pending environment-specific proof and final-head checks.
