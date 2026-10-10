@@ -30,3 +30,11 @@ Updated: 2026-10-10 UTC. Repository: Jonathan-Harris1975/HIVE-UI. This ledger is
 - GitHub open-PR search returned PR #129 only at inspection time. No unrelated PR was modified.
 - Base commit `6533342999275a715fe47d251b42ed1864c958cf` returned a successful `codecov/patch` status only; this is not evidence that all required checks passed.
 - CI run history, current deployment SHA, provider OIDC acceptance, environment secrets, branch protections and rollback rehearsal remain unverified. Release verdict remains NOT READY.
+
+## 2026-10-10 follow-up
+
+- Commit `5650c350460878a10e5d08cfd75ff0f594677137` adds `scripts/verify-dist.test.mjs` with positive and negative artifact verification scenarios.
+- Commit `f5249706c6f70e8a5b07be30fc453bde14ff5371` adds `npm run test:dist` and includes it in `npm run check`.
+- GitHub reports PR #129 as open and mergeable. Combined commit status query returned zero statuses for `f5249706c6f70e8a5b07be30fc453bde14ff5371`; no passing CI conclusion has been established.
+- Local checkout could not connect to github.com due to DNS resolution failure. No local npm checks or browser smoke tests have been run.
+- Required next gate: run CI/security and staging tests for the PR head SHA; inspect GitHub Actions conclusions, external provider trust, and rollback rehearsal. **NOT READY** until evidenced.
