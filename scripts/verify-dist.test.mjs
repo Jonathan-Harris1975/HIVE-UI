@@ -74,3 +74,11 @@ test('rejects nested source maps', async () => {
 test('rejects secret names in nested modules', async () => {
   await verify('<script src="/assets/main.js"></script>', false, /forbidden server secret/, { 'js/private.mjs': 'HIVE_ADMIN_TOKEN' })
 })
+
+test('rejects empty referenced JavaScript bundle', async () => {
+  await verify('<script src="/assets/main.js"></script>', false, /Referenced asset is empty/, { 'main.js': '' })
+})
+
+test('rejects empty referenced CSS bundle', async () => {
+  await verify('<script src="/assets/main.js"></script><link href="/assets/main.css">', false, /Referenced asset is empty/, { 'main.css': '' })
+})
