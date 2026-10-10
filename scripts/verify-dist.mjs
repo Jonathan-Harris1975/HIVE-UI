@@ -41,7 +41,11 @@ for (const asset of referencedAssets) {
   if (!/^\/assets\/[a-zA-Z0-9._/-]+$/.test(asset) || asset.includes('..')) {
     throw new Error(`Invalid bundled asset reference: ${asset}`)
   }
-  await access(resolve('dist', asset.slice(1)))
+  const assetPath = resolve('dist', asset.slice(1))
+  await access(assetPath)
+  if ((await readFile(assetPath)).byteLength === 0) {
+    throw new Error(`Referenced asset is empty: ${asset}`)
+  }
 }
 const jsEntries = referencedAssets.filter((asset) => /\.m?js$/.test(asset))
 if (jsEntries.length === 0) throw new Error('Production HTML does not reference a JavaScript entry point.')
