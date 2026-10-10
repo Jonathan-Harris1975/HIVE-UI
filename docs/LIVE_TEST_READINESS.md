@@ -7,7 +7,7 @@ Updated: 2026-10-10 UTC. Repository: Jonathan-Harris1975/HIVE-UI. This ledger is
 | Autonomous detection | Failed workflow run is captured with job evidence | blocked | `.github/workflows/failure-diagnostics.yml`, `.github/scripts/failure_diagnostics.py` | Inspect completed failed workflow and retained artifact | Confirm recent workflow runs and incident persistence; repository maintainer |
 | Self-repair | Trusted failure starts bounded repair PR | blocked | `.github/workflows/autonomous-repair.yml` | Controlled failed-main CI simulation, inspect PR and agent trigger | App permissions, webhook, idempotency and safe escalation evidence; maintainer |
 | Production safeguards | Exact deployment SHA and gateway smoke test | blocked | `.github/workflows/deployed-integration.yml` | Dispatch with full expected SHA, inspect /health and Playwright results | Staging/current deployment run evidence and rollback rehearsal; deployment owner |
-| Production safeguards | Artifact integrity and correct target | blocked | `scripts/verify-dist.mjs` | `npm ci && npm run build && npm run verify:dist` | Add manifest/digest, environment/API-target and CDN consistency verification; frontend owner |
+| Production safeguards | Artifact integrity and correct target | blocked | `scripts/verify-dist.mjs` | `npm ci && npm run build && npm run verify:dist` | JS entry-point and referenced-asset existence now checked in scripts/verify-dist.mjs (commit c46b39e); manifest/digest, environment/API-target and CDN consistency still unverified; frontend owner |
 | Ecosystem coordination | OIDC claims and cross-repository contract | blocked | `.github/workflows/oidc-readiness.yml` | Inspect OIDC run artifact and provider trust policy | Confirm external provider acceptance and seven peer contracts; ecosystem owner |
 | Production safeguards | UI access controls and operator boundaries | blocked | Worker gateway and UI tests require complete inspection | `npm run check && npm run test:e2e` | Authorisation, CSRF/replay, browser and outage scenarios; security owner |
 
@@ -23,3 +23,10 @@ Updated: 2026-10-10 UTC. Repository: Jonathan-Harris1975/HIVE-UI. This ledger is
 ## Decision
 
 **NOT READY**. This ledger is a starting evidence register, not proof that any listed external gate has passed. The current HEAD, branch rules, open PRs, recent workflow runs, and provider configuration still require full inspection and documented verification.
+
+## 2026-10-10 implementation update
+
+- PR #129 branch contains a stronger `scripts/verify-dist.mjs`: rejects HTML without a JS entry and rejects missing referenced `/assets/` files. This code change has **not** yet been validated by an actual build/test run.
+- GitHub open-PR search returned PR #129 only at inspection time. No unrelated PR was modified.
+- Base commit `6533342999275a715fe47d251b42ed1864c958cf` returned a successful `codecov/patch` status only; this is not evidence that all required checks passed.
+- CI run history, current deployment SHA, provider OIDC acceptance, environment secrets, branch protections and rollback rehearsal remain unverified. Release verdict remains NOT READY.
