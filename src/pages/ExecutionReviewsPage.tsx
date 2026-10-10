@@ -362,7 +362,8 @@ export function ExecutionReviewsPage() {
 
           <section>
             {!selectedId ? (
-              <EmptyState icon={<Gavel className="h-5 w-5" />} title="Select a review plan." body="Approve, reject, request changes, or archive — plus pull an audit trail or evidence pack." />
+              <EmptyState icon={<Gavel className="h-5 w-5" />} title="Select a review plan."
+                body="Inspect the audit trail and evidence pack. Decisions require the trusted operator channel." />
             ) : detailLoading ? (
               <div className="flex items-center justify-center py-16 text-slate-400">
                 <LoaderCircle className="mr-2 h-5 w-5 animate-spin" /> Loading plan
@@ -393,6 +394,7 @@ export function ExecutionReviewsPage() {
                   </div>
 
                   <div className="mt-4 border-t border-white/8 pt-3">
+                    <p className="mb-2 text-xs text-slate-300">Review decisions require the trusted operator channel. This dashboard displays evidence only.</p>
                     <textarea
                       value={decisionNote}
                       onChange={(event) => setDecisionNote(event.target.value)}
@@ -407,7 +409,8 @@ export function ExecutionReviewsPage() {
                           key={decision}
                           type="button"
                           onClick={() => void submitDecision(decision)}
-                          disabled={deciding !== null}
+                          disabled
+                          title="Review decisions require the trusted operator channel."
                           className={`flex h-8 items-center gap-1.5 rounded-lg border px-3 text-xs capitalize disabled:opacity-50 ${
                             decision === 'approved'
                               ? 'border-emerald-300/20 bg-emerald-300/8 text-emerald-200'

@@ -16,7 +16,7 @@ export default defineConfig({
     // e2e/*.spec.ts (Playwright specs, run via `npm run test:e2e`). Running
     // those under Vitest breaks their module resolution and test-framework
     // assumptions, so scope Vitest to only the unit tests it owns.
-    include: ['src/test/**/*.{test,spec}.{ts,tsx}'],
+    include: ['src/test/**/*.{test,spec}.{ts,tsx}', 'workers/gateway/*.test.ts'],
     exclude: ['e2e/**', 'scripts/**', 'node_modules/**'],
     coverage: {
       provider: 'v8',
