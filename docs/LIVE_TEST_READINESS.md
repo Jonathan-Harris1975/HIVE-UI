@@ -79,3 +79,9 @@ The HIVE contract inspected at `20d87ef79d5918d2982e169afaa020146cb8e41e` expose
 | Provider repair acceptance | blocked | Earlier HTTP 403 remains the last observed attempted Kilo delivery; successful no-op sweeps are not delivery evidence | Provider owner must validate the configured webhook authorisation and record an accepted controlled request |
 
 Validation of this follow-up: 48 unit tests passed; 66 Python automation tests passed; dependency audit found zero vulnerabilities; secret scan passed. Local browser download and production health access are network-blocked. GitHub CI remains the authoritative pinned-toolchain/browser gate. No production failure injection has been performed. **NOT READY** until the mandatory external rehearsal/provider gates and broader contract evidence are satisfied.
+
+Additional safeguards in this follow-up:
+
+- `/health` retains the legacy 12-character `commit` and adds `source_sha`. Deployed integration and its Playwright assertion now require the complete expected SHA, so a matching prefix cannot satisfy the gate.
+- Status badges retain `unknown`, `skipped`, `blocked`, `failed` and `verified` across all display variants. Unknown evidence no longer implies an active check. Twenty rendering tests cover the five states across four variants.
+- `npm run check` passed with 69 unit tests, security/UX checks, typecheck, lint, build and 12 artifact-verifier tests. These are local results; final-head CI remains required.

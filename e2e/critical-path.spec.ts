@@ -115,7 +115,10 @@ test.describe('HIVE-UI deployed gateway', () => {
     expect(healthBody.ok).toBe(true)
     expect(String(healthBody.service).toLowerCase()).toContain('hive')
     const expectedSha = process.env.EXPECTED_DEPLOYMENT_SHA?.trim() ?? ''
-    if (expectedSha) expect(healthBody.commit).toBe(expectedSha.slice(0, 12))
+    if (expectedSha) {
+      expect(expectedSha).toMatch(/^[0-9a-f]{40}$/)
+      expect(healthBody.source_sha).toBe(expectedSha)
+    }
 
     const login = await request.post('/api/auth/login', {
       headers: { origin: hiveOrigin },
