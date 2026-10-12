@@ -216,7 +216,8 @@ def dispatch(pr: dict, kind: str, findings: list[str]) -> str:
         return 'already-requested'
     if matching_markers:
         print(f"PR #{number} has an explicit rejected handoff; a bounded retry is eligible.")
-    if sum(f":{kind} -->" in c["body"] for c in markers) >= 2:
+    exact_kind_marker = re.compile(rf"<!-- kilo-auto-repair:[0-9a-f]{40}:{re.escape(kind)} -->")
+    if sum(bool(exact_kind_marker.search(c["body"])) for c in markers) >= 2:
         print(f"::warning::PR #{number} exhausted its two {kind} repair attempts; inspect the repair agent's results.")
         return 'attempt-limit'
 
@@ -309,7 +310,13 @@ def dispatch(pr: dict, kind: str, findings: list[str]) -> str:
             "No human reply or @kilocode-bot command is required. "
             "The source PR remains governed by its normal checks."})
     except Exception as exc:
-        print(f"::warning::Kilo accepted PR #{number} repair request but its marker acknowledgement could not be updated ({type(exc).__name__}).")
+        try:
+            api("PATCH", f"/repos/{REPO}/issues/comments/{comment_id}", {"body":
+                f"{marker}\\ndispatch-state: accepted-ack-failed\\n"
+                f"Kilo accepted the repair request, but recording the acknowledgement failed ({type(exc).__name__}); "
+                "automatic retry remains suppressed to prevent duplicate dispatch."})
+        except Exception:
+            print(f"::warning::Kilo accepted PR #{number} repair request but its marker acknowledgement could not be updated ({type(exc).__name__}); the pending marker still suppresses duplicates.")
     print(f"Sent {kind} repair for PR #{number} at {sha[:12]} to Kilo.")
     return 'requested'
 
