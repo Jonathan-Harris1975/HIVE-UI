@@ -272,6 +272,14 @@ def dispatch(pr: dict, kind: str, findings: list[str]) -> str:
     instruction = machine_contract() + "\n\n" + instruction
     payload = {"repository": REPO, "source_pr": source, "source_sha": sha,
                "kind": kind, "task": instruction, "findings": findings[:12]}
+    reservation = api("POST", f"/repos/{REPO}/issues/{number}/comments", {"body":
+        f"{marker}\nKilo repair handoff reserved for the current {kind} findings. "
+        "This marker is written before the external request to prevent duplicate dispatch. "
+        "The source PR remains governed by its normal checks."})
+    comment_id = reservation.get("id") if isinstance(reservation, dict) else None
+    if not isinstance(comment_id, int) or comment_id <= 0:
+        raise RuntimeError("Could not persist the Kilo repair deduplication marker")
+
     request = urllib.request.Request(url, data=json.dumps(payload).encode(), method="POST",
                                      headers={"Content-Type": "application/json"})
     try:
@@ -282,10 +290,14 @@ def dispatch(pr: dict, kind: str, findings: list[str]) -> str:
         raise RuntimeError(f"Kilo trigger returned HTTP {exc.code}") from None
     except urllib.error.URLError:
         raise RuntimeError("Kilo trigger could not be reached") from None
-    api("POST", f"/repos/{REPO}/issues/{number}/comments", {"body":
-        f"{marker}\nAutonomous Kilo repair requested for the current {kind} findings. "
-        "No human reply or @kilocode-bot command is required. "
-        "The source PR remains governed by its normal checks."})
+
+    try:
+        api("PATCH", f"/repos/{REPO}/issues/comments/{comment_id}", {"body":
+            f"{marker}\nKilo accepted the repair request for the current {kind} findings. "
+            "No human reply or @kilocode-bot command is required. "
+            "The source PR remains governed by its normal checks."})
+    except Exception as exc:
+        print(f"::warning::Kilo accepted PR #{number} repair request but its marker acknowledgement could not be updated ({type(exc).__name__}).")
     print(f"Sent {kind} repair for PR #{number} at {sha[:12]} to Kilo.")
     return 'requested'
 
