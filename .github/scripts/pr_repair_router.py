@@ -220,6 +220,22 @@ def dispatch(pr: dict, kind: str, findings: list[str]) -> str:
     if sum(bool(exact_kind_marker.search(c["body"])) for c in markers) >= 2:
         print(f"::warning::PR #{number} exhausted its two {kind} repair attempts; inspect the repair agent's results.")
         return 'attempt-limit'
+
+    blocker_prefixes = ('merge-conflict-', 'branch-behind-', 'review-threads-')
+    blocker_prefix = next((prefix for prefix in blocker_prefixes if kind.startswith(prefix)), None)
+    blocker_recovery = blocker_prefix is not None
+    base_sha = None
+    if blocker_recovery:
+        base_sha = kind[len(blocker_prefix):]
+        if not re.fullmatch(r"[0-9a-f]{40}", base_sha):
+            raise ValueError("Invalid blocker-recovery base SHA")
+        fresh = pr_details(int(number))
+        current_base = api('GET', f'/repos/{REPO}/commits/{urllib.parse.quote(DEFAULT, safe="")}')['sha']
+        if (not fresh or fresh['head']['sha'] != sha or current_base != base_sha or
+                {x.get('name') for x in fresh.get('labels', [])} &
+                {'hold', 'do-not-merge', 'needs-manual-review', 'autonomy:human-hold'}):
+            print(f"PR #{number} or its base moved before dispatch; defer to the next sweep.")
+            return 'changed-before-dispatch'
     url = os.environ.get("KILO_REPAIR_TRIGGER_URL", "")
     if not valid_kilo_webhook_url(url):
         raise RuntimeError("Configure KILO_REPAIR_TRIGGER_URL with this repository's Kilo Cloud Agent webhook trigger")
@@ -229,19 +245,7 @@ def dispatch(pr: dict, kind: str, findings: list[str]) -> str:
     destination = ("Update this existing Kilo PR branch; do not open a replacement PR. " if existing_kilo_pr else
                    f"Fetch and branch from source PR head {sha}; create one implementation PR to {DEFAULT} "
                    f"including {source} in its PR body. Preserve the source PR's exact commit ancestry. ")
-    blocker_prefixes = ('merge-conflict-', 'branch-behind-', 'review-threads-')
-    blocker_prefix = next((prefix for prefix in blocker_prefixes if kind.startswith(prefix)), None)
-    blocker_recovery = blocker_prefix is not None
     if blocker_recovery:
-        base_sha = kind[len(blocker_prefix):]
-        if not re.fullmatch(r"[0-9a-f]{40}", base_sha):
-            raise ValueError("Invalid blocker-recovery base SHA")
-        fresh = pr_details(int(number))
-        current_base = api('GET', f'/repos/{REPO}/commits/{urllib.parse.quote(DEFAULT, safe="")}')['sha']
-        if (not fresh or fresh['head']['sha'] != sha or current_base != base_sha or
-                {x.get('name') for x in fresh.get('labels', [])} & {'hold', 'do-not-merge', 'needs-manual-review'}):
-            print(f"PR #{number} or its base moved before dispatch; defer to the next sweep.")
-            return 'changed-before-dispatch'
         destination = (
             f"Update the existing source PR branch {pr['head']['ref']} in place. "
             f"Fetch current source head {sha} and target base {base_sha}; refuse if either moved. "
