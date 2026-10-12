@@ -498,14 +498,21 @@ class Recovery(unittest.TestCase):
     @patch.dict(os.environ, {"KILO_REPAIR_TRIGGER_URL": "https://example.invalid/repair"})
     def test_dispatch_reserves_before_webhook_and_suppresses_retry_if_ack_fails(self):
         order = []
+        ack_calls = 0
         def api(method, path, payload=None):
+            nonlocal ack_calls
             if method == "POST" and path.endswith("/issues/7/comments"):
                 order.append("reservation")
                 self.assertIn("<!-- kilo-auto-repair:", payload["body"])
                 return {"id": 99}
             if method == "PATCH" and path.endswith("/issues/comments/99"):
-                order.append("ack")
-                raise RuntimeError("ack failure")
+                ack_calls += 1
+                if ack_calls == 1:
+                    order.append("ack")
+                    raise RuntimeError("ack failure")
+                order.append("ack-failed-state")
+                self.assertIn("dispatch-state: accepted-ack-failed", payload["body"])
+                return {"id": 99}
             raise AssertionError((method, path, payload))
 
         with (
@@ -521,7 +528,7 @@ class Recovery(unittest.TestCase):
             openurl.side_effect = webhook
             with patch("builtins.print"):
                 self.assertEqual(m.router.dispatch(self.pr, "review", ["finding"]), "requested")
-            self.assertEqual(order, ["reservation", "webhook", "ack"])
+            self.assertEqual(order, ["reservation", "webhook", "ack", "ack-failed-state"])
             marker = "<!-- kilo-auto-repair:" + "a" * 40 + ":review -->"
             with patch.object(m.router, "all_pages", return_value=[
                 {"user": {"login": "github-actions[bot]"}, "body": marker}
