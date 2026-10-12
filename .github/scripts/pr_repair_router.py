@@ -316,7 +316,7 @@ def dispatch(pr: dict, kind: str, findings: list[str]) -> str:
                 f"Kilo accepted the repair request, but recording the acknowledgement failed ({type(exc).__name__}); "
                 "automatic retry remains suppressed to prevent duplicate dispatch."})
         except Exception:
-            print(f"::warning::Kilo accepted PR #{number} repair request but its marker acknowledgement could not be updated ({type(exc).__name__}); the pending marker still suppresses duplicates.")
+            print(f"::warning::Kilo accepted PR #{number} repair request but its marker acknowledgement could not be updated ({type(exc).__name__}); the accepted-ack-failed marker still suppresses duplicates.")
     print(f"Sent {kind} repair for PR #{number} at {sha[:12]} to Kilo.")
     return 'requested'
 
