@@ -308,7 +308,7 @@ def dispatch(pr: dict, kind: str, findings: list[str]) -> str:
     except Exception as exc:
         try:
             api("PATCH", f"/repos/{REPO}/issues/comments/{comment_id}", {"body":
-                f"{marker}\\ndispatch-state: accepted-ack-failed\\n"
+                f"{marker}\ndispatch-state: accepted-ack-failed\n"
                 f"Kilo accepted the repair request, but recording the acknowledgement failed ({type(exc).__name__}); "
                 "automatic retry remains suppressed to prevent duplicate dispatch."})
         except Exception:
