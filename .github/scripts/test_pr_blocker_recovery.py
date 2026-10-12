@@ -8,7 +8,7 @@ from pathlib import Path
 import sys
 import tempfile
 import unittest
-from unittest.mock import patch
+from unittest.mock import MagicMock, patch
 
 os.environ.setdefault("GITHUB_REPOSITORY", "owner/repo")
 os.environ.setdefault("GH_TOKEN", "test-token")
