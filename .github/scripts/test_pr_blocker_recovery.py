@@ -435,9 +435,15 @@ class Recovery(unittest.TestCase):
         ):
             openurl.return_value.__enter__.return_value.status = 202
 
-            # The acknowledgement write is mocked separately from base reads.
+            # Persist the dedupe reservation before the webhook, then update it.
             def api(method, path, payload=None):
-                return {"sha": "b" * 40} if method == "GET" else None
+                if method == "GET":
+                    return {"sha": "b" * 40}
+                if method == "POST" and path.endswith("/issues/7/comments"):
+                    return {"id": 99}
+                if method == "PATCH" and path.endswith("/issues/comments/99"):
+                    return {}
+                raise AssertionError((method, path, payload))
 
             with patch.object(m.router, "api", side_effect=api):
                 m.router.dispatch(self.pr, "merge-conflict-" + "b" * 40, ["conflict"])
@@ -484,6 +490,41 @@ class Recovery(unittest.TestCase):
             m.router.dispatch(self.pr, "merge-conflict-" + "b" * 40, ["conflict"])
             openurl.assert_not_called()
 
+
+
+    @patch.dict(os.environ, {"KILO_REPAIR_TRIGGER_URL": "https://example.invalid/repair"})
+    def test_dispatch_reserves_before_webhook_and_suppresses_retry_if_ack_fails(self):
+        order = []
+        def api(method, path, payload=None):
+            if method == "POST" and path.endswith("/issues/7/comments"):
+                order.append("reservation")
+                self.assertIn("<!-- kilo-auto-repair:", payload["body"])
+                return {"id": 99}
+            if method == "PATCH" and path.endswith("/issues/comments/99"):
+                order.append("ack")
+                raise RuntimeError("ack failure")
+            raise AssertionError((method, path, payload))
+
+        with (
+            patch.object(m.router, "all_pages", return_value=[]),
+            patch.object(m.router, "valid_kilo_webhook_url", return_value=True),
+            patch.object(m.router, "api", side_effect=api),
+            patch.object(m.router.urllib.request, "urlopen") as openurl,
+        ):
+            openurl.return_value.__enter__.return_value.status = 202
+            def webhook(*args, **kwargs):
+                order.append("webhook")
+                return openurl.return_value
+            openurl.side_effect = webhook
+            with patch("builtins.print"):
+                self.assertEqual(m.router.dispatch(self.pr, "review", ["finding"]), "requested")
+            self.assertEqual(order, ["reservation", "webhook", "ack"])
+            marker = "<!-- kilo-auto-repair:" + "a" * 40 + ":review -->"
+            with patch.object(m.router, "all_pages", return_value=[
+                {"user": {"login": "github-actions[bot]"}, "body": marker}
+            ]):
+                self.assertEqual(m.router.dispatch(self.pr, "review", ["finding"]), "already-requested")
+            openurl.assert_called_once()
 
     def test_router_failure_exits_nonzero_and_redacts_secrets(self):
         error = RuntimeError(
