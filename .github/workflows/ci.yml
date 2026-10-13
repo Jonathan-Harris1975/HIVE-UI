@@ -33,6 +33,9 @@ jobs:
       - name: Reject committed literal secrets
         run: python3 scripts/secret_scan.py
 
+      - name: Test operational alert HTTP error handling
+        run: python3 -B -m unittest discover -s scripts -p 'test_ops_notify.py' -v
+
       - name: Install repository-pinned npm
         run: npm install --global npm@10.9.9
 
