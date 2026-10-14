@@ -88,7 +88,7 @@ AUTONOMOUS REPAIR + TRUSTED PR AUTOMATION
 - A verified linked Kilo implementation PR may be approved only after the current head SHA has successful repository CI, CodeQL and repository-security workflows while GitHub enforces any other required branch/ruleset checks.
 - Kilo implementation changes to workflows, Renovate/native auto-merge configuration, CodeQL/security policy, secret-scanner controls, CODEOWNERS, SECURITY.md or autonomy governance files receive `autonomy:human-hold`. Carrier PRs are lifecycle evidence and never auto-merge.
 - `native_auto_merge.py` enables GitHub native auto-merge only for trusted exact-head admissions with green required checks. Trusted lifecycle automation closes explicitly retired PRs.
-- GitHub native auto-merge is enabled only after exact-head required checks pass and all configured protections are satisfied; active branch/ruleset protections remain authoritative.
+- Trusted repository automation may enable GitHub native auto-merge after exact-head admission and policy checks. GitHub waits to merge until all required checks, review requirements and configured branch/ruleset protections pass.
 - Keep GitHub automatic deletion of merged head branches enabled where desired to remove completed automation branches.
 - Only current high/critical CodeQL security alerts block the extra CodeQL gate; GitHub’s configured code-scanning ruleset remains independent. Genuine failed checks feed the Kilo repair router. Alert dismissal, broad suppressions, allowlist changes and security-policy decisions remain human-controlled.
 
