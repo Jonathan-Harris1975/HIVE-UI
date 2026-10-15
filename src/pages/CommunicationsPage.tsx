@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import { AlertTriangle, LoaderCircle, RefreshCw } from 'lucide-react'
+import { notifyNewHIVEEvents } from '../components/AudioNotificationSettings'
 
 interface HandoffResponse {
   ok?: boolean
@@ -9,12 +10,42 @@ interface HandoffResponse {
 
 const AIMS_ORIGIN = 'https://chat.jonathan-harris.online'
 
+export function toAIMSOperationalEvent(message: unknown) {
+  if (!message || typeof message !== 'object') return null
+  const payload = message as Record<string, unknown>
+  if (payload.type !== 'aims-comms-notification') return null
+  if (typeof payload.id !== 'string') return null
+  const id = payload.id.trim()
+  if (!id || id.length > 200) return null
+  if (typeof payload.category !== 'string') return null
+
+  const category = payload.category
+  const summaries: Record<string, string> = {
+    urgent: 'An urgent AIMS communication needs your attention.',
+    review_required: 'An AIMS communication needs your review.',
+    new_message: 'An actionable AIMS message needs your attention.',
+    resolved: 'A communication has been marked as resolved.',
+  }
+  if (!Object.prototype.hasOwnProperty.call(summaries, category)) return null
+
+  return {
+    event_id: `aims-comms:${id}`,
+    source: 'AIMS Comms Hub',
+    event_type: category === 'urgent' ? 'service_blocked' : category,
+    severity: category === 'urgent' ? 'critical' : 'warning',
+    details: { requires_action: category !== 'resolved' },
+    title: 'AIMS Comms Hub',
+    summary: summaries[category],
+  }
+}
+
 export function CommunicationsPage() {
   const [frameKey, setFrameKey] = useState(0)
   const [frameUrl, setFrameUrl] = useState<string | null>(null)
   const [ready, setReady] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const timeoutRef = useRef<number | null>(null)
+  const frameRef = useRef<HTMLIFrameElement | null>(null)
 
   useEffect(() => {
     let cancelled = false
@@ -46,6 +77,12 @@ export function CommunicationsPage() {
   useEffect(() => {
     function onMessage(event: MessageEvent) {
       if (event.origin !== AIMS_ORIGIN) return
+      if (event.source !== frameRef.current?.contentWindow) return
+      if (event.data?.type === 'aims-comms-notification') {
+        const notificationEvent = toAIMSOperationalEvent(event.data)
+        if (notificationEvent) notifyNewHIVEEvents([notificationEvent], { playAudio: false })
+        return
+      }
       if (event.data?.type === 'aims-comms-ready') {
         setReady(true)
         setError(null)
@@ -103,6 +140,7 @@ export function CommunicationsPage() {
       {frameUrl && (
         <iframe
           key={frameKey}
+          ref={frameRef}
           title="AIMS Comms Hub"
           src={frameUrl}
           className="h-full w-full border-0 bg-hive-canvas"
