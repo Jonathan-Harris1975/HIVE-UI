@@ -12,9 +12,14 @@ import {
   GitBranch,
   Trash2,
 } from 'lucide-react'
-import { useCallback, useEffect, useMemo, useState, type FormEvent } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState, type FormEvent } from 'react'
 import { Link } from 'react-router'
 import { ConfirmDialog } from '../components/ConfirmDialog'
+import {
+  acknowledgeHIVENotification,
+  AudioNotificationSettings,
+  notifyNewHIVEEvents,
+} from '../components/AudioNotificationSettings'
 import { StatusBadge } from '../components/StatusBadge'
 import { WorkflowGraph } from '../components/WorkflowGraph'
 import { useAuth } from '../context/AuthContext'
@@ -160,6 +165,61 @@ export function OpsPage() {
   const [tab, setTab] = useState<OpsTab>('overview')
   const [health, setHealth] = useState<HealthResponse | null>(null)
   const [opsEvents, setOpsEvents] = useState<OpsEventsResponse | null>(null)
+  const [lifecycleReport, setLifecycleReport] = useState<Record<string, unknown> | null>(null)
+  const [reportHistory, setReportHistory] = useState<Array<Record<string, unknown>>>([])
+  const [lifecycleReviews, setLifecycleReviews] = useState<Array<Record<string, unknown>>>([])
+  const [reviewActionMessage, setReviewActionMessage] = useState('')
+  const observedEventIds = useRef<Set<string> | null>(null)
+  const observedReviewIds = useRef<Set<string> | null>(null)
+  useEffect(() => {
+    const items = opsEvents?.items || []
+    if (!observedEventIds.current) {
+      observedEventIds.current = new Set(items.map((item) => item.event_id))
+      return
+    }
+    const fresh = items.filter((item) => !observedEventIds.current?.has(item.event_id))
+    items.forEach((item) => observedEventIds.current?.add(item.event_id))
+    if (fresh.length) notifyNewHIVEEvents(fresh)
+  }, [opsEvents])
+  useEffect(() => {
+    const items = lifecycleReviews
+    if (!observedReviewIds.current) {
+      observedReviewIds.current = new Set(items.map((item) => String(item.review_id)))
+      return
+    }
+    const fresh = items.filter((item) => !observedReviewIds.current?.has(String(item.review_id)))
+    items.forEach((item) => observedReviewIds.current?.add(String(item.review_id)))
+    if (fresh.length) {
+      notifyNewHIVEEvents(fresh.map((item) => ({
+        event_id: String(item.review_id),
+        event_type: 'review_required',
+        severity: String(item.severity || 'warning'),
+        details: { requires_action: true },
+        title: String(item.title || 'Review required'),
+        summary: String(item.summary || 'A decision is required.'),
+      })))
+    }
+  }, [lifecycleReviews])
+  useEffect(() => {
+    let active = true
+    const refreshActionable = async () => {
+      if (document.visibilityState !== 'visible') return
+      const [events, reviews] = await Promise.all([
+        apiFetch<OpsEventsResponse>('/v1/system/ops-events?limit=30').catch(() => null),
+        apiFetch<{ items?: Array<Record<string, unknown>> }>('/v1/system/lifecycle-reviews').catch(() => null),
+      ])
+      if (!active) return
+      if (events) setOpsEvents(events)
+      if (reviews?.items) setLifecycleReviews(reviews.items)
+    }
+    const timer = window.setInterval(() => {
+      void refreshActionable()
+    }, 60_000)
+    return () => {
+      active = false
+      window.clearInterval(timer)
+    }
+  }, [])
   const [runtimeStats, setRuntimeStats] = useState<RuntimeStatsResponse | null>(null)
   const [templates, setTemplates] = useState<Record<string, WorkflowTemplate>>({})
   const [openReviewCount, setOpenReviewCount] = useState(0)
@@ -185,7 +245,16 @@ export function OpsPage() {
     setLoading(true)
     setError(null)
     try {
-      const [healthResult, templateResult, reviewResult, opsEventsResult, runtimeStatsResult] = await Promise.all([
+      const [
+        healthResult,
+        templateResult,
+        reviewResult,
+        opsEventsResult,
+        runtimeStatsResult,
+        lifecycleResult,
+        lifecycleReviewsResult,
+        reportHistoryResult,
+      ] = await Promise.all([
         apiFetch<HealthResponse>('/health'),
         apiFetch<WorkflowTemplatesResponse>('/v1/workflow-graphs/templates'),
         apiFetch<ExecutionReviewsResponse>('/v1/execution-reviews?limit=50'),
@@ -196,10 +265,16 @@ export function OpsPage() {
           }),
         ),
         apiFetch<RuntimeStatsResponse>('/v1/system/runtime-stats').catch(() => null),
+        apiFetch<Record<string, unknown>>('/v1/system/lifecycle-reports/current').catch(() => null),
+        apiFetch<{ items?: Array<Record<string, unknown>> }>('/v1/system/lifecycle-reviews').catch(() => ({ items: [] })),
+        apiFetch<{ items?: Array<Record<string, unknown>> }>('/v1/system/lifecycle-reports/history?limit=12').catch(() => ({ items: [] })),
       ])
       setHealth(healthResult)
       setOpsEvents(opsEventsResult)
       setRuntimeStats(runtimeStatsResult)
+      setLifecycleReport(lifecycleResult)
+      setLifecycleReviews(lifecycleReviewsResult.items ?? [])
+      setReportHistory(reportHistoryResult.items ?? [])
       const activeReviews = (reviewResult.items ?? []).filter(isOpenReview)
       setTemplates(templateResult.templates ?? {})
       setOpenReviewCount(Number(reviewResult.open_count ?? activeReviews.length))
@@ -210,6 +285,23 @@ export function OpsPage() {
       setLoading(false)
     }
   }, [refreshHealth])
+
+  const acceptLifecycleFix = useCallback(async (reviewId: string) => {
+    setReviewActionMessage('Recording decision and checking the exact PR head…')
+    try {
+      const result = await apiFetch<Record<string, unknown>>(
+        `/v1/system/lifecycle-reviews/${encodeURIComponent(reviewId)}/accept-fix`,
+        { method: 'POST' },
+      )
+      const message = result.dispatch === 'accepted'
+        ? 'Repair request accepted. CI, security, deployment verification and GitHub native auto-merge remain in force.'
+        : `Decision recorded; dispatch status: ${String(result.dispatch || 'unknown')}. Check the review evidence before retrying.`
+      setReviewActionMessage(message)
+      await loadOps()
+    } catch (caught) {
+      setReviewActionMessage(caught instanceof Error ? caught.message : 'Accept Fix could not be recorded.')
+    }
+  }, [loadOps])
 
   const purgeResetDatabases = useCallback(async () => {
     if (purgeConfirmation !== DATABASE_PURGE_CONFIRMATION) return
@@ -432,6 +524,8 @@ export function OpsPage() {
           ))}
         </div>
 
+        {tab === 'overview' && <AudioNotificationSettings />}
+
         {error && <div role="alert" className="mt-4 rounded-xl border border-rose-400/20 bg-rose-400/8 px-4 py-3 text-sm text-rose-200">{error}</div>}
 
         {loading && !health ? (
@@ -445,7 +539,16 @@ export function OpsPage() {
                   <StatusBadge status={opsEvents.items.some((item) => item.severity === 'critical') ? 'critical' : 'warning'} label={`${opsEvents.count ?? 0} events`} compact />
                 </summary>
                 <div className="grid gap-2 border-t border-white/6 p-3 lg:grid-cols-2">
-                  {opsEvents.items.slice(0, 6).map((item) => <OpsEventCard key={item.event_id} item={item} onInspect={() => inspect(item.title || 'Operational event', item, item.summary)} />)}
+                  {opsEvents.items.slice(0, 6).map((item) => (
+                    <OpsEventCard
+                      key={item.event_id}
+                      item={item}
+                      onInspect={() => {
+                        acknowledgeHIVENotification(item.event_id)
+                        inspect(item.title || 'Operational event', item, item.summary)
+                      }}
+                    />
+                  ))}
                 </div>
               </details>
             ) : (
@@ -454,6 +557,181 @@ export function OpsPage() {
                 <span className="text-xs font-medium text-emerald-200">None</span>
               </div>
             )}
+
+            <section className="mt-3 rounded-2xl border border-white/8 bg-hive-panel/60 p-4" aria-labelledby="lifecycle-review-title">
+              <div className="flex items-center justify-between gap-3">
+                <div>
+                  <h2 id="lifecycle-review-title" className="text-sm font-semibold text-white">
+                    Needs My Review
+                  </h2>
+                  <p className="mt-1 text-xs text-slate-400">
+                    Only terminal states requiring a human decision appear here.
+                  </p>
+                </div>
+                <StatusBadge
+                  status={lifecycleReviews.length ? 'warning' : 'ready'}
+                  label={`${lifecycleReviews.length} open`}
+                  compact
+                />
+              </div>
+              {lifecycleReviews.length ? (
+                <div className="mt-3 grid gap-2">
+                  {lifecycleReviews.map((review) => {
+                    const evidence = recordFrom(review.evidence)
+                    const proposal = recordFrom(review.proposal)
+                    const reviewId = String(review.review_id)
+                    return (
+                      <article
+                        key={reviewId}
+                        className="rounded-xl border border-amber-300/15 bg-hive-surface p-3"
+                      >
+                        <div className="flex flex-wrap items-center justify-between gap-2">
+                          <div>
+                            <h3 className="text-xs font-semibold text-white">
+                              {String(review.title || 'Review required')}
+                            </h3>
+                            <p className="mt-1 text-xs text-slate-400">
+                              {String(review.source)} · PR #{String(review.pr_number || 'unknown')} ·{' '}
+                              {String(review.head_sha || '')}
+                            </p>
+                            <p className="mt-1 text-xs text-slate-300">
+                              {String(review.summary || '')}
+                            </p>
+                          </div>
+                          {typeof review.action_url === 'string' && (
+                            <a
+                              href={review.action_url}
+                              target="_blank"
+                              rel="noreferrer"
+                              className="text-xs text-cyan-200 underline"
+                            >
+                              Open PR
+                            </a>
+                          )}
+                        </div>
+                        <details className="mt-3 rounded-lg border border-white/8 px-3 py-2">
+                          <summary
+                            onClick={() => acknowledgeHIVENotification(reviewId)}
+                            className="cursor-pointer text-xs text-cyan-200"
+                          >
+                            Review details
+                          </summary>
+                          <div className="mt-2 grid gap-2 text-xs text-slate-300">
+                            <p>Failed check: {String(evidence.failed_check || 'Not identified')}</p>
+                            <p>
+                              Repair attempts: {String(evidence.repair_attempts ?? 0)} · Human hold:{' '}
+                              {String(evidence.human_hold ?? 'unknown')}
+                            </p>
+                            <p>
+                              Proposed solution:{' '}
+                              {String(proposal.proposed_solution || 'No safe solution recorded; Accept Fix is disabled.')}
+                            </p>
+                            <p>
+                              Repair prompt: {String(proposal.repair_prompt || 'No repair prompt recorded.')}
+                            </p>
+                            <p>Risk / impact: {String(proposal.risk_impact || 'Not recorded')}</p>
+                          </div>
+                        </details>
+                        <div className="mt-3 flex flex-wrap items-center gap-2">
+                          <button
+                            type="button"
+                            disabled={!review.accept_fix_enabled || review.decision_recorded === true}
+                            onClick={() => {
+                              acknowledgeHIVENotification(reviewId)
+                              void acceptLifecycleFix(reviewId)
+                            }}
+                            className="rounded-lg border border-cyan-200/20 px-3 py-2 text-xs text-cyan-100 disabled:cursor-not-allowed disabled:opacity-40"
+                          >
+                            {review.decision_recorded === true ? 'Fix accepted' : 'Accept Fix'}
+                          </button>
+                          {review.decision_recorded === true && (
+                            <span className="text-xs text-slate-400">
+                              Dispatch: {String(review.dispatch_status || 'pending')}
+                            </span>
+                          )}
+                        </div>
+                      </article>
+                    )
+                  })}
+                </div>
+              ) : (
+                <p className="mt-3 text-xs text-slate-400">
+                  No unresolved human decision is recorded.
+                </p>
+              )}
+              {reviewActionMessage && <p role="status" className="mt-2 text-xs text-slate-300">{reviewActionMessage}</p>}
+            </section>
+
+            <section className="mt-3 rounded-2xl border border-white/8 bg-hive-panel/60 p-4" aria-labelledby="weekly-lifecycle-report-title">
+              <div className="flex flex-wrap items-center justify-between gap-3">
+                <div>
+                  <h2 id="weekly-lifecycle-report-title" className="text-sm font-semibold text-white">
+                    Weekly repository overview
+                  </h2>
+                  <p className="mt-1 text-xs text-slate-400">
+                    Deterministic report from the durable HIVE evidence store.
+                  </p>
+                </div>
+                {lifecycleReport?.available === true ? (
+                  <StatusBadge
+                    status={String((lifecycleReport.report as Record<string, unknown>)?.overall_status || 'unknown')}
+                    compact
+                  />
+                ) : (
+                  <StatusBadge status="unknown" label="Not available" compact />
+                )}
+              </div>
+              {lifecycleReport?.available === true ? (
+                <p className="mt-2 text-xs text-slate-300">
+                  Report {String((lifecycleReport.report as Record<string, unknown>)?.report_id || '')} ·
+                  {' '}R2 key {String(lifecycleReport.r2_key || '')}
+                </p>
+              ) : (
+                <p className="mt-2 text-xs text-slate-400">
+                  No persisted report is available for this ISO week yet. Missing evidence remains unknown.
+                </p>
+              )}
+              {lifecycleReport?.available === true &&
+                Array.isArray((lifecycleReport.report as Record<string, unknown>)?.repositories) && (
+                  <ul className="mt-3 grid gap-1 sm:grid-cols-2">
+                    {(
+                      (lifecycleReport.report as Record<string, unknown>)
+                        .repositories as Array<Record<string, unknown>>
+                    ).map((item) => (
+                      <li
+                        key={String(item.repository)}
+                        className="flex justify-between rounded-lg border border-white/6 px-3 py-2 text-xs"
+                      >
+                        <span className="text-slate-300">{String(item.repository)}</span>
+                        <span className="text-slate-400">
+                          {String(item.status)} · {String(item.evidence_count ?? 0)} evidence
+                        </span>
+                      </li>
+                    ))}
+                  </ul>
+                )}
+              {reportHistory.length > 0 && (
+                <details className="mt-3 rounded-lg border border-white/8 px-3 py-2">
+                  <summary className="cursor-pointer text-xs text-cyan-200">
+                    Report history ({reportHistory.length})
+                  </summary>
+                  <ul className="mt-2 grid gap-2">
+                    {reportHistory.map((item) => (
+                      <li
+                        key={String(item.report_id)}
+                        className="flex items-center justify-between gap-3 text-xs text-slate-300"
+                      >
+                        <span>
+                          {String(item.report_id)} · {String(item.overall_status)} ·{' '}
+                          {item.evidence_complete === true ? 'complete' : 'incomplete'}
+                        </span>
+                        <span className="text-slate-500">{String(item.r2_key || '')}</span>
+                      </li>
+                    ))}
+                  </ul>
+                </details>
+              )}
+            </section>
 
             <details className="group mt-3 rounded-2xl border border-white/8 bg-hive-panel/60">
               <summary className="flex cursor-pointer list-none items-center justify-between gap-3 px-4 py-3">
