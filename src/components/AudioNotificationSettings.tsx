@@ -208,7 +208,8 @@ export function toSharedNotification(item: HIVEOperationalEvent): SharedNotifica
   }
 }
 
-export function notifyNewHIVEEvents(items: HIVEOperationalEvent[]) {
+export function notifyNewHIVEEvents(items: HIVEOperationalEvent[], options: { playAudio?: boolean } = {}) {
+  const playAudio = options.playAudio !== false
   const prefs = loadPreferences()
   const seenStorageName = 'hive-notification-seen-v1'
   const acknowledgedStorageName = 'hive-notification-acknowledged-v1'
@@ -260,7 +261,7 @@ export function notifyNewHIVEEvents(items: HIVEOperationalEvent[]) {
         : sound === 'critical'
           ? prefs.critical
           : prefs.review)
-    if (enabled) {
+    if (playAudio && enabled) {
       try {
         const audio = new Audio(sounds[sound])
         audio.volume = prefs.volume
