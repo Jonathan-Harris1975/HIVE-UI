@@ -74,7 +74,6 @@ jobs:
 
   e2e:
     name: Playwright end-to-end
-    needs: [verify]
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
