@@ -341,15 +341,19 @@ export function OpsPage() {
         : `?event_id=${encodeURIComponent(opsEventDeleteTarget.eventId || '')}`
       await apiFetch<{ ok: boolean }>(`/v1/system/ops-events${query}`, { method: 'DELETE' })
       const deletedId = opsEventDeleteTarget.eventId
-      setOpsEvents((current) => current ? {
-        ...current,
-        items: opsEventDeleteTarget.clearAll
-          ? []
-          : current.items.filter((item) => item.event_id !== deletedId),
-        count: opsEventDeleteTarget.clearAll
-          ? 0
-          : Math.max(0, (current.count ?? current.items.length) - 1),
-      } : current)
+      setOpsEvents((current) => {
+        if (!current) return current
+        const currentItems = current.items ?? []
+        return {
+          ...current,
+          items: opsEventDeleteTarget.clearAll
+            ? []
+            : currentItems.filter((item) => item.event_id !== deletedId),
+          count: opsEventDeleteTarget.clearAll
+            ? 0
+            : Math.max(0, (current.count ?? currentItems.length) - 1),
+        }
+      })
       setOpsEventActionMessage(opsEventDeleteTarget.clearAll ? 'All operational alerts deleted.' : 'Operational alert deleted.')
       setOpsEventDeleteTarget(null)
     } catch (caught) {
@@ -419,33 +423,7 @@ export function OpsPage() {
     return () => { active = false }
   }, [])
 
-  const purgeResetDatabases = useCallback(async () => {
-    if (purgeConfirmation !== DATABASE_PURGE_CONFIRMATION) return
-    setPurgingDatabases(true)
-    setPurgeError(null)
-    setPurgeResult(null)
-    try {
-      const result = await apiFetch<DatabasePurgeResetResponse>('/v1/db/purge-reset', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ confirmation: purgeConfirmation }),
-      })
-      setPurgeResult(result)
-      if (!result.ok) {
-        setPurgeError('The reset completed only partially. Inspect the returned database result before retrying.')
-        return
-      }
-      setPurgeDialogOpen(false)
-      setPurgeConfirmation('')
-      await loadOps()
-    } catch (caught) {
-      setPurgeError(caught instanceof Error ? caught.message : 'Database purge/reset failed.')
-    } finally {
-      setPurgingDatabases(false)
-    }
-  }, [loadOps, purgeConfirmation])
-
-  useEffect(() => {
+    useEffect(() => {
     void loadOps()
   }, [loadOps])
 
