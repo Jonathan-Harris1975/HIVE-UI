@@ -362,6 +362,7 @@ export function OpsPage() {
   const previewDatabaseReset = useCallback(async () => {
     if (!selectedResetTarget) return
     setPurgeError(null)
+    setPurgeResult(null)
     setPurgePreview(null)
     try {
       const result = await apiFetch<DatabaseResetPreview>('/v1/db/purge-reset/preview', {
