@@ -118,26 +118,38 @@ function configuredText(status: FlagStatus, readyText: string, notReadyText: str
   return 'Backend health contract did not include this helper flag.'
 }
 
-function OpsEventCard({ item, onInspect }: { item: OpsEventItem; onInspect: () => void }) {
+function OpsEventCard({ item, onInspect, onDelete }: { item: OpsEventItem; onInspect: () => void; onDelete: () => void }) {
   const severity = item.severity || 'warning'
   const border = severity === 'critical' ? 'border-rose-300/20' : severity === 'warning' ? 'border-amber-300/20' : 'border-cyan-300/15'
   return (
-    <button type="button" onClick={onInspect} className={`w-full rounded-xl border ${border} bg-hive-surface p-3 text-left transition hover:bg-hive-panel-deep`}>
-      <div className="flex items-start gap-3">
-        <BellRing className={`mt-0.5 h-4 w-4 shrink-0 ${severity === 'critical' ? 'text-rose-300' : severity === 'warning' ? 'text-amber-300' : 'text-cyan-300'}`} />
-        <div className="min-w-0 flex-1">
-          <div className="flex flex-wrap items-center gap-2">
-            <h4 className="truncate text-xs font-semibold text-white">{item.title || item.event_type || 'Operational event'}</h4>
-            <StatusBadge status={severity} compact />
+    <article className={`rounded-xl border ${border} bg-hive-surface p-3`}>
+      <div className="flex items-start gap-2">
+        <button type="button" onClick={onInspect} className="min-w-0 flex-1 text-left transition hover:bg-hive-panel-deep">
+          <div className="flex items-start gap-3">
+            <BellRing className={`mt-0.5 h-4 w-4 shrink-0 ${severity === 'critical' ? 'text-rose-300' : severity === 'warning' ? 'text-amber-300' : 'text-cyan-300'}`} />
+            <div className="min-w-0 flex-1">
+              <div className="flex flex-wrap items-center gap-2">
+                <h4 className="truncate text-xs font-semibold text-white">{item.title || item.event_type || 'Operational event'}</h4>
+                <StatusBadge status={severity} compact />
+              </div>
+              <p className="mt-1 line-clamp-2 text-xs leading-5 text-slate-400">{item.summary || 'No event summary returned.'}</p>
+              <p className="mt-2 text-xs uppercase tracking-[0.12em] text-slate-400">{item.service || 'unknown service'} · {formatDate(item.occurred_at || item.received_at)}</p>
+            </div>
           </div>
-          <p className="mt-1 line-clamp-2 text-xs leading-5 text-slate-400">{item.summary || 'No event summary returned.'}</p>
-          <p className="mt-2 text-xs uppercase tracking-[0.12em] text-slate-400">{item.service || 'unknown service'} · {formatDate(item.occurred_at || item.received_at)}</p>
-        </div>
+        </button>
+        <button
+          type="button"
+          onClick={onDelete}
+          aria-label={`Delete alert: ${item.title || item.event_type || 'Operational event'}`}
+          title="Delete alert"
+          className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border border-rose-300/15 text-rose-200 hover:bg-rose-300/10"
+        >
+          <Trash2 className="h-4 w-4" />
+        </button>
       </div>
-    </button>
+    </article>
   )
 }
-
 
 function recordValue(value: unknown): Record<string, unknown> {
   return value && typeof value === 'object' && !Array.isArray(value) ? value as Record<string, unknown> : {}
@@ -169,6 +181,10 @@ export function OpsPage() {
   const [reportHistory, setReportHistory] = useState<Array<Record<string, unknown>>>([])
   const [lifecycleReviews, setLifecycleReviews] = useState<Array<Record<string, unknown>>>([])
   const [reviewActionMessage, setReviewActionMessage] = useState('')
+  const [opsEventDeleteTarget, setOpsEventDeleteTarget] = useState<{ eventId?: string; title?: string; clearAll?: boolean } | null>(null)
+  const [opsEventDeleteBusy, setOpsEventDeleteBusy] = useState(false)
+  const [opsEventDeleteError, setOpsEventDeleteError] = useState<string | null>(null)
+  const [opsEventActionMessage, setOpsEventActionMessage] = useState('')
   const observedEventIds = useRef<Set<string> | null>(null)
   const observedReviewIds = useRef<Set<string> | null>(null)
   useEffect(() => {
@@ -302,6 +318,25 @@ export function OpsPage() {
       setReviewActionMessage(caught instanceof Error ? caught.message : 'Accept Fix could not be recorded.')
     }
   }, [loadOps])
+
+  const deleteOpsEvents = useCallback(async () => {
+    if (!opsEventDeleteTarget) return
+    setOpsEventDeleteBusy(true)
+    setOpsEventDeleteError(null)
+    try {
+      const query = opsEventDeleteTarget.clearAll
+        ? '?clear_all=true'
+        : `?event_id=${encodeURIComponent(opsEventDeleteTarget.eventId || '')}`
+      await apiFetch<{ ok: boolean }>(`/v1/system/ops-events${query}`, { method: 'DELETE' })
+      setOpsEventActionMessage(opsEventDeleteTarget.clearAll ? 'All operational alerts deleted.' : 'Operational alert deleted.')
+      setOpsEventDeleteTarget(null)
+      await loadOps()
+    } catch (caught) {
+      setOpsEventDeleteError(caught instanceof Error ? caught.message : 'Operational alert could not be deleted.')
+    } finally {
+      setOpsEventDeleteBusy(false)
+    }
+  }, [loadOps, opsEventDeleteTarget])
 
   const purgeResetDatabases = useCallback(async () => {
     if (purgeConfirmation !== DATABASE_PURGE_CONFIRMATION) return
@@ -538,7 +573,22 @@ export function OpsPage() {
                   <span className="flex items-center gap-2 text-sm font-semibold text-white"><BellRing className="h-4 w-4 text-amber-300" /> Operational alerts</span>
                   <StatusBadge status={opsEvents.items.some((item) => item.severity === 'critical') ? 'critical' : 'warning'} label={`${opsEvents.count ?? 0} events`} compact />
                 </summary>
-                <div className="grid gap-2 border-t border-white/6 p-3 lg:grid-cols-2">
+                <div className="border-t border-white/6 p-3">
+                  <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
+                    <p className="text-xs text-slate-400">Showing up to 6 recent alerts. You can remove one alert or clear the inbox.</p>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setOpsEventDeleteError(null)
+                        setOpsEventDeleteTarget({ clearAll: true })
+                      }}
+                      className="rounded-lg border border-rose-300/15 px-3 py-2 text-xs font-medium text-rose-200 hover:bg-rose-300/10"
+                    >
+                      Delete all alerts
+                    </button>
+                  </div>
+                  {opsEventActionMessage && <p role="status" className="mb-2 text-xs text-emerald-200">{opsEventActionMessage}</p>}
+                  <div className="grid gap-2 lg:grid-cols-2">
                   {opsEvents.items.slice(0, 6).map((item) => (
                     <OpsEventCard
                       key={item.event_id}
@@ -547,8 +597,13 @@ export function OpsPage() {
                         acknowledgeHIVENotification(item.event_id)
                         inspect(item.title || 'Operational event', item, item.summary)
                       }}
+                      onDelete={() => {
+                        setOpsEventDeleteError(null)
+                        setOpsEventDeleteTarget({ eventId: item.event_id, title: item.title || item.event_type || 'Operational event' })
+                      }}
                     />
                   ))}
+                  </div>
                 </div>
               </details>
             ) : (
@@ -788,21 +843,6 @@ export function OpsPage() {
                 </button>
                 <button
                   type="button"
-                  onClick={() => inspect('Integration readiness', {
-                    ready: flags.filter((flag) => flag.status === 'ready').length,
-                    total: flags.length,
-                    flags,
-                  })}
-                  className="rounded-xl border border-white/8 bg-hive-surface p-3 text-left"
-                >
-                  <Activity className="h-4 w-4 text-cyan-300" />
-                  <p className="mt-2 text-lg font-semibold text-white">
-                    {flags.filter((flag) => flag.status === 'ready').length}/{flags.length}
-                  </p>
-                  <span className="text-[10px] uppercase tracking-wider text-slate-500">Integrations ready</span>
-                </button>
-                <button
-                  type="button"
                   onClick={() => inspect('Default coding model', {
                     model: runtimeStats?.model_registry?.default_coding_model,
                   })}
@@ -974,6 +1014,22 @@ export function OpsPage() {
           </section>
         )}
       </div>
+      <ConfirmDialog
+        open={Boolean(opsEventDeleteTarget)}
+        title={opsEventDeleteTarget?.clearAll ? 'Delete all operational alerts?' : 'Delete this operational alert?'}
+        summary={opsEventDeleteTarget?.clearAll
+          ? 'This permanently removes every operational alert from the HIVE inbox and cannot be undone.'
+          : 'This permanently removes the selected alert from the HIVE inbox and cannot be undone.'}
+        objectName={opsEventDeleteTarget?.clearAll ? 'All stored operational alerts' : opsEventDeleteTarget?.title}
+        systems={['HIVE event inbox']}
+        confirmLabel={opsEventDeleteBusy ? 'Deleting…' : opsEventDeleteTarget?.clearAll ? 'Delete all alerts' : 'Delete alert'}
+        tone="destructive"
+        busy={opsEventDeleteBusy}
+        error={opsEventDeleteError}
+        onConfirm={() => void deleteOpsEvents()}
+        onCancel={() => setOpsEventDeleteTarget(null)}
+      />
+
       <ConfirmDialog
         open={purgeDialogOpen}
         title="Purge and reset all databases?"
