@@ -43,23 +43,32 @@ import type {
 
 type OpsTab = 'overview' | 'workflow'
 
-const DATABASE_PURGE_CONFIRMATION = 'PURGE ALL DATABASES'
+type DatabaseResetTarget = {
+  id: string
+  label: string
+  kind: 'sql' | 'd1'
+  enabled: boolean
+  required_confirmation: string
+}
+
+type DatabaseResetPreview = {
+  ok: boolean
+  target?: string
+  database_name?: string
+  dialect?: string
+  tables?: Array<{ name: string; rows: number }>
+  total_rows?: number
+  preserved_tables?: string[]
+  preserves?: string[]
+  message?: string
+  unavailable?: unknown
+}
 
 type DatabasePurgeResetResponse = {
   ok: boolean
+  target?: string
   confirmation?: string
-  d1?: {
-    ok?: boolean
-    database_names?: string[]
-    databases?: Array<{ database_name?: string; ok?: boolean; tables_cleared?: string[] }>
-  }
-  sql?: {
-    ok?: boolean
-    dialect?: string
-    tables_cleared?: string[]
-    before?: Record<string, number>
-    after?: Record<string, number>
-  }
+  result?: Record<string, unknown>
 }
 
 type FlagStatus = 'ready' | 'not_ready' | 'disabled' | 'partial' | 'unknown'
@@ -246,6 +255,9 @@ export function OpsPage() {
   const [purgingDatabases, setPurgingDatabases] = useState(false)
   const [purgeError, setPurgeError] = useState<string | null>(null)
   const [purgeResult, setPurgeResult] = useState<DatabasePurgeResetResponse | null>(null)
+  const [resetTargets, setResetTargets] = useState<DatabaseResetTarget[]>([])
+  const [selectedResetTarget, setSelectedResetTarget] = useState('')
+  const [purgePreview, setPurgePreview] = useState<DatabaseResetPreview | null>(null)
 
   const [task, setTask] = useState('Prepare a safe, review-gated operational workflow plan.')
   const [repo, setRepo] = useState('HIVE')
@@ -328,18 +340,50 @@ export function OpsPage() {
         ? '?clear_all=true'
         : `?event_id=${encodeURIComponent(opsEventDeleteTarget.eventId || '')}`
       await apiFetch<{ ok: boolean }>(`/v1/system/ops-events${query}`, { method: 'DELETE' })
+      const deletedId = opsEventDeleteTarget.eventId
+      setOpsEvents((current) => {
+        if (!current) return current
+        const currentItems = current.items ?? []
+        return {
+          ...current,
+          items: opsEventDeleteTarget.clearAll
+            ? []
+            : currentItems.filter((item) => item.event_id !== deletedId),
+          count: opsEventDeleteTarget.clearAll
+            ? 0
+            : Math.max(0, (current.count ?? currentItems.length) - 1),
+        }
+      })
       setOpsEventActionMessage(opsEventDeleteTarget.clearAll ? 'All operational alerts deleted.' : 'Operational alert deleted.')
       setOpsEventDeleteTarget(null)
-      await loadOps()
     } catch (caught) {
       setOpsEventDeleteError(caught instanceof Error ? caught.message : 'Operational alert could not be deleted.')
     } finally {
       setOpsEventDeleteBusy(false)
     }
-  }, [loadOps, opsEventDeleteTarget])
+  }, [opsEventDeleteTarget])
+
+  const previewDatabaseReset = useCallback(async () => {
+    if (!selectedResetTarget) return
+    setPurgeError(null)
+    setPurgeResult(null)
+    setPurgePreview(null)
+    try {
+      const result = await apiFetch<DatabaseResetPreview>('/v1/db/purge-reset/preview', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ target: selectedResetTarget }),
+      })
+      setPurgePreview(result)
+      if (!result.ok) setPurgeError('A complete row-count preview is unavailable. No reset can be started.')
+    } catch (caught) {
+      setPurgeError(caught instanceof Error ? caught.message : 'Reset preview could not be loaded.')
+    }
+  }, [selectedResetTarget])
 
   const purgeResetDatabases = useCallback(async () => {
-    if (purgeConfirmation !== DATABASE_PURGE_CONFIRMATION) return
+    const target = resetTargets.find((item) => item.id === selectedResetTarget)
+    if (!target || purgeConfirmation !== target.required_confirmation || purgePreview?.target !== target.id) return
     setPurgingDatabases(true)
     setPurgeError(null)
     setPurgeResult(null)
@@ -347,28 +391,44 @@ export function OpsPage() {
       const result = await apiFetch<DatabasePurgeResetResponse>('/v1/db/purge-reset', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ confirmation: purgeConfirmation }),
+        body: JSON.stringify({ target: target.id, confirmation: purgeConfirmation }),
       })
       setPurgeResult(result)
       if (!result.ok) {
-        setPurgeError('The reset completed only partially. Inspect the returned database result before retrying.')
+        setPurgeError('The selected reset did not complete. Inspect the returned result before retrying.')
         return
       }
       setPurgeDialogOpen(false)
       setPurgeConfirmation('')
+      setPurgePreview(null)
       await loadOps()
     } catch (caught) {
-      setPurgeError(caught instanceof Error ? caught.message : 'Database purge/reset failed.')
+      setPurgeError(caught instanceof Error ? caught.message : 'Database reset failed.')
     } finally {
       setPurgingDatabases(false)
     }
-  }, [loadOps, purgeConfirmation])
+  }, [loadOps, purgeConfirmation, purgePreview, resetTargets, selectedResetTarget])
 
   useEffect(() => {
+    let active = true
+    void apiFetch<{ ok: boolean; targets: DatabaseResetTarget[] }>('/v1/db/purge-reset/targets')
+      .then((result) => {
+        if (!active) return
+        setResetTargets(result.targets)
+        setSelectedResetTarget(result.targets.find((target) => target.enabled)?.id ?? '')
+      })
+      .catch((caught) => {
+        if (active) setPurgeError(caught instanceof Error ? caught.message : 'Reset targets could not be loaded.')
+      })
+    return () => { active = false }
+  }, [])
+
+    useEffect(() => {
     void loadOps()
   }, [loadOps])
 
   const templateEntries = useMemo(() => Object.entries(templates), [templates])
+  const activeResetTarget = resetTargets.find((target) => target.id === selectedResetTarget)
   const adapterPolicy = useMemo(() => recordValue(health?.execution_adapter_policy), [health])
   const executionAdaptersEnabled = Boolean(health?.execution_adapters_enabled ?? adapterPolicy.enabled)
   const executionAdapterDetail = stringFrom(adapterPolicy.note) ?? (executionAdaptersEnabled
@@ -860,28 +920,73 @@ export function OpsPage() {
             <details className="group mt-3 rounded-2xl border border-rose-300/15 bg-rose-300/[0.025]">
               <summary className="flex cursor-pointer list-none items-center justify-between gap-3 px-4 py-3">
                 <span className="flex items-center gap-2 text-sm font-semibold text-rose-100"><Trash2 className="h-4 w-4 text-rose-300" /> Danger zone</span>
-                <span className="text-[11px] text-slate-500">Database reset</span>
+                <span className="text-[11px] text-slate-500">Scoped data cleanup</span>
               </summary>
               <div className="border-t border-rose-300/10 p-4">
                 <p className="text-xs leading-5 text-slate-400">
-                  Permanently clears application data from database-hive, database-comms-hub and HIVE PostgreSQL while
-                  preserving schemas and migration history.
+                  Select one database, review its row counts, then confirm that target only. D1 migration history and database schemas are preserved.
                 </p>
-                {purgeResult?.ok && <p className="mt-2 text-xs font-medium text-emerald-200" role="status">Database reset completed successfully.</p>}
-                {purgeError && !purgeDialogOpen && <p className="mt-2 text-xs text-rose-200" role="alert">{purgeError}</p>}
-                <button
-                  type="button"
-                  onClick={() => {
+                <label className="mt-3 block text-xs font-medium text-slate-300" htmlFor="reset-target">Database to clean</label>
+                <select
+                  id="reset-target"
+                  value={selectedResetTarget}
+                  onChange={(event) => {
+                    setSelectedResetTarget(event.target.value)
+                    setPurgePreview(null)
                     setPurgeError(null)
                     setPurgeResult(null)
-                    setPurgeConfirmation('')
-                    setPurgeDialogOpen(true)
                   }}
-                  disabled={purgingDatabases}
-                  className="mt-3 flex h-9 w-full items-center justify-center gap-2 rounded-xl border border-rose-300/25 bg-rose-300/10 px-4 text-xs font-semibold text-rose-100 disabled:opacity-50"
+                  disabled={!resetTargets.length || purgingDatabases}
+                  className="mt-1 h-10 w-full rounded-xl border border-white/10 bg-hive-surface px-3 text-sm text-white"
                 >
-                  {purgingDatabases ? <LoaderCircle className="h-4 w-4 animate-spin" /> : <Trash2 className="h-4 w-4" />} Purge / reset databases
+                  {resetTargets.length === 0 && <option value="">No reset targets available</option>}
+                  {resetTargets.map((target) => (
+                    <option key={target.id} value={target.id} disabled={!target.enabled}>
+                      {target.label}{target.enabled ? '' : ' (not configured)'}
+                    </option>
+                  ))}
+                </select>
+                {purgeResult?.ok && <p className="mt-2 text-xs font-medium text-emerald-200" role="status">{purgeResult.target} reset completed.</p>}
+                {purgeError && <p className="mt-2 text-xs text-rose-200" role="alert">{purgeError}</p>}
+                {purgePreview?.ok && purgePreview.target === selectedResetTarget && (
+                  <div className="mt-3 rounded-xl border border-white/8 bg-hive-surface p-3">
+                    <p className="text-xs font-semibold text-white">
+                      Preview: {purgePreview.total_rows ?? 0} rows across {purgePreview.tables?.length ?? 0} tables
+                    </p>
+                    <ul className="mt-2 max-h-32 space-y-1 overflow-y-auto text-xs text-slate-400">
+                      {purgePreview.tables?.map((table) => (
+                        <li key={table.name} className="flex justify-between gap-3"><span className="truncate">{table.name}</span><span>{table.rows.toLocaleString()}</span></li>
+                      ))}
+                    </ul>
+                    {purgePreview.preserved_tables?.length ? (
+                      <p className="mt-2 text-[11px] text-slate-500">Preserved tables: {purgePreview.preserved_tables.join(', ')}</p>
+                    ) : null}
+                  </div>
+                )}
+                <button
+                  type="button"
+                  onClick={() => void previewDatabaseReset()}
+                  disabled={!activeResetTarget?.enabled || purgingDatabases}
+                  className="mt-3 flex h-9 w-full items-center justify-center gap-2 rounded-xl border border-white/10 bg-white/5 px-4 text-xs font-semibold text-white disabled:opacity-50"
+                >
+                  Preview selected database
                 </button>
+                {purgePreview?.ok && purgePreview.target === selectedResetTarget && (purgePreview.total_rows ?? 0) > 0 && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setPurgeConfirmation('')
+                      setPurgeDialogOpen(true)
+                    }}
+                    disabled={purgingDatabases}
+                    className="mt-2 flex h-9 w-full items-center justify-center gap-2 rounded-xl border border-rose-300/25 bg-rose-300/10 px-4 text-xs font-semibold text-rose-100 disabled:opacity-50"
+                  >
+                    Review reset of {activeResetTarget?.label}
+                  </button>
+                )}
+                {purgePreview?.ok && purgePreview.target === selectedResetTarget && purgePreview.total_rows === 0 && (
+                  <p className="mt-2 text-xs text-slate-400">No rows to clear in this database.</p>
+                )}
               </div>
             </details>
           </>
@@ -1032,23 +1137,25 @@ export function OpsPage() {
 
       <ConfirmDialog
         open={purgeDialogOpen}
-        title="Purge and reset all databases?"
-        summary="This permanently deletes application records from both ecosystem D1 databases and HIVE's Koyeb PostgreSQL database. The schemas and database identities remain in place."
-        objectName="database-hive · database-comms-hub · Koyeb PostgreSQL"
-        systems={['Cloudflare D1', 'Koyeb PostgreSQL']}
-        confirmLabel={purgingDatabases ? 'Resetting…' : 'Purge / reset databases'}
+        title={`Reset ${activeResetTarget?.label ?? 'database'}?`}
+        summary={activeResetTarget?.kind === 'sql'
+          ? 'This clears HIVE SQL conversations, messages, file metadata and chunks, and cost records.'
+          : 'This clears application rows from the selected D1 database while preserving its migration tables.'}
+        objectName={activeResetTarget?.label}
+        systems={[activeResetTarget?.kind === 'sql' ? 'HIVE SQL' : 'Cloudflare D1']}
+        confirmLabel={purgingDatabases ? 'Resetting…' : 'Reset selected database'}
         cancelLabel="Keep data"
         tone="destructive"
         busy={purgingDatabases}
-        confirmDisabled={purgeConfirmation !== DATABASE_PURGE_CONFIRMATION}
+        confirmDisabled={!activeResetTarget || purgeConfirmation !== activeResetTarget.required_confirmation}
         error={purgeError}
-        textInput={{
-          label: `Type ${DATABASE_PURGE_CONFIRMATION} to confirm`,
+        textInput={activeResetTarget ? {
+          label: `Type ${activeResetTarget.required_confirmation} to confirm`,
           value: purgeConfirmation,
           onChange: setPurgeConfirmation,
-          placeholder: DATABASE_PURGE_CONFIRMATION,
+          placeholder: activeResetTarget.required_confirmation,
           required: true,
-        }}
+        } : undefined}
         onConfirm={() => void purgeResetDatabases()}
         onCancel={() => {
           if (purgingDatabases) return
@@ -1057,7 +1164,14 @@ export function OpsPage() {
           setPurgeError(null)
         }}
       >
-        <p>This action cannot be undone from HIVE-UI. R2, Vectorize, Workers KV and Durable Object storage are not touched.</p>
+        <p>This action cannot be undone. It affects only the selected database. R2 objects, Vectorize data, Workers KV and Durable Object storage are not touched.</p>
+        {purgePreview?.tables && (
+          <ul className="mt-3 max-h-36 space-y-1 overflow-y-auto rounded-xl border border-white/8 bg-hive-surface p-3 text-xs text-slate-400">
+            {purgePreview.tables.map((table) => (
+              <li key={table.name} className="flex justify-between gap-3"><span>{table.name}</span><span>{table.rows.toLocaleString()} rows</span></li>
+            ))}
+          </ul>
+        )}
       </ConfirmDialog>
     </div>
   )

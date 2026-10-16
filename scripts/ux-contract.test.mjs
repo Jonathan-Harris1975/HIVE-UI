@@ -32,12 +32,21 @@ test('ChatPage checks title and auto_titled state before requesting auto-title',
   assert.match(page, /autoTitleConversation\(completedConversationId\)/)
 })
 
-test('Operations database reset requires explicit destructive confirmation', () => {
+test('Operations database reset requires scoped preview and target-specific confirmation', () => {
   const page = source('src/pages/OpsPage.tsx')
-  assert.match(page, /DATABASE_PURGE_CONFIRMATION = 'PURGE ALL DATABASES'/)
-  assert.match(page, /apiFetch<DatabasePurgeResetResponse>\('\/v1\/db\/purge-reset'/)
-  assert.match(page, /confirmDisabled=\{purgeConfirmation !== DATABASE_PURGE_CONFIRMATION\}/)
-  assert.match(page, /database-hive/)
-  assert.match(page, /database-comms-hub/)
-  assert.match(page, /R2, Vectorize, Workers KV and Durable Object storage are not touched/)
+  assert.match(page, /\/v1\/db\/purge-reset\/targets/)
+  assert.match(page, /\/v1\/db\/purge-reset\/preview/)
+  assert.match(page, /body: JSON\.stringify\(\{ target: target\.id, confirmation: purgeConfirmation \}\)/)
+  assert.match(page, /Preview selected database/)
+  assert.match(page, /Type \$\{activeResetTarget\.required_confirmation\} to confirm/)
+  assert.match(page, /No rows to clear in this database/)
+  assert.match(page, /R2 objects, Vectorize data, Workers KV and Durable Object storage are not touched/)
+  assert.doesNotMatch(page, /PURGE ALL DATABASES/)
+})
+
+test('Operational alert deletion updates the inbox without a full page refresh', () => {
+  const page = source('src/pages/OpsPage.tsx')
+  const deletion = page.slice(page.indexOf('const deleteOpsEvents'), page.indexOf('const previewDatabaseReset'))
+  assert.match(deletion, /setOpsEvents\(\(current\)/)
+  assert.doesNotMatch(deletion, /await loadOps\(\)/)
 })
