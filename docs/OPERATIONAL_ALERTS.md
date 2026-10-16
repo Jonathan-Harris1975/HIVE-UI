@@ -3,7 +3,7 @@
 **Status:** Ready for production events  
 **Last reviewed:** 22 June 2026
 
-The Ops page reads the authenticated HIVE endpoint `GET /v1/system/ops-events`. It presents recent GitHub CI failures, Koyeb deployment failures, Cloudflare Worker failures and repeated runtime failures as compact, inspectable cards. HIVE-UI never receives the event-ingest token.
+The Ops page reads the authenticated HIVE endpoint `GET /v1/system/ops-events`. It presents recent GitHub CI failures, Koyeb deployment failures, Cloudflare Worker failures and repeated runtime failures as compact, inspectable cards. Operators can delete one alert or clear the inbox after an explicit confirmation; HIVE-UI never receives the event-ingest token.
 
 ## Data flow
 
@@ -11,6 +11,7 @@ The Ops page reads the authenticated HIVE endpoint `GET /v1/system/ops-events`. 
 2. HIVE validates the dedicated ingest token, redacts sensitive keys and stores the bounded event.
 3. HIVE-UI obtains events through its existing server-side HIVE admin proxy.
 4. Selecting a card opens the existing inspector with the event metadata and provider link.
+5. Confirmed deletion calls HIVE's authenticated `DELETE /v1/system/ops-events` route. One alert can be removed by ID, or the operator can clear the inbox. Provider-side run and deployment records are unaffected.
 
 A failed event fetch does not break the Ops dashboard. Repository health and workflows continue to load, while the alert panel remains absent until HIVE is reachable.
 
