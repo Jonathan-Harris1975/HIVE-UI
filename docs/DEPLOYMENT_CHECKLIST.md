@@ -84,6 +84,8 @@ The Cloudflare Worker gateway calls Koyeb server-to-server. The browser does not
 
 ## 4. Production gates before deployment
 
+Privileged Ops actions remain server-denied until the HIVE backend has individual operator identity, exact-revision expiring approvals, durable idempotency and correlated repair results. Follow [`OPS_ACTION_BOUNDARY.md`](OPS_ACTION_BOUNDARY.md) for the backend contract, Cloudflare checks and non-production verification steps. Do not grant the shared UI access key approval authority.
+
 Run:
 
 ```bash

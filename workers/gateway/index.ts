@@ -586,7 +586,7 @@ async function handleApi(request: Request, env: Env, path: string): Promise<Resp
   if (!['GET', 'HEAD', 'POST', 'PUT', 'PATCH', 'DELETE'].includes(request.method)) {
     return errorResponse('method_not_allowed', 'This HTTP method is not supported by the HIVE proxy.', 405, requestId)
   }
-  if (isPrivilegedBrowserPath(path)) {
+  if (isPrivilegedBrowserPath(path, request.method)) {
     console.warn('Privileged browser operation denied', { request_id: requestId })
     return errorResponse('privileged_operation_denied', 'Use the trusted operator channel for approvals, repairs and deployments.', 403, requestId)
   }

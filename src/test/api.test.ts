@@ -2,6 +2,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 import {
   ApiError,
   apiFetch,
+  apiFetchWithMetadata,
   chatWithFile,
   chatWithFiles,
   getUiSession,
@@ -104,6 +105,16 @@ describe('API helpers', () => {
       code: 'backend_write_outcome_unknown',
       requestId: 'write-unknown-1',
       message: 'The backend did not confirm this change. Check the current state before retrying.',
+    })
+  })
+
+  it('returns the gateway correlation id with a successful action response', async () => {
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue(
+      jsonResponse({ dispatch: 'accepted' }, 200, { 'x-request-id': 'request-correlated-42' }),
+    ))
+    await expect(apiFetchWithMetadata<{ dispatch: string }>('/v1/example/action', { method: 'POST' })).resolves.toEqual({
+      data: { dispatch: 'accepted' },
+      requestId: 'request-correlated-42',
     })
   })
 
