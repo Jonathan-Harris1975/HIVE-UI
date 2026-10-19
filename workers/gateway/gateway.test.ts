@@ -33,13 +33,98 @@ for (const path of [
   })
 }
 
+for (const [path, method] of [
+  ['v1/system/lifecycle-reviews/review-123/accept-fix', 'POST'],
+  ['v1/db/purge-reset', 'POST'],
+  ['v1/system/ops-events?clear_all=true', 'DELETE'],
+  ['v1/files/r2/uploads/objects', 'DELETE'],
+  ['v1/db/conversations/conversation-123', 'DELETE'],
+  ['v1/model-registry/coding', 'POST'],
+  ['v1/model-registry/coding/model-123', 'DELETE'],
+] as const) {
+  test(`signed browser session cannot submit ${method} ${path}`, async () => {
+    const secret = 'test-only-session-signing-secret'
+    const { token } = await createSessionToken(secret, 3600, 1800, true, true)
+    const upstream = vi.spyOn(globalThis, 'fetch').mockRejectedValue(new Error('Must not reach upstream'))
+    const request = new Request(`https://hive.example/api/${path}`, {
+      method,
+      headers: { origin: 'https://hive.example', cookie: sessionCookie(token, 3600), 'content-type': 'application/json' },
+      body: method === 'DELETE' ? undefined : JSON.stringify({ confirmation: 'test-only' }),
+    })
+    const env = {
+      HIVE_UI_SESSION_SECRET: secret,
+      HIVE_ADMIN_TOKEN: 'test-only-admin-token',
+      HIVE_API_BASE_URL: 'https://backend.example',
+    } as Parameters<typeof gateway.fetch>[1]
+    const response = await gateway.fetch(request, env)
+    expect(response.status).toBe(403)
+    expect(await response.json()).toMatchObject({ code: 'privileged_operation_denied' })
+    expect(upstream).not.toHaveBeenCalled()
+  })
+}
+
+test('unauthenticated callers cannot submit privileged decisions', async () => {
+  const upstream = vi.spyOn(globalThis, 'fetch').mockRejectedValue(new Error('Must not reach upstream'))
+  const response = await gateway.fetch(new Request(
+    'https://hive.example/api/v1/system/lifecycle-reviews/review-123/accept-fix',
+    { method: 'POST', headers: { origin: 'https://hive.example' }, body: '{}' },
+  ), {} as Parameters<typeof gateway.fetch>[1])
+  expect(response.status).toBe(403)
+  expect(upstream).not.toHaveBeenCalled()
+})
+
+test('HIVE outage returns an explicit unknown-state error instead of a cached success', async () => {
+  const secret = 'test-only-session-signing-secret'
+  const { token } = await createSessionToken(secret, 3600, 1800, true, true)
+  vi.spyOn(globalThis, 'fetch').mockRejectedValue(new Error('upstream unavailable'))
+  const response = await gateway.fetch(new Request('https://hive.example/api/health', {
+    headers: { origin: 'https://hive.example', cookie: sessionCookie(token, 3600) },
+  }), {
+    HIVE_UI_SESSION_SECRET: secret,
+    HIVE_ADMIN_TOKEN: 'test-only-admin-token',
+    HIVE_API_BASE_URL: 'https://backend.example',
+  } as Parameters<typeof gateway.fetch>[1])
+  expect(response.status).toBe(502)
+  expect(await response.json()).toMatchObject({ code: 'backend_unreachable' })
+  expect(response.headers.get('cache-control')).toContain('no-store')
+})
+
+test('upstream HTTP 403 remains an explicit rejection with its request correlation', async () => {
+  const secret = 'test-only-session-signing-secret'
+  const { token } = await createSessionToken(secret, 3600, 1800, true, true)
+  vi.spyOn(globalThis, 'fetch').mockResolvedValue(new Response(JSON.stringify({
+    ok: false,
+    code: 'repair_provider_forbidden',
+    detail: 'The configured repair provider rejected the handoff.',
+  }), { status: 403, headers: { 'content-type': 'application/json' } }))
+  const response = await gateway.fetch(new Request('https://hive.example/api/v1/system/lifecycle-reviews', {
+    headers: {
+      origin: 'https://hive.example',
+      cookie: sessionCookie(token, 3600),
+      'x-request-id': 'hive-ui-repair-403',
+    },
+  }), {
+    HIVE_UI_SESSION_SECRET: secret,
+    HIVE_ADMIN_TOKEN: 'test-only-admin-token',
+    HIVE_API_BASE_URL: 'https://backend.example',
+  } as Parameters<typeof gateway.fetch>[1])
+  expect(response.status).toBe(403)
+  expect(response.headers.get('x-request-id')).toBe('hive-ui-repair-403')
+  expect(await response.json()).toMatchObject({ code: 'repair_provider_forbidden' })
+})
+
 test('privilege policy preserves ordinary UI and evidence routes', () => {
   for (const path of [
     'health', 'v1/models', 'v1/chat/stream', 'v1/files/upload',
     'v1/execution-reviews', 'v1/execution-reviews/plan-123',
     'v1/execution-reviews/plan-123/audit-trail', 'v1/execution-preview',
-    'v1/services/AIMS/ensure-ready',
-  ]) expect(isPrivilegedBrowserPath(path), path).toBe(false)
+    'v1/services/AIMS/ensure-ready', 'v1/system/lifecycle-reviews',
+    'v1/db/purge-reset/targets', 'v1/db/purge-reset/preview',
+    'v1/model-registry/coding', 'v1/files/r2/uploads/objects',
+  ]) expect(isPrivilegedBrowserPath(path, 'GET'), path).toBe(false)
+  expect(isPrivilegedBrowserPath('v1/db/purge-reset/preview', 'POST')).toBe(false)
+  expect(isPrivilegedBrowserPath('v1/system/ops-events', 'GET')).toBe(false)
+  expect(isPrivilegedBrowserPath('v1/system/ops-events', 'DELETE')).toBe(true)
 })
 
 

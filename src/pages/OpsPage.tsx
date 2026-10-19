@@ -1,3 +1,6 @@
+Warning: truncated output (original token count: 16281)
+Total output lines: 1298
+
 import {
   Activity,
   BellRing,
@@ -24,8 +27,9 @@ import { StatusBadge } from '../components/StatusBadge'
 import { WorkflowGraph } from '../components/WorkflowGraph'
 import { useAuth } from '../context/AuthContext'
 import { useInspector } from '../context/InspectorContext'
-import { apiFetch } from '../lib/api'
+import { ApiError, apiFetch, apiFetchWithMetadata } from '../lib/api'
 import { formatDate } from '../lib/format'
+import { acquireActionLock, hasCurrentLifecycleApproval, isSnapshotFresh, lifecycleIdempotencyKey, releaseActionLock, safeRepairHandoffFailure } from '../lib/ops-action-policy'
 import { GOVERNED_REPOSITORIES } from '../lib/repositories'
 import type {
   ExecutionPreviewResponse,
@@ -190,6 +194,11 @@ export function OpsPage() {
   const [reportHistory, setReportHistory] = useState<Array<Record<string, unknown>>>([])
   const [lifecycleReviews, setLifecycleReviews] = useState<Array<Record<string, unknown>>>([])
   const [reviewActionMessage, setReviewActionMessage] = useState('')
+  const reviewActionLocks = useRef(new Set<string>())
+  const [actionableDataError, setActionableDataError] = useState<string | null>(null)
+  const [actionableUpdatedAt, setActionableUpdatedAt] = useState<number | null>(null)
+  const [snapshotUpdatedAt, setSnapshotUpdatedAt] = useState<number | null>(null)
+  const [freshnessNow, setFreshnessNow] = useState<number | null>(null)
   const [opsEventDeleteTarget, setOpsEventDeleteTarget] = useState<{ eventId?: string; title?: string; clearAll?: boolean } | null>(null)
   const [opsEventDeleteBusy, setOpsEventDeleteBusy] = useState(false)
   const [opsEventDeleteError, setOpsEventDeleteError] = useState<string | null>(null)
@@ -227,22 +236,44 @@ export function OpsPage() {
   }, [lifecycleReviews])
   useEffect(() => {
     let active = true
+    let refreshing = false
     const refreshActionable = async () => {
-      if (document.visibilityState !== 'visible') return
-      const [events, reviews] = await Promise.all([
-        apiFetch<OpsEventsResponse>('/v1/system/ops-events?limit=30').catch(() => null),
-        apiFetch<{ items?: Array<Record<string, unknown>> }>('/v1/system/lifecycle-reviews').catch(() => null),
-      ])
-      if (!active) return
-      if (events) setOpsEvents(events)
-      if (reviews?.items) setLifecycleReviews(reviews.items)
+      if (document.visibilityState !== 'visible' || refreshing) return
+      refreshing = true
+      try {
+        const [events, reviews] = await Promise.all([
+          apiFetch<OpsEventsResponse>('/v1/system/ops-events?limit=30').catch(() => null),
+          apiFetch<{ items?: Array<Record<string, unknown>> }>('/v1/system/lifecycle-reviews').catch(() => null),
+        ])
+        if (!active) return
+        const failures: string[] = []
+        if (events?.ok) setOpsEvents(events)
+        else {
+          setOpsEvents({ ok: false, error: 'Operational alerts are unavailable; the displayed state is unknown.' })
+          failures.push('Operational alerts')
+        }
+        if (reviews && Array.isArray(reviews.items)) setLifecycleReviews(reviews.items)
+        else {
+          setLifecycleReviews([])
+          failures.push('Lifecycle reviews')
+        }
+        setActionableDataError(failures.length ? `${failures.join(' and ')} could not be refreshed. No current status is available.` : null)
+        setActionableUpdatedAt(failures.length ? null : Date.now())
+      } finally {
+        refreshing = false
+      }
     }
     const timer = window.setInterval(() => {
       void refreshActionable()
     }, 60_000)
+    const onVisible = () => {
+      if (document.visibilityState === 'visible') void refreshActionable()
+    }
+    document.addEventListener('visibilitychange', onVisible)
     return () => {
       active = false
       window.clearInterval(timer)
+      document.removeEventListener('visibilitychange', onVisible)
     }
   }, [])
   const [runtimeStats, setRuntimeStats] = useState<RuntimeStatsResponse | null>(null)
@@ -294,42 +325,119 @@ export function OpsPage() {
         ),
         apiFetch<RuntimeStatsResponse>('/v1/system/runtime-stats').catch(() => null),
         apiFetch<Record<string, unknown>>('/v1/system/lifecycle-reports/current').catch(() => null),
-        apiFetch<{ items?: Array<Record<string, unknown>> }>('/v1/system/lifecycle-reviews').catch(() => ({ items: [] })),
+        apiFetch<{ items?: Array<Record<string, unknown>> }>('/v1/system/lifecycle-reviews').catch(() => null),
         apiFetch<{ items?: Array<Record<string, unknown>> }>('/v1/system/lifecycle-reports/history?limit=12').catch(() => ({ items: [] })),
       ])
       setHealth(healthResult)
       setOpsEvents(opsEventsResult)
       setRuntimeStats(runtimeStatsResult)
       setLifecycleReport(lifecycleResult)
-      setLifecycleReviews(lifecycleReviewsResult.items ?? [])
+      setLifecycleReviews(lifecycleReviewsResult?.items ?? [])
+      const actionableFailures = [
+        opsEventsResult.ok === true ? null : 'operational alerts',
+        lifecycleReviewsResult && Array.isArray(lifecycleReviewsResult.items) ? null : 'lifecycle reviews',
+      ].filter((value): value is string => value !== null)
+      setActionableDataError(actionableFailures.length
+        ? `${actionableFailures.join(' and ')} could not be loaded. Current status is unknown.`
+        : null)
       setReportHistory(reportHistoryResult.items ?? [])
       const activeReviews = (reviewResult.items ?? []).filter(isOpenReview)
       setTemplates(templateResult.templates ?? {})
       setOpenReviewCount(Number(reviewResult.open_count ?? activeReviews.length))
       await refreshHealth()
+      const actionDataIsComplete = opsEventsResult.ok === true
+        && lifecycleReviewsResult !== null
+        && Array.isArray(lifecycleReviewsResult.items)
+      setActionableUpdatedAt(actionDataIsComplete ? Date.now() : null)
+      setSnapshotUpdatedAt(Date.now())
     } catch (caught) {
+      // Clear the previous snapshot so a failed refresh cannot leave stale green status on screen.
+      setHealth(null)
+      setOpsEvents(null)
+      setRuntimeStats(null)
+      setLifecycleReport(null)
+      setLifecycleReviews([])
+      setReportHistory([])
+      setTemplates({})
+      setOpenReviewCount(0)
+      setActionableUpdatedAt(null)
+      setSnapshotUpdatedAt(null)
       setError(caught instanceof Error ? caught.message : 'Operations data could not be loaded.')
     } finally {
       setLoading(false)
     }
   }, [refreshHealth])
 
+  useEffect(() => {
+    setFreshnessNow(Date.now())
+    const timer = window.setInterval(() => setFreshnessNow(Date.now()), 15_000)
+    return () => window.clearInterval(timer)
+  }, [])
+
+  const operationalSnapshotFresh = freshnessNow === null || isSnapshotFresh(snapshotUpdatedAt, freshnessNow)
+
+  useEffect(() => {
+    if (!snapshotUpdatedAt || operationalSnapshotFresh) return
+    setHealth(null)
+    setOpsEvents(null)
+    setRuntimeStats(null)
+    setLifecycleReport(null)
+    setLifecycleReviews([])
+    setReportHistory([])
+    setTemplates({})
+    setOpenReviewCount(0)
+    setActionableUpdatedAt(null)
+    setSnapshotUpdatedAt(null)
+    setActionableDataError('Operational data is stale. Current status is unknown; refresh before acting.')
+    setError('Operational data is stale. Refresh to load a current HIVE snapshot.')
+  }, [operationalSnapshotFresh, snapshotUpdatedAt])
+
   const acceptLifecycleFix = useCallback(async (reviewId: string) => {
+    const review = lifecycleReviews.find((item) => String(item.review_id) === reviewId)
+    if (!review || !isSnapshotFresh(actionableUpdatedAt, Date.now()) || !hasCurrentLifecycleApproval(review)) {
+      setReviewActionMessage('No current approval is available for this exact proposal and source revision. The action remains blocked.')
+      return
+    }
+    if (!acquireActionLock(reviewActionLocks.current, reviewId)) return
     setReviewActionMessage('Recording decision and checking the exact PR head…')
     try {
-      const result = await apiFetch<Record<string, unknown>>(
+      const idempotencyKey = await lifecycleIdempotencyKey(review)
+      const response = await apiFetchWithMetadata<Record<string, unknown>>(
         `/v1/system/lifecycle-reviews/${encodeURIComponent(reviewId)}/accept-fix`,
-        { method: 'POST' },
+        {
+          method: 'POST',
+          headers: { 'Idempotency-Key': idempotencyKey },
+          body: JSON.stringify({
+            expected_repository: review.repository,
+            expected_head_sha: review.head_sha,
+            expected_proposal_revision: review.proposal_revision,
+          }),
+        },
       )
+      const result = response.data
       const message = result.dispatch === 'accepted'
-        ? 'Repair request accepted. CI, security, deployment verification and GitHub native auto-merge remain in force.'
-        : `Decision recorded; dispatch status: ${String(result.dispatch || 'unknown')}. Check the review evidence before retrying.`
+        ? [
+            `Repair handoff accepted by HIVE for ${String(review.repository || 'the reviewed repository')}`,
+            `at ${String(review.head_sha || 'unknown SHA')}.`,
+            `Request ID: ${response.requestId || 'not returned'}.`,
+            'Verify the correlated run and post-change health before treating recovery as complete.',
+          ].join(' ')
+        : [
+            `Decision recorded, but repair handoff is not confirmed (status: ${String(result.dispatch || 'unknown')}).`,
+            'Do not retry until the current review and handoff state have been checked.',
+          ].join(' ')
       setReviewActionMessage(message)
       await loadOps()
     } catch (caught) {
-      setReviewActionMessage(caught instanceof Error ? caught.message : 'Accept Fix could not be recorded.')
+      if (caught instanceof ApiError) {
+        setReviewActionMessage(safeRepairHandoffFailure(caught.status, caught.requestId))
+      } else {
+        setReviewActionMessage('Repair handoff was not confirmed. Check HIVE’s current review and handoff state before retrying.')
+      }
+    } finally {
+      releaseActionLock(reviewActionLocks.current, reviewId)
     }
-  }, [loadOps])
+  }, [actionableUpdatedAt, lifecycleReviews, loadOps])
 
   const deleteOpsEvents = useCallback(async () => {
     if (!opsEventDeleteTarget) return
@@ -348,507 +456,7 @@ export function OpsPage() {
           ...current,
           items: opsEventDeleteTarget.clearAll
             ? []
-            : currentItems.filter((item) => item.event_id !== deletedId),
-          count: opsEventDeleteTarget.clearAll
-            ? 0
-            : Math.max(0, (current.count ?? currentItems.length) - 1),
-        }
-      })
-      setOpsEventActionMessage(opsEventDeleteTarget.clearAll ? 'All operational alerts deleted.' : 'Operational alert deleted.')
-      setOpsEventDeleteTarget(null)
-    } catch (caught) {
-      setOpsEventDeleteError(caught instanceof Error ? caught.message : 'Operational alert could not be deleted.')
-    } finally {
-      setOpsEventDeleteBusy(false)
-    }
-  }, [opsEventDeleteTarget])
-
-  const previewDatabaseReset = useCallback(async () => {
-    if (!selectedResetTarget) return
-    setPurgeError(null)
-    setPurgeResult(null)
-    setPurgePreview(null)
-    try {
-      const result = await apiFetch<DatabaseResetPreview>('/v1/db/purge-reset/preview', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ target: selectedResetTarget }),
-      })
-      setPurgePreview(result)
-      if (!result.ok) setPurgeError('A complete row-count preview is unavailable. No reset can be started.')
-    } catch (caught) {
-      setPurgeError(caught instanceof Error ? caught.message : 'Reset preview could not be loaded.')
-    }
-  }, [selectedResetTarget])
-
-  const purgeResetDatabases = useCallback(async () => {
-    const target = resetTargets.find((item) => item.id === selectedResetTarget)
-    if (!target || purgeConfirmation !== target.required_confirmation || purgePreview?.target !== target.id) return
-    setPurgingDatabases(true)
-    setPurgeError(null)
-    setPurgeResult(null)
-    try {
-      const result = await apiFetch<DatabasePurgeResetResponse>('/v1/db/purge-reset', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ target: target.id, confirmation: purgeConfirmation }),
-      })
-      setPurgeResult(result)
-      if (!result.ok) {
-        setPurgeError('The selected reset did not complete. Inspect the returned result before retrying.')
-        return
-      }
-      setPurgeDialogOpen(false)
-      setPurgeConfirmation('')
-      setPurgePreview(null)
-      await loadOps()
-    } catch (caught) {
-      setPurgeError(caught instanceof Error ? caught.message : 'Database reset failed.')
-    } finally {
-      setPurgingDatabases(false)
-    }
-  }, [loadOps, purgeConfirmation, purgePreview, resetTargets, selectedResetTarget])
-
-  useEffect(() => {
-    let active = true
-    void apiFetch<{ ok: boolean; targets: DatabaseResetTarget[] }>('/v1/db/purge-reset/targets')
-      .then((result) => {
-        if (!active) return
-        setResetTargets(result.targets)
-        setSelectedResetTarget(result.targets.find((target) => target.enabled)?.id ?? '')
-      })
-      .catch((caught) => {
-        if (active) setPurgeError(caught instanceof Error ? caught.message : 'Reset targets could not be loaded.')
-      })
-    return () => { active = false }
-  }, [])
-
-    useEffect(() => {
-    void loadOps()
-  }, [loadOps])
-
-  const templateEntries = useMemo(() => Object.entries(templates), [templates])
-  const activeResetTarget = resetTargets.find((target) => target.id === selectedResetTarget)
-  const adapterPolicy = useMemo(() => recordValue(health?.execution_adapter_policy), [health])
-  const executionAdaptersEnabled = Boolean(health?.execution_adapters_enabled ?? adapterPolicy.enabled)
-  const executionAdapterDetail = stringFrom(adapterPolicy.note) ?? (executionAdaptersEnabled
-    ? 'Execution adapters are available for approved, allow-listed production handoffs'
-    : 'Execution adapters are disabled by backend configuration')
-
-
-  const storageFlags = recordFrom(health?.storage_flags)
-  const r2Flags = recordFrom(storageFlags.r2)
-  const sqlFlags = recordFrom(storageFlags.sql)
-  const vectorizeFlags = recordFrom(storageFlags.vectorize)
-  const embeddingsFlags = recordFrom(storageFlags.embeddings)
-  const d1Flags = recordFrom(storageFlags.d1)
-
-  const openrouterStatus: FlagStatus = health && hasOwn(health, 'openrouter_configured')
-    ? configuredStatus(health.openrouter_configured)
-    : 'unknown'
-  const sqlStatus: FlagStatus = health && hasOwn(health, 'database_configured')
-    ? configuredStatus(health.database_configured, sqlFlags.enabled)
-    : 'unknown'
-  const r2Status: FlagStatus = health && hasOwn(health, 'r2_configured')
-    ? configuredStatus(health.r2_configured, r2Flags.enabled)
-    : 'unknown'
-  const vectorizeStatus: FlagStatus = health && hasOwn(health, 'vectorize_configured')
-    ? configuredStatus(health.vectorize_configured, health.vectorize_enabled ?? vectorizeFlags.enabled)
-    : 'unknown'
-  const embeddingsStatus: FlagStatus = health && hasOwn(health, 'embeddings_configured')
-    ? configuredStatus(health.embeddings_configured, health.embeddings_enabled ?? embeddingsFlags.enabled)
-    : 'unknown'
-  const d1Status: FlagStatus = health && hasOwn(health, 'd1_configured')
-    ? configuredStatus(health.d1_configured, health.d1_enabled ?? d1Flags.enabled)
-    : 'unknown'
-  const executionStatus: FlagStatus = health ? (executionAdaptersEnabled ? 'ready' : 'disabled') : 'unknown'
-  const laneCount = typeof r2Flags.ecosystem_lane_count === 'number' ? r2Flags.ecosystem_lane_count : null
-
-  const flags: FlagProps[] = [
-    {
-      label: 'OpenRouter',
-      status: openrouterStatus,
-      detail: configuredText(openrouterStatus, 'Model gateway and routing policy', 'OpenRouter token is missing or not visible to HIVE'),
-      icon: Network,
-    },
-    {
-      label: 'SQL persistence',
-      status: sqlStatus,
-      detail: configuredText(sqlStatus, health?.database_dialect ? `${health.database_dialect} conversation store` : 'Conversation store configured', 'Conversation database is not configured'),
-      icon: Database,
-    },
-    {
-      label: 'R2 storage',
-      status: r2Status,
-      detail: configuredText(r2Status, laneCount ? `${laneCount} R2 ecosystem lanes registered` : 'Uploads and ecosystem artefacts', 'Primary R2 upload storage is not configured'),
-      icon: HardDrive,
-    },
-    {
-      label: 'Vector retrieval',
-      status: vectorizeStatus,
-      detail: configuredText(vectorizeStatus, 'Semantic file and chunk retrieval', 'Vectorize is enabled but missing account, token, or index', 'Vectorize is disabled'),
-      icon: GitBranch,
-    },
-    {
-      label: 'Embeddings',
-      status: embeddingsStatus,
-      detail: configuredText(embeddingsStatus, 'Vector generation provider', 'Embeddings are enabled but missing account, token, or model', 'Embeddings are disabled'),
-      icon: Activity,
-    },
-    {
-      label: 'D1 metadata',
-      status: d1Status,
-      detail: configuredText(d1Status, 'Previews and execution-review indexes', 'D1 is enabled but missing account, token, or database ID', 'D1 metadata is disabled'),
-      icon: ShieldCheck,
-    },
-    { label: 'Execution adapters', status: executionStatus, detail: executionAdapterDetail, icon: PlayCircle },
-  ]
-
-  function inspect(title: string, value: unknown, description = 'Read-only operational data from the HIVE backend.') {
-    setPayload({ eyebrow: 'Operations', title, description, json: value })
-    setOpen(true)
-  }
-
-  function inspectNode(node: WorkflowNode) {
-    setPayload({
-      eyebrow: 'Workflow node',
-      title: node.label || node.id,
-      description: node.summary,
-      rows: [
-        { label: 'Node ID', value: node.id },
-        { label: 'Type', value: String(node.type || 'unknown') },
-        { label: 'Status', value: String(node.status || 'unknown') },
-      ],
-      json: node,
-    })
-    setOpen(true)
-  }
-
-  async function buildGraph(event?: FormEvent) {
-    event?.preventDefault()
-    if (!task.trim()) return
-    setBuildingGraph(true)
-    setError(null)
-    try {
-      const response = await apiFetch<WorkflowGraphResponse>('/v1/workflow-graphs/build', {
-        method: 'POST',
-        body: JSON.stringify({
-          task: task.trim(),
-          repo: repo || null,
-          workflow_preset: workflowPreset || null,
-          template: template || null,
-          limit: 8,
-        }),
-      })
-      if (!response.ok) throw new Error(response.message || response.error_code || 'Workflow graph could not be built.')
-      setGraph(response)
-      setPreview(null)
-    } catch (caught) {
-      setError(caught instanceof Error ? caught.message : 'Workflow graph could not be built.')
-    } finally {
-      setBuildingGraph(false)
-    }
-  }
-
-  async function buildPreview() {
-    if (!task.trim()) return
-    setBuildingPreview(true)
-    setError(null)
-    try {
-      const response = await apiFetch<ExecutionPreviewResponse>('/v1/execution-preview', {
-        method: 'POST',
-        body: JSON.stringify({
-          task: task.trim(),
-          repo: repo || null,
-          workflow_preset: workflowPreset || null,
-          template: template || null,
-          approval_state: approvalState,
-          limit: 8,
-        }),
-      })
-      if (!response.ok) throw new Error(response.message || response.error_code || 'Execution preview could not be created.')
-      setPreview(response)
-      if (response.workflow_graph) setGraph(response.workflow_graph)
-    } catch (caught) {
-      setError(caught instanceof Error ? caught.message : 'Execution preview could not be created.')
-    } finally {
-      setBuildingPreview(false)
-    }
-  }
-
-  const tabs: Array<{ id: OpsTab; label: string }> = [
-    { id: 'overview', label: 'Overview' },
-    { id: 'workflow', label: 'Workflow lab' },
-  ]
-
-  return (
-    <div className="h-full overflow-y-auto p-4 sm:p-6 lg:p-8">
-      <div className="mx-auto max-w-7xl">
-        <section className="flex items-center justify-between gap-3 rounded-2xl border border-white/8 bg-hive-panel/65 px-4 py-3">
-          <div className="min-w-0">
-            <div className="flex items-center gap-2">
-              <p className="text-sm font-semibold text-white">System operations</p>
-              <StatusBadge status={health?.ok ? 'healthy' : loading ? 'checking' : 'down'} variant="operational" compact />
-            </div>
-            <p className="mt-0.5 truncate text-[11px] text-slate-500">{health?.build ?? (loading ? 'checking…' : 'unavailable')} · {health?.env ?? 'environment unavailable'}</p>
-          </div>
-          <button
-            type="button"
-            onClick={() => void loadOps()}
-            aria-label="Refresh operational status"
-            title="Refresh status"
-            className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border border-white/8 bg-white/[0.04] text-slate-300 hover:bg-white/[0.07]"
-          >
-            <RefreshCw className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`} />
-          </button>
-        </section>
-
-        <div className="mt-3 grid grid-cols-2 gap-1 rounded-xl border border-white/8 bg-hive-surface p-1">
-          {tabs.map((item) => (
-            <button
-              key={item.id}
-              type="button"
-              onClick={() => setTab(item.id)}
-              className={[
-                'rounded-lg px-3 py-2 text-xs font-medium transition',
-                tab === item.id ? 'bg-cyan-300/10 text-cyan-100' : 'text-slate-400 hover:bg-white/[0.04] hover:text-slate-300',
-              ].join(' ')}
-            >
-              {item.label}
-            </button>
-          ))}
-        </div>
-
-        {tab === 'overview' && <AudioNotificationSettings />}
-
-        {error && <div role="alert" className="mt-4 rounded-xl border border-rose-400/20 bg-rose-400/8 px-4 py-3 text-sm text-rose-200">{error}</div>}
-
-        {loading && !health ? (
-          <div className="flex items-center justify-center py-20 text-slate-400"><LoaderCircle className="mr-2 h-5 w-5 animate-spin" /> Loading operational state</div>
-        ) : tab === 'overview' ? (
-          <>
-            {opsEvents?.items?.length ? (
-              <details className="group mt-3 rounded-2xl border border-amber-300/15 bg-hive-panel/60">
-                <summary className="flex cursor-pointer list-none items-center justify-between gap-3 px-4 py-3">
-                  <span className="flex items-center gap-2 text-sm font-semibold text-white"><BellRing className="h-4 w-4 text-amber-300" /> Operational alerts</span>
-                  <StatusBadge status={opsEvents.items.some((item) => item.severity === 'critical') ? 'critical' : 'warning'} label={`${opsEvents.count ?? 0} events`} compact />
-                </summary>
-                <div className="border-t border-white/6 p-3">
-                  <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
-                    <p className="text-xs text-slate-400">Showing up to 6 recent alerts. You can remove one alert or clear the inbox.</p>
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setOpsEventDeleteError(null)
-                        setOpsEventDeleteTarget({ clearAll: true })
-                      }}
-                      className="rounded-lg border border-rose-300/15 px-3 py-2 text-xs font-medium text-rose-200 hover:bg-rose-300/10"
-                    >
-                      Delete all alerts
-                    </button>
-                  </div>
-                  {opsEventActionMessage && <p role="status" className="mb-2 text-xs text-emerald-200">{opsEventActionMessage}</p>}
-                  <div className="grid gap-2 lg:grid-cols-2">
-                  {opsEvents.items.slice(0, 6).map((item) => (
-                    <OpsEventCard
-                      key={item.event_id}
-                      item={item}
-                      onInspect={() => {
-                        acknowledgeHIVENotification(item.event_id)
-                        inspect(item.title || 'Operational event', item, item.summary)
-                      }}
-                      onDelete={() => {
-                        setOpsEventDeleteError(null)
-                        setOpsEventDeleteTarget({ eventId: item.event_id, title: item.title || item.event_type || 'Operational event' })
-                      }}
-                    />
-                  ))}
-                  </div>
-                </div>
-              </details>
-            ) : (
-              <div className="mt-3 flex items-center justify-between rounded-xl border border-white/8 bg-hive-panel/45 px-4 py-3">
-                <span className="flex items-center gap-2 text-xs text-slate-400"><BellRing className="h-4 w-4 text-emerald-300" /> Operational alerts</span>
-                <span className="text-xs font-medium text-emerald-200">None</span>
-              </div>
-            )}
-
-            <section className="mt-3 rounded-2xl border border-white/8 bg-hive-panel/60 p-4" aria-labelledby="lifecycle-review-title">
-              <div className="flex items-center justify-between gap-3">
-                <div>
-                  <h2 id="lifecycle-review-title" className="text-sm font-semibold text-white">
-                    Needs My Review
-                  </h2>
-                  <p className="mt-1 text-xs text-slate-400">
-                    Only terminal states requiring a human decision appear here.
-                  </p>
-                </div>
-                <StatusBadge
-                  status={lifecycleReviews.length ? 'warning' : 'ready'}
-                  label={`${lifecycleReviews.length} open`}
-                  compact
-                />
-              </div>
-              {lifecycleReviews.length ? (
-                <div className="mt-3 grid gap-2">
-                  {lifecycleReviews.map((review) => {
-                    const evidence = recordFrom(review.evidence)
-                    const proposal = recordFrom(review.proposal)
-                    const reviewId = String(review.review_id)
-                    return (
-                      <article
-                        key={reviewId}
-                        className="rounded-xl border border-amber-300/15 bg-hive-surface p-3"
-                      >
-                        <div className="flex flex-wrap items-center justify-between gap-2">
-                          <div>
-                            <h3 className="text-xs font-semibold text-white">
-                              {String(review.title || 'Review required')}
-                            </h3>
-                            <p className="mt-1 text-xs text-slate-400">
-                              {String(review.source)} · PR #{String(review.pr_number || 'unknown')} ·{' '}
-                              {String(review.head_sha || '')}
-                            </p>
-                            <p className="mt-1 text-xs text-slate-300">
-                              {String(review.summary || '')}
-                            </p>
-                          </div>
-                          {typeof review.action_url === 'string' && (
-                            <a
-                              href={review.action_url}
-                              target="_blank"
-                              rel="noreferrer"
-                              className="text-xs text-cyan-200 underline"
-                            >
-                              Open PR
-                            </a>
-                          )}
-                        </div>
-                        <details className="mt-3 rounded-lg border border-white/8 px-3 py-2">
-                          <summary
-                            onClick={() => acknowledgeHIVENotification(reviewId)}
-                            className="cursor-pointer text-xs text-cyan-200"
-                          >
-                            Review details
-                          </summary>
-                          <div className="mt-2 grid gap-2 text-xs text-slate-300">
-                            <p>Failed check: {String(evidence.failed_check || 'Not identified')}</p>
-                            <p>
-                              Repair attempts: {String(evidence.repair_attempts ?? 0)} · Human hold:{' '}
-                              {String(evidence.human_hold ?? 'unknown')}
-                            </p>
-                            <p>
-                              Proposed solution:{' '}
-                              {String(proposal.proposed_solution || 'No safe solution recorded; Accept Fix is disabled.')}
-                            </p>
-                            <p>
-                              Repair prompt: {String(proposal.repair_prompt || 'No repair prompt recorded.')}
-                            </p>
-                            <p>Risk / impact: {String(proposal.risk_impact || 'Not recorded')}</p>
-                          </div>
-                        </details>
-                        <div className="mt-3 flex flex-wrap items-center gap-2">
-                          <button
-                            type="button"
-                            disabled={!review.accept_fix_enabled || review.decision_recorded === true}
-                            onClick={() => {
-                              acknowledgeHIVENotification(reviewId)
-                              void acceptLifecycleFix(reviewId)
-                            }}
-                            className="rounded-lg border border-cyan-200/20 px-3 py-2 text-xs text-cyan-100 disabled:cursor-not-allowed disabled:opacity-40"
-                          >
-                            {review.decision_recorded === true ? 'Fix accepted' : 'Accept Fix'}
-                          </button>
-                          {review.decision_recorded === true && (
-                            <span className="text-xs text-slate-400">
-                              Dispatch: {String(review.dispatch_status || 'pending')}
-                            </span>
-                          )}
-                        </div>
-                      </article>
-                    )
-                  })}
-                </div>
-              ) : (
-                <p className="mt-3 text-xs text-slate-400">
-                  No unresolved human decision is recorded.
-                </p>
-              )}
-              {reviewActionMessage && <p role="status" className="mt-2 text-xs text-slate-300">{reviewActionMessage}</p>}
-            </section>
-
-            <section className="mt-3 rounded-2xl border border-white/8 bg-hive-panel/60 p-4" aria-labelledby="weekly-lifecycle-report-title">
-              <div className="flex flex-wrap items-center justify-between gap-3">
-                <div>
-                  <h2 id="weekly-lifecycle-report-title" className="text-sm font-semibold text-white">
-                    Weekly repository overview
-                  </h2>
-                  <p className="mt-1 text-xs text-slate-400">
-                    Deterministic report from the durable HIVE evidence store.
-                  </p>
-                </div>
-                {lifecycleReport?.available === true ? (
-                  <StatusBadge
-                    status={String((lifecycleReport.report as Record<string, unknown>)?.overall_status || 'unknown')}
-                    compact
-                  />
-                ) : (
-                  <StatusBadge status="unknown" label="Not available" compact />
-                )}
-              </div>
-              {lifecycleReport?.available === true ? (
-                <p className="mt-2 text-xs text-slate-300">
-                  Report {String((lifecycleReport.report as Record<string, unknown>)?.report_id || '')} ·
-                  {' '}R2 key {String(lifecycleReport.r2_key || '')}
-                </p>
-              ) : (
-                <p className="mt-2 text-xs text-slate-400">
-                  No persisted report is available for this ISO week yet. Missing evidence remains unknown.
-                </p>
-              )}
-              {lifecycleReport?.available === true &&
-                Array.isArray((lifecycleReport.report as Record<string, unknown>)?.repositories) && (
-                  <ul className="mt-3 grid gap-1 sm:grid-cols-2">
-                    {(
-                      (lifecycleReport.report as Record<string, unknown>)
-                        .repositories as Array<Record<string, unknown>>
-                    ).map((item) => (
-                      <li
-                        key={String(item.repository)}
-                        className="flex justify-between rounded-lg border border-white/6 px-3 py-2 text-xs"
-                      >
-                        <span className="text-slate-300">{String(item.repository)}</span>
-                        <span className="text-slate-400">
-                          {String(item.status)} · {String(item.evidence_count ?? 0)} evidence
-                        </span>
-                      </li>
-                    ))}
-                  </ul>
-                )}
-              {reportHistory.length > 0 && (
-                <details className="mt-3 rounded-lg border border-white/8 px-3 py-2">
-                  <summary className="cursor-pointer text-xs text-cyan-200">
-                    Report history ({reportHistory.length})
-                  </summary>
-                  <ul className="mt-2 grid gap-2">
-                    {reportHistory.map((item) => (
-                      <li
-                        key={String(item.report_id)}
-                        className="flex items-center justify-between gap-3 text-xs text-slate-300"
-                      >
-                        <span>
-                          {String(item.report_id)} · {String(item.overall_status)} ·{' '}
-                          {item.evidence_complete === true ? 'complete' : 'incomplete'}
-                        </span>
-                        <span className="text-slate-500">{String(item.r2_key || '')}</span>
-                      </li>
-                    ))}
-                  </ul>
-                </details>
-              )}
-            </section>
-
-            <details className="group mt-3 rounded-2xl border border-white/8 bg-hive-panel/60">
+            : currentItems.filter((item) => item.event_id !== deletedI…6281 tokens truncated…-white/8 bg-hive-panel/60">
               <summary className="flex cursor-pointer list-none items-center justify-between gap-3 px-4 py-3">
                 <span className="text-sm font-semibold text-white">Integration readiness</span>
                 <span className="text-xs text-slate-400">{flags.filter((flag) => flag.status === 'ready').length}/{flags.length} ready</span>

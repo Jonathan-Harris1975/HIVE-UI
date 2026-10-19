@@ -136,7 +136,12 @@ export function logoutUi(): Promise<UiSessionResponse> {
   return authFetch<UiSessionResponse>('/auth/logout', { method: 'POST' })
 }
 
-export async function apiFetch<T>(path: string, init: RequestInit = {}): Promise<T> {
+export interface ApiResponseWithMetadata<T> {
+  data: T
+  requestId: string | null
+}
+
+export async function apiFetchWithMetadata<T>(path: string, init: RequestInit = {}): Promise<ApiResponseWithMetadata<T>> {
   const headers = requestHeaders(init.headers)
   if (init.body && !(init.body instanceof FormData) && !headers.has('content-type')) {
     headers.set('content-type', 'application/json')
@@ -157,7 +162,11 @@ export async function apiFetch<T>(path: string, init: RequestInit = {}): Promise
       responseCode(payload),
     )
   }
-  return payload as T
+  return { data: payload as T, requestId: response.headers.get('x-request-id') }
+}
+
+export async function apiFetch<T>(path: string, init: RequestInit = {}): Promise<T> {
+  return (await apiFetchWithMetadata<T>(path, init)).data
 }
 
 interface StreamHandlers {
