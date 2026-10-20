@@ -169,6 +169,15 @@ function stringFrom(value: unknown): string | null {
   return typeof value === 'string' && value.trim() ? value : null
 }
 
+function weeklyReportHtmlHref(value: unknown): string | null {
+  const report = recordFrom(value)
+  const period = recordFrom(report.period)
+  const year = Number(period.iso_year)
+  const week = Number(period.iso_week)
+  if (!Number.isInteger(year) || !Number.isInteger(week)) return null
+  return `/api/v1/system/lifecycle-reports/html?year=${year}&week=${week}`
+}
+
 const OPEN_REVIEW_STATUSES = new Set(['pending_review', 'needs_changes'])
 
 function normaliseReviewStatus(status: unknown): string {
@@ -685,6 +694,7 @@ export function OpsPage() {
     { id: 'overview', label: 'Overview' },
     { id: 'workflow', label: 'Workflow lab' },
   ]
+  const currentReportHtmlHref = weeklyReportHtmlHref(lifecycleReport?.report)
 
   return (
     <div className="h-full overflow-y-auto p-4 sm:p-6 lg:p-8">
@@ -913,14 +923,16 @@ export function OpsPage() {
                       status={String((lifecycleReport.report as Record<string, unknown>)?.overall_status || 'unknown')}
                       compact
                     />
-                    <a
-                      href={`/api/v1/system/lifecycle-reports/html?year=${encodeURIComponent(String(((lifecycleReport.report as Record<string, unknown>)?.period as Record<string, unknown>)?.iso_year || ''))}&week=${encodeURIComponent(String(((lifecycleReport.report as Record<string, unknown>)?.period as Record<string, unknown>)?.iso_week || ''))}`}
-                      target="_blank"
-                      rel="noreferrer"
-                      className="rounded-lg border border-cyan-300/20 px-3 py-2 text-xs font-medium text-cyan-200 hover:bg-cyan-300/10"
-                    >
-                      View HTML report
-                    </a>
+                    {currentReportHtmlHref && (
+                      <a
+                        href={currentReportHtmlHref}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="rounded-lg border border-cyan-300/20 px-3 py-2 text-xs font-medium text-cyan-200 hover:bg-cyan-300/10"
+                      >
+                        View HTML report
+                      </a>
+                    )}
                   </div>
                 ) : (
                   <StatusBadge status="unknown" label="Not available" compact />
