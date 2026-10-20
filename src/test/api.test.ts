@@ -115,6 +115,7 @@ describe('API helpers', () => {
     await expect(apiFetchWithMetadata<{ dispatch: string }>('/v1/example/action', { method: 'POST' })).resolves.toEqual({
       data: { dispatch: 'accepted' },
       requestId: 'request-correlated-42',
+      contentType: 'application/json',
     })
   })
 
