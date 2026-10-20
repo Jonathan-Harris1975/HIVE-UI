@@ -139,6 +139,7 @@ export function logoutUi(): Promise<UiSessionResponse> {
 export interface ApiResponseWithMetadata<T> {
   data: T
   requestId: string | null
+  contentType: string | null
 }
 
 export async function apiFetchWithMetadata<T>(path: string, init: RequestInit = {}): Promise<ApiResponseWithMetadata<T>> {
@@ -162,7 +163,11 @@ export async function apiFetchWithMetadata<T>(path: string, init: RequestInit = 
       responseCode(payload),
     )
   }
-  return { data: payload as T, requestId: response.headers.get('x-request-id') }
+  return {
+    data: payload as T,
+    requestId: response.headers.get('x-request-id'),
+    contentType: response.headers.get('content-type'),
+  }
 }
 
 export async function apiFetch<T>(path: string, init: RequestInit = {}): Promise<T> {
