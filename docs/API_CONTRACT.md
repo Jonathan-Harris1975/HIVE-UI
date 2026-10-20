@@ -174,6 +174,17 @@ The response includes model groups, modalities, configured roles, free-model sta
 ## Operations
 
 ```text
+GET /v1/system/lifecycle-reports/current
+GET /v1/system/lifecycle-reports/html?year=YYYY&week=WW
+```
+
+The current report endpoint returns an availability flag and, when available, the
+weekly report object. Its period contains numeric `iso_year` and `iso_week`
+fields. The HTML route returns the matching self-contained report with
+`Content-Type: text/html; charset=utf-8`; it uses the same authenticated
+same-origin gateway session as other `/v1/*` requests.
+
+```text
 GET  /health
 GET  /v1/system/repo-hygiene
 GET  /v1/workflow-graphs/templates
