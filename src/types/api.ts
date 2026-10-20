@@ -258,6 +258,40 @@ export interface WorkflowPreset {
   [key: string]: unknown
 }
 
+export interface WeeklyLifecycleReport {
+  report_id: string
+  generated_at: string
+  scope: string
+  overall_status: string
+  evidence_complete: boolean
+  period: {
+    iso_year: number
+    iso_week: number
+    start_date?: string
+    end_date?: string
+  }
+  repositories: Array<{
+    repository: string
+    status: string
+    evidence_count: number
+    current_sha?: string | null
+    missing_evidence?: boolean
+    evidence_issue?: string | null
+    [key: string]: unknown
+  }>
+  metrics: Record<string, number | string | boolean | null>
+  council_evidence?: Array<Record<string, unknown>>
+  [key: string]: unknown
+}
+
+export interface WeeklyLifecycleReportCurrentResponse {
+  ok: boolean
+  available: boolean
+  report: WeeklyLifecycleReport | null
+  r2_key?: string
+  reason?: string
+}
+
 export interface HealthResponse {
   ok: boolean
   build?: string
