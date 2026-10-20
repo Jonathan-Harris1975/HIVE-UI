@@ -12,7 +12,7 @@ import {
   GitBranch,
   Trash2,
 } from 'lucide-react'
-import { useCallback, useEffect, useMemo, useRef, useState, type FormEvent } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState, type FormEvent, type MouseEvent } from 'react'
 import { Link } from 'react-router'
 import { ConfirmDialog } from '../components/ConfirmDialog'
 import {
@@ -26,6 +26,7 @@ import { useAuth } from '../context/AuthContext'
 import { useInspector } from '../context/InspectorContext'
 import { ApiError, apiFetch, apiFetchWithMetadata } from '../lib/api'
 import { formatDate } from '../lib/format'
+import { weeklyReportHtmlHref } from '../lib/weekly-lifecycle-report'
 import { acquireActionLock, hasCurrentLifecycleApproval, isSnapshotFresh, lifecycleIdempotencyKey, releaseActionLock, safeRepairHandoffFailure } from '../lib/ops-action-policy'
 import { GOVERNED_REPOSITORIES } from '../lib/repositories'
 import type {
@@ -40,6 +41,7 @@ import type {
   WorkflowNode,
   WorkflowTemplate,
   WorkflowTemplatesResponse,
+  WeeklyLifecycleReportCurrentResponse,
 } from '../types/api'
 
 type OpsTab = 'overview' | 'workflow'
@@ -169,15 +171,6 @@ function stringFrom(value: unknown): string | null {
   return typeof value === 'string' && value.trim() ? value : null
 }
 
-function weeklyReportHtmlHref(value: unknown): string | null {
-  const report = recordFrom(value)
-  const period = recordFrom(report.period)
-  const year = Number(period.iso_year)
-  const week = Number(period.iso_week)
-  if (!Number.isInteger(year) || !Number.isInteger(week)) return null
-  return `/api/v1/system/lifecycle-reports/html?year=${year}&week=${week}`
-}
-
 const OPEN_REVIEW_STATUSES = new Set(['pending_review', 'needs_changes'])
 
 function normaliseReviewStatus(status: unknown): string {
@@ -196,7 +189,8 @@ export function OpsPage() {
   const [tab, setTab] = useState<OpsTab>('overview')
   const [health, setHealth] = useState<HealthResponse | null>(null)
   const [opsEvents, setOpsEvents] = useState<OpsEventsResponse | null>(null)
-  const [lifecycleReport, setLifecycleReport] = useState<Record<string, unknown> | null>(null)
+  const [lifecycleReport, setLifecycleReport] = useState<WeeklyLifecycleReportCurrentResponse | null>(null)
+  const [weeklyReportOpenError, setWeeklyReportOpenError] = useState<string | null>(null)
   const [reportHistory, setReportHistory] = useState<Array<Record<string, unknown>>>([])
   const [lifecycleReviews, setLifecycleReviews] = useState<Array<Record<string, unknown>>>([])
   const [reviewActionMessage, setReviewActionMessage] = useState('')
@@ -330,7 +324,7 @@ export function OpsPage() {
           }),
         ),
         apiFetch<RuntimeStatsResponse>('/v1/system/runtime-stats').catch(() => null),
-        apiFetch<Record<string, unknown>>('/v1/system/lifecycle-reports/current').catch(() => null),
+        apiFetch<WeeklyLifecycleReportCurrentResponse>('/v1/system/lifecycle-reports/current').catch(() => null),
         apiFetch<{ items?: Array<Record<string, unknown>> }>('/v1/system/lifecycle-reviews').catch(() => null),
         apiFetch<{ items?: Array<Record<string, unknown>> }>('/v1/system/lifecycle-reports/history?limit=12').catch(() => ({ items: [] })),
       ])
@@ -695,6 +689,32 @@ export function OpsPage() {
     { id: 'workflow', label: 'Workflow lab' },
   ]
   const currentReportHtmlHref = weeklyReportHtmlHref(lifecycleReport?.report)
+  const openWeeklyReport = useCallback(async (event: MouseEvent<HTMLAnchorElement>) => {
+    event.preventDefault()
+    setWeeklyReportOpenError(null)
+    if (!currentReportHtmlHref) return
+
+    const reportWindow = window.open('about:blank', '_blank')
+    if (!reportWindow) {
+      setWeeklyReportOpenError('Allow pop-ups to open the weekly report.')
+      return
+    }
+    reportWindow.opener = null
+    reportWindow.document.title = 'Loading weekly report'
+    reportWindow.document.body.textContent = 'Loading weekly report…'
+
+    try {
+      const response = await apiFetchWithMetadata<string>(currentReportHtmlHref)
+      const mediaType = response.contentType?.split(';', 1)[0].trim().toLowerCase()
+      if (mediaType !== 'text/html' || typeof response.data !== 'string' || !response.data.trimStart().startsWith('<!doctype html>')) {
+        throw new Error('HIVE returned an invalid weekly report document.')
+      }
+      reportWindow.location.replace(`/api${currentReportHtmlHref}`)
+    } catch {
+      reportWindow.close()
+      setWeeklyReportOpenError('The weekly HTML report could not be loaded. Refresh Operations and try again.')
+    }
+  }, [currentReportHtmlHref])
 
   return (
     <div className="h-full overflow-y-auto p-4 sm:p-6 lg:p-8">
@@ -925,13 +945,17 @@ export function OpsPage() {
                     />
                     {currentReportHtmlHref && (
                       <a
-                        href={currentReportHtmlHref}
+                        href={currentReportHtmlHref ? `/api${currentReportHtmlHref}` : undefined}
+                        onClick={openWeeklyReport}
                         target="_blank"
                         rel="noreferrer"
                         className="rounded-lg border border-cyan-300/20 px-3 py-2 text-xs font-medium text-cyan-200 hover:bg-cyan-300/10"
                       >
                         View HTML report
                       </a>
+                    )}
+                    {weeklyReportOpenError && (
+                      <p role="alert" className="text-xs text-rose-200">{weeklyReportOpenError}</p>
                     )}
                   </div>
                 ) : (
