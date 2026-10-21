@@ -297,9 +297,12 @@ def machine_contract() -> str:
     return text
 
 
+DEBUG_ROUTE_KINDS = {"check"}
+
+
 def trigger_secret_for(kind: str) -> str:
     """Route failed commit checks to Debug while preserving Code for other requests."""
-    return "KILO_DEBUG_TRIGGER_URL" if kind == "check" else "KILO_REPAIR_TRIGGER_URL"
+    return "KILO_DEBUG_TRIGGER_URL" if kind in DEBUG_ROUTE_KINDS else "KILO_REPAIR_TRIGGER_URL"
 
 
 def dispatch(pr: dict, kind: str, findings: list[str]) -> str:
@@ -423,6 +426,9 @@ def dispatch(pr: dict, kind: str, findings: list[str]) -> str:
 def safe_route_error(exc: Exception) -> str:
     """Return actionable routing diagnostics without exposing the private webhook URL."""
     message = str(exc)
+    match = re.fullmatch(r"Configure ([A-Z_]+) with", message)
+    if match is not None:
+        return f"Kilo webhook configuration is missing, unsupported or invalid ({match.group(1)})"
     if message.startswith(("Configure KILO_REPAIR_TRIGGER_URL with", "Configure KILO_DEBUG_TRIGGER_URL with")):
         return "Kilo webhook configuration is missing, unsupported or invalid"
     match = re.fullmatch(r"Kilo trigger returned HTTP ([0-9]{3})", message)

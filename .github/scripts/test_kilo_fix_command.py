@@ -1,4 +1,4 @@
-"""Tests for explicit, authorised @kilocode-bot fix it routing."""
+"""Tests for explicit, authorised @kilocode-bot fix it routing and Kilo trigger selection."""
 import os
 import sys
 import unittest
@@ -118,7 +118,7 @@ class ExplicitKiloFixCommandTests(unittest.TestCase):
 class TriggerSecretRoutingTests(unittest.TestCase):
     def test_only_failed_check_repairs_use_debug_trigger(self):
         self.assertEqual(router.trigger_secret_for("check"), "KILO_DEBUG_TRIGGER_URL")
-        for kind in ("review", "fix-command", "merge-conflict-base", "review-threads-base"):
+        for kind in ("review", "fix-command", "merge-conflict-base", "branch-behind-base", "review-threads-base"):
             with self.subTest(kind=kind):
                 self.assertEqual(router.trigger_secret_for(kind), "KILO_REPAIR_TRIGGER_URL")
 
