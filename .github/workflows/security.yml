@@ -38,6 +38,10 @@ jobs:
       id: blocker_recovery_tests
       continue-on-error: true
       run: python3 .github/scripts/test_pr_blocker_recovery.py
+    - name: Verify Kilo fix command routing regressions
+      id: kilo_fix_command_tests
+      continue-on-error: true
+      run: python3 .github/scripts/test_kilo_fix_command.py
     - name: Prepare isolated diagnostic paths
       run: mkdir -p "$RUNNER_TEMP/security-raw" "$RUNNER_TEMP/security-diagnostics"
     - name: Test diagnostic redaction and failure handling
