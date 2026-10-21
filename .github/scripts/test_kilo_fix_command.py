@@ -10,6 +10,7 @@ os.environ.setdefault("GH_TOKEN", "test-token")
 os.environ.setdefault("GITHUB_EVENT_NAME", "issue_comment")
 os.environ.setdefault("DEFAULT_BRANCH", "main")
 sys.path.insert(0, str(Path(__file__).parent))
+import kilo_webhook_url as webhook
 import pr_repair_router as router
 
 
@@ -113,14 +114,37 @@ class ExplicitKiloFixCommandTests(unittest.TestCase):
         self.assertIn("src/example.py", result[2][0])
 
 
-
-
 class TriggerSecretRoutingTests(unittest.TestCase):
+    """Failed commit checks use the Debug trigger; every other kind uses the Code trigger."""
+
     def test_only_failed_check_repairs_use_debug_trigger(self):
         self.assertEqual(router.trigger_secret_for("check"), "KILO_DEBUG_TRIGGER_URL")
         for kind in ("review", "fix-command", "merge-conflict-base", "branch-behind-base", "review-threads-base"):
             with self.subTest(kind=kind):
                 self.assertEqual(router.trigger_secret_for(kind), "KILO_REPAIR_TRIGGER_URL")
+
+    def test_validator_reads_the_secret_in_use_for_the_trigger_kind(self):
+        with patch.dict(os.environ, {
+            "KILO_DEBUG_TRIGGER_URL": "https://hooks.kilosessions.ai/debug",
+            "KILO_REPAIR_TRIGGER_URL": "https://hooks.kilosessions.ai/repair",
+        }, clear=False):
+            self.assertEqual(webhook.configured_trigger_url("check"), "https://hooks.kilosessions.ai/debug")
+            self.assertEqual(webhook.configured_trigger_url("repair"), "https://hooks.kilosessions.ai/repair")
+
+    def test_missing_trigger_diagnostic_names_the_secret_without_exposing_it(self):
+        error = RuntimeError(
+            "Configure KILO_DEBUG_TRIGGER_URL with "
+            "https://hooks.kilosessions.ai/debug?token=sentinel-secret"
+        )
+        message = router.safe_route_error(error)
+        self.assertIn("KILO_DEBUG_TRIGGER_URL", message)
+        self.assertNotIn("sentinel-secret", message)
+        self.assertNotIn("hooks.kilosessions.ai", message)
+
+    def test_security_workflow_runs_the_routing_regressions_on_pull_requests(self):
+        workflow = (Path(__file__).parents[1] / "workflows/security.yml").read_text()
+        self.assertIn("python3 .github/scripts/test_kilo_fix_command.py", workflow)
+
 
 if __name__ == "__main__":
     unittest.main()

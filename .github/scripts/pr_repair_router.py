@@ -14,7 +14,7 @@ import urllib.error
 import urllib.parse
 import urllib.request
 from pathlib import Path
-from kilo_webhook_url import valid_kilo_webhook_url
+from kilo_webhook_url import configured_trigger_url, trigger_secret_for, valid_kilo_webhook_url
 from kilo_failure_classifier import repairable_failed_steps
 
 REPO = os.environ["GITHUB_REPOSITORY"]
@@ -297,14 +297,6 @@ def machine_contract() -> str:
     return text
 
 
-DEBUG_ROUTE_KINDS = {"check"}
-
-
-def trigger_secret_for(kind: str) -> str:
-    """Route failed commit checks to Debug while preserving Code for other requests."""
-    return "KILO_DEBUG_TRIGGER_URL" if kind in DEBUG_ROUTE_KINDS else "KILO_REPAIR_TRIGGER_URL"
-
-
 def dispatch(pr: dict, kind: str, findings: list[str]) -> str:
     number, sha = pr["number"], pr["head"]["sha"]
     marker = f"<!-- kilo-auto-repair:{sha}:{kind} -->"
@@ -338,7 +330,7 @@ def dispatch(pr: dict, kind: str, findings: list[str]) -> str:
             print(f"PR #{number} or its base moved before dispatch; defer to the next sweep.")
             return 'changed-before-dispatch'
     trigger_secret = trigger_secret_for(kind)
-    url = os.environ.get(trigger_secret, "")
+    url = configured_trigger_url(kind)
     if not valid_kilo_webhook_url(url):
         raise RuntimeError(f"Configure {trigger_secret} with this repository's Kilo Cloud Agent webhook trigger")
 
@@ -426,11 +418,9 @@ def dispatch(pr: dict, kind: str, findings: list[str]) -> str:
 def safe_route_error(exc: Exception) -> str:
     """Return actionable routing diagnostics without exposing the private webhook URL."""
     message = str(exc)
-    match = re.fullmatch(r"Configure ([A-Z_]+) with", message)
+    match = re.match(r"Configure (KILO_[A-Z_]+) with", message)
     if match is not None:
         return f"Kilo webhook configuration is missing, unsupported or invalid ({match.group(1)})"
-    if message.startswith(("Configure KILO_REPAIR_TRIGGER_URL with", "Configure KILO_DEBUG_TRIGGER_URL with")):
-        return "Kilo webhook configuration is missing, unsupported or invalid"
     match = re.fullmatch(r"Kilo trigger returned HTTP ([0-9]{3})", message)
     if match:
         return f"Kilo trigger returned HTTP {match.group(1)}"
