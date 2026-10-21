@@ -429,7 +429,6 @@ def safe_route_error(exc: Exception) -> str:
     return f"{type(exc).__name__}; detail withheld"
 
 
-
 def fail_routing(exc: Exception) -> None:
     """Surface a failed repair handoff as a failed workflow step without leaking secrets."""
     print(

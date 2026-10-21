@@ -3,7 +3,11 @@
 
 The optional argument selects the trigger family: ``check`` for the Debug
 trigger used by failed-commit-check repairs, ``repair`` (the default) for the
-Code trigger used by every other repair request.
+Code trigger used by review repair requests.
+
+The kind-to-secret mapping is the single source of truth shared by the repair
+router and the validator, so a routed kind can never fall back to the other
+trigger family.
 """
 from __future__ import annotations
 
@@ -15,6 +19,7 @@ from urllib.parse import urlsplit
 REPAIR_TRIGGER_SECRET = "KILO_REPAIR_TRIGGER_URL"
 DEBUG_TRIGGER_SECRET = "KILO_DEBUG_TRIGGER_URL"
 DEBUG_ROUTE_KINDS = {"check"}
+DEBUG_ROUTE_PREFIXES = ("merge-conflict-", "branch-behind-")
 TRIGGER_KINDS = ("check", "repair")
 
 
@@ -37,8 +42,10 @@ def valid_kilo_webhook_url(url: str) -> bool:
 
 
 def trigger_secret_for(kind: str) -> str:
-    """Route failed commit checks to Debug while preserving Code for other requests."""
-    return DEBUG_TRIGGER_SECRET if kind in DEBUG_ROUTE_KINDS else REPAIR_TRIGGER_SECRET
+    """Route failed checks and branch-state repairs to Debug; keep review fixes on Code."""
+    if kind in DEBUG_ROUTE_KINDS or kind.startswith(DEBUG_ROUTE_PREFIXES):
+        return DEBUG_TRIGGER_SECRET
+    return REPAIR_TRIGGER_SECRET
 
 
 def configured_trigger_url(kind: str) -> str:
