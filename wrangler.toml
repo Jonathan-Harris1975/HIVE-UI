@@ -22,18 +22,19 @@ VITE_APP_NAME = "HIVE"
 
 [observability]
 enabled = true
-head_sampling_rate = 1
+head_sampling_rate = 0.1
+redact_query_string = true
 
 [observability.logs]
 enabled = true
-head_sampling_rate = 1
+head_sampling_rate = 0.1
 persist = true
 invocation_logs = true
 
 [observability.traces]
 enabled = true
 persist = true
-head_sampling_rate = 1
+head_sampling_rate = 0.1
 
 [assets]
 directory = "./dist"
