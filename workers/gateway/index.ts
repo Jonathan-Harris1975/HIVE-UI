@@ -19,6 +19,7 @@ import { isPrivilegedBrowserPath } from './proxy-policy'
 import { HIVE_UI_VERSION } from '../../shared/version'
 import { HIVE_UI_BUILD_BRANCH, HIVE_UI_BUILD_SHA } from './build-meta'
 import { backendTimeoutMs, configuredBackends, isRetryableUpstreamStatus, isTimeoutError } from './upstream'
+import { handleTextBeeKdpOtpWebhook } from './textbee-webhook'
 
 interface Env {
   ASSETS: Fetcher
@@ -27,6 +28,9 @@ interface Env {
   HIVE_API_BASE_URL: string
   HIVE_API_FALLBACK_URLS?: string
   HIVE_API_TIMEOUT_MS?: string
+  AIMS_API_BASE_URL?: string
+  AIMS_ADMIN_TOKEN?: string
+  TEXTBEE_WEBHOOK_SECRET?: string
   HIVE_ADMIN_TOKEN: string
   HIVE_UI_ACCESS_KEY?: string
   HIVE_UI_SESSION_SECRET?: string
@@ -842,6 +846,7 @@ export default {
   async fetch(request: Request, env: Env): Promise<Response> {
     const url = new URL(request.url)
     if (url.pathname === '/health') return handleHealth(request, env)
+    if (url.pathname === '/webhooks/textbee/kdp-otp') return handleTextBeeKdpOtpWebhook(request, env)
     if (url.pathname === '/api' || url.pathname.startsWith('/api/')) {
       const path = url.pathname.replace(/^\/api\/?/, '')
       return handleApi(request, env, path)

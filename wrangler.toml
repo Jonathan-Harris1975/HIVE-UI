@@ -11,6 +11,7 @@ custom_domain = true
 [vars]
 HIVE_API_BASE_URL = "https://liable-loreen-jonathanharris-57884580.koyeb.app"
 HIVE_API_TIMEOUT_MS = "10000"
+AIMS_API_BASE_URL = "https://zeroth-kara-jonathanharris-3296ed37.koyeb.app"
 HIVE_COMMS_ACTOR = "hive-owner"
 HIVE_COMMS_ROLE = "admin"
 HIVE_COMMS_URL = "https://chat.jonathan-harris.online/console/"
