@@ -129,21 +129,25 @@ export async function handleTextBeeKdpOtpWebhook(request: Request, env: TextBeeW
     return webhookResponse(401, { ok: false, code: 'invalid_webhook_signature' }, requestId)
   }
 
-  let payload: Record<string, unknown>
+  let payload: unknown
   try {
-    payload = JSON.parse(new TextDecoder().decode(rawBody)) as Record<string, unknown>
+    payload = JSON.parse(new TextDecoder().decode(rawBody))
   } catch {
     return webhookResponse(400, { ok: false, code: 'invalid_json' }, requestId)
   }
-  if (payload.webhookEvent !== 'MESSAGE_RECEIVED') {
+  if (!payload || typeof payload !== 'object' || Array.isArray(payload)) {
+    return webhookResponse(400, { ok: false, code: 'invalid_json' }, requestId)
+  }
+  const parsedPayload = payload as Record<string, unknown>
+  if (parsedPayload.webhookEvent !== 'MESSAGE_RECEIVED') {
     return webhookResponse(202, { ok: true, accepted: false, reason: 'event_ignored' }, requestId)
   }
   if (
-    typeof payload.idempotencyKey !== 'string'
-    || payload.idempotencyKey.length > 200
-    || typeof payload.message !== 'string'
-    || typeof payload.sender !== 'string'
-    || typeof payload.deviceId !== 'string'
+    typeof parsedPayload.idempotencyKey !== 'string'
+    || parsedPayload.idempotencyKey.length > 200
+    || typeof parsedPayload.message !== 'string'
+    || typeof parsedPayload.sender !== 'string'
+    || typeof parsedPayload.deviceId !== 'string'
   ) {
     return webhookResponse(400, { ok: false, code: 'invalid_message_event' }, requestId)
   }
@@ -160,7 +164,7 @@ export async function handleTextBeeKdpOtpWebhook(request: Request, env: TextBeeW
       headers: {
         authorization: `Bearer ${aimsToken}`,
         'content-type': 'application/json',
-        'x-idempotency-key': payload.idempotencyKey,
+        'x-idempotency-key': parsedPayload.idempotencyKey,
         'x-request-id': requestId,
       },
       body: toArrayBuffer(rawBody),
