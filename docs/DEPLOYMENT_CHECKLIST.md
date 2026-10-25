@@ -25,6 +25,7 @@ Add these under **Settings → Variables and Secrets** for the Production enviro
 
 ```text
 HIVE_API_BASE_URL             variable: live HIVE Koyeb HTTPS origin
+AIMS_API_BASE_URL             variable: live AIMS Koyeb HTTPS origin
 HIVE_UI_SESSION_TTL_SECONDS   variable: 43200
 HIVE_UI_IDLE_TIMEOUT_SECONDS  variable: 1800
 KOYEB_SERVICE_ID_HIVE         variable: live HIVE Koyeb service ID
@@ -37,6 +38,8 @@ HIVE_UI_ACCESS_KEY            secret: separate high-entropy UI access key
 HIVE_UI_SESSION_SECRET        required secret: independent session-signing key
 KOYEB_TOKEN                   secret: Koyeb service-control token
 HIVE_COMMS_HANDOFF_SECRET     required secret: independent HIVE handoff-signing key
+TEXTBEE_WEBHOOK_SECRET        secret: TextBee webhook signing secret (20+ characters)
+AIMS_ADMIN_TOKEN              secret: matches AIMS `AIMS_API_KEY`
 ```
 
 Recommended absolute session TTL and inactivity timeout:
@@ -51,6 +54,19 @@ The absolute session TTL supports 900 to 86400 seconds. Idle timeout supports 30
 Configure Preview values separately only when preview deployments need working backend access. Do not expose production credentials to untrusted branch previews.
 
 Never configure any runtime secret with a `VITE_` prefix.
+
+### TextBee KDP OTP callback
+
+Configure a TextBee webhook with the public HTTPS delivery URL
+`https://hive.jonathan-harris.online/webhooks/textbee/kdp-otp`, event
+`MESSAGE_RECEIVED`, and a signing secret of at least 20 characters. Store that
+same signing secret in the production Worker as `TEXTBEE_WEBHOOK_SECRET`.
+`AIMS_ADMIN_TOKEN` must match the AIMS `AIMS_API_KEY`, and
+`AIMS_API_BASE_URL` must point to the HTTPS AIMS Koyeb origin. The Worker
+verifies `X-Signature` against the unmodified body before forwarding the event
+to AIMS. It does not log message contents. AIMS must allow-list the Amazon SMS
+sender under `KDP_OTP_ALLOWED_SENDERS`; otherwise OTP messages are acknowledged
+but ignored.
 
 ### Required Durable Object binding and migration
 
