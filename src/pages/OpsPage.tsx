@@ -984,8 +984,18 @@ export function OpsPage() {
                         className="flex justify-between rounded-lg border border-white/6 px-3 py-2 text-xs"
                       >
                         <span className="text-slate-300">{String(item.repository)}</span>
-                        <span className="text-slate-400">
+                        <span className="flex items-center gap-2 text-slate-400">
                           {String(item.status)} · {String(item.evidence_count ?? 0)} evidence
+                          {typeof item.report_url === 'string' && (
+                            <a
+                              href={item.report_url}
+                              target="_blank"
+                              rel="noreferrer"
+                              className="text-cyan-200 underline underline-offset-2"
+                            >
+                              Open report
+                            </a>
+                          )}
                         </span>
                       </li>
                     ))}
