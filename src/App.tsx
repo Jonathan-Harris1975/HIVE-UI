@@ -9,6 +9,7 @@ import { InspectorProvider } from './context/InspectorContext'
 
 const ChatPage = lazy(() => import('./pages/ChatPage').then((module) => ({ default: module.ChatPage })))
 const FilesPage = lazy(() => import('./pages/FilesPage').then((module) => ({ default: module.FilesPage })))
+const LlmSpendPage = lazy(() => import('./pages/LlmSpendPage').then((module) => ({ default: module.LlmSpendPage })))
 const OpsPage = lazy(() => import('./pages/OpsPage').then((module) => ({ default: module.OpsPage })))
 const ModelRegistryPage = lazy(() =>
   import('./pages/ModelRegistryPage').then((module) => ({ default: module.ModelRegistryPage })),
@@ -78,6 +79,7 @@ export default function App() {
               <Route path="monthly-review" element={<MonthlyReviewPage />} />
               <Route path="models" element={<ModelRegistryPage />} />
               <Route path="ops" element={<OpsPage />} />
+              <Route path="llm-spend" element={<LlmSpendPage />} />
               <Route path="communications" element={<CommunicationsPage />} />
               <Route path="*" element={<Navigate to="/chat" replace />} />
             </Route>

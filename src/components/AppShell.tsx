@@ -55,7 +55,7 @@ const navigationGroups = [
     label: 'System',
     items: [
       { to: '/execution', label: 'Execution', icon: Workflow, routes: ['/execution', '/execution-reviews', '/execution-simulation'] },
-      { to: '/ops', label: 'Operations & review', icon: Activity, routes: ['/ops', '/integrations', '/monthly-review'] },
+      { to: '/ops', label: 'Operations & review', icon: Activity, routes: ['/ops', '/llm-spend', '/integrations', '/monthly-review'] },
     ],
   },
 ]
@@ -81,9 +81,10 @@ const sectionTabs = [
     ],
   },
   {
-    routes: ['/ops', '/integrations', '/monthly-review'],
+    routes: ['/ops', '/llm-spend', '/integrations', '/monthly-review'],
     items: [
       { to: '/ops', label: 'System' },
+      { to: '/llm-spend', label: 'LLM spend' },
       { to: '/integrations', label: 'Integrations' },
       { to: '/monthly-review', label: 'Monthly review' },
     ],
@@ -102,6 +103,7 @@ const pageMeta: Record<string, { title: string; subtitle: string }> = {
   '/execution': { title: 'Execution', subtitle: 'Plan, preview and review controlled production work' },
   '/execution-reviews': { title: 'Execution', subtitle: 'Plan, preview and review controlled production work' },
   '/execution-simulation': { title: 'Execution', subtitle: 'Plan, preview and review controlled production work' },
+  '/llm-spend': { title: 'Operations', subtitle: 'Daily LLM spend and evidence coverage' },
   '/ops': { title: 'Operations', subtitle: 'Live runtime health, infrastructure and integrations' },
   '/integrations': { title: 'Operations', subtitle: 'Live runtime health, infrastructure and integrations' },
   '/monthly-review': { title: 'Operations', subtitle: 'Live runtime health, integrations and monthly governance review' },
