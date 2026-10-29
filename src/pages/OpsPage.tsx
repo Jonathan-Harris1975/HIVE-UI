@@ -310,8 +310,10 @@ export function OpsPage() {
       const actionDataIsComplete = opsEventsResult.ok === true
         && lifecycleReviewsResult !== null
         && Array.isArray(lifecycleReviewsResult.items)
-      setActionableUpdatedAt(actionDataIsComplete ? Date.now() : null)
-      setSnapshotUpdatedAt(Date.now())
+      const receivedAt = Date.now()
+      setFreshnessNow(receivedAt)
+      setActionableUpdatedAt(actionDataIsComplete ? receivedAt : null)
+      setSnapshotUpdatedAt(receivedAt)
     } catch (caught) {
       // Clear the previous snapshot so a failed refresh cannot leave stale green status on screen.
       setHealth(null)
@@ -323,6 +325,7 @@ export function OpsPage() {
       setTemplates({})
       setOpenReviewCount(0)
       setActionableUpdatedAt(null)
+      setActionableDataError('Operations could not be refreshed. Alerts and review status are unknown until recovery.')
       setSnapshotUpdatedAt(null)
       setError(caught instanceof Error ? caught.message : 'Operations data could not be loaded.')
     } finally {
