@@ -195,6 +195,7 @@ export function OpsPage() {
   const [lifecycleReviews, setLifecycleReviews] = useState<Array<Record<string, unknown>>>([])
   const [reviewActionMessage, setReviewActionMessage] = useState('')
   const reviewActionLocks = useRef(new Set<string>())
+  const snapshotRefresh = useRef(false)
   const [actionableDataError, setActionableDataError] = useState<string | null>(null)
   const [actionableUpdatedAt, setActionableUpdatedAt] = useState<number | null>(null)
   const [snapshotUpdatedAt, setSnapshotUpdatedAt] = useState<number | null>(null)
@@ -234,48 +235,6 @@ export function OpsPage() {
       })))
     }
   }, [lifecycleReviews])
-  useEffect(() => {
-    let active = true
-    let refreshing = false
-    const refreshActionable = async () => {
-      if (document.visibilityState !== 'visible' || refreshing) return
-      refreshing = true
-      try {
-        const [events, reviews] = await Promise.all([
-          apiFetch<OpsEventsResponse>('/v1/system/ops-events?limit=30').catch(() => null),
-          apiFetch<{ items?: Array<Record<string, unknown>> }>('/v1/system/lifecycle-reviews').catch(() => null),
-        ])
-        if (!active) return
-        const failures: string[] = []
-        if (events?.ok) setOpsEvents(events)
-        else {
-          setOpsEvents({ ok: false, error: 'Operational alerts are unavailable; the displayed state is unknown.' })
-          failures.push('Operational alerts')
-        }
-        if (reviews && Array.isArray(reviews.items)) setLifecycleReviews(reviews.items)
-        else {
-          setLifecycleReviews([])
-          failures.push('Lifecycle reviews')
-        }
-        setActionableDataError(failures.length ? `${failures.join(' and ')} could not be refreshed. No current status is available.` : null)
-        setActionableUpdatedAt(failures.length ? null : Date.now())
-      } finally {
-        refreshing = false
-      }
-    }
-    const timer = window.setInterval(() => {
-      void refreshActionable()
-    }, 60_000)
-    const onVisible = () => {
-      if (document.visibilityState === 'visible') void refreshActionable()
-    }
-    document.addEventListener('visibilitychange', onVisible)
-    return () => {
-      active = false
-      window.clearInterval(timer)
-      document.removeEventListener('visibilitychange', onVisible)
-    }
-  }, [])
   const [runtimeStats, setRuntimeStats] = useState<RuntimeStatsResponse | null>(null)
   const [templates, setTemplates] = useState<Record<string, WorkflowTemplate>>({})
   const [openReviewCount, setOpenReviewCount] = useState(0)
@@ -300,9 +259,12 @@ export function OpsPage() {
   const [buildingGraph, setBuildingGraph] = useState(false)
   const [buildingPreview, setBuildingPreview] = useState(false)
 
-  const loadOps = useCallback(async () => {
-    setLoading(true)
+  const loadOps = useCallback(async (background = false) => {
+    if (snapshotRefresh.current) return
+    snapshotRefresh.current = true
+    if (!background) setLoading(true)
     setError(null)
+    const signal = AbortSignal.timeout(20_000)
     try {
       const [
         healthResult,
@@ -314,19 +276,19 @@ export function OpsPage() {
         lifecycleReviewsResult,
         reportHistoryResult,
       ] = await Promise.all([
-        apiFetch<HealthResponse>('/health'),
-        apiFetch<WorkflowTemplatesResponse>('/v1/workflow-graphs/templates'),
-        apiFetch<ExecutionReviewsResponse>('/v1/execution-reviews?limit=50'),
-        apiFetch<OpsEventsResponse>('/v1/system/ops-events?limit=30').catch(
+        apiFetch<HealthResponse>('/health', { signal }),
+        apiFetch<WorkflowTemplatesResponse>('/v1/workflow-graphs/templates', { signal }),
+        apiFetch<ExecutionReviewsResponse>('/v1/execution-reviews?limit=50', { signal }),
+        apiFetch<OpsEventsResponse>('/v1/system/ops-events?limit=30', { signal }).catch(
           (caught): OpsEventsResponse => ({
             ok: false,
             error: caught instanceof Error ? caught.message : 'Ops events could not be loaded.',
           }),
         ),
-        apiFetch<RuntimeStatsResponse>('/v1/system/runtime-stats').catch(() => null),
-        apiFetch<WeeklyLifecycleReportCurrentResponse>('/v1/system/lifecycle-reports/current').catch(() => null),
-        apiFetch<{ items?: Array<Record<string, unknown>> }>('/v1/system/lifecycle-reviews').catch(() => null),
-        apiFetch<{ items?: Array<Record<string, unknown>> }>('/v1/system/lifecycle-reports/history?limit=12').catch(() => ({ items: [] })),
+        apiFetch<RuntimeStatsResponse>('/v1/system/runtime-stats', { signal }).catch(() => null),
+        apiFetch<WeeklyLifecycleReportCurrentResponse>('/v1/system/lifecycle-reports/current', { signal }).catch(() => null),
+        apiFetch<{ items?: Array<Record<string, unknown>> }>('/v1/system/lifecycle-reviews', { signal }).catch(() => null),
+        apiFetch<{ items?: Array<Record<string, unknown>> }>('/v1/system/lifecycle-reports/history?limit=12', { signal }).catch(() => ({ items: [] })),
       ])
       setHealth(healthResult)
       setOpsEvents(opsEventsResult)
@@ -364,6 +326,7 @@ export function OpsPage() {
       setSnapshotUpdatedAt(null)
       setError(caught instanceof Error ? caught.message : 'Operations data could not be loaded.')
     } finally {
+      snapshotRefresh.current = false
       setLoading(false)
     }
   }, [refreshHealth])
@@ -531,8 +494,17 @@ export function OpsPage() {
     return () => { active = false }
   }, [])
 
-    useEffect(() => {
+  useEffect(() => {
     void loadOps()
+    const refreshVisible = () => {
+      if (document.visibilityState === 'visible') void loadOps(true)
+    }
+    const timer = window.setInterval(refreshVisible, 60_000)
+    document.addEventListener('visibilitychange', refreshVisible)
+    return () => {
+      window.clearInterval(timer)
+      document.removeEventListener('visibilitychange', refreshVisible)
+    }
   }, [loadOps])
 
   const templateEntries = useMemo(() => Object.entries(templates), [templates])
@@ -969,7 +941,9 @@ export function OpsPage() {
                 </p>
               ) : (
                 <p className="mt-2 text-xs text-slate-400">
-                  No persisted report is available for this ISO week yet. Missing evidence remains unknown.
+                  {lifecycleReport?.available === false
+                    ? 'No persisted report is available for this ISO week yet. The weekly report job needs checking; missing evidence remains unknown.'
+                    : 'The weekly report could not be loaded. It will be checked again automatically.'}
                 </p>
               )}
               {lifecycleReport?.available === true &&

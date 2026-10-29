@@ -87,7 +87,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, [clearIdleTimer, idleTimeoutSeconds])
 
   const refreshHealth = useCallback(async () => {
-    const result = await apiFetch<HealthResponse>('/health')
+    const result = await apiFetch<HealthResponse>('/health', { signal: AbortSignal.timeout(20_000) })
     setHealth(result)
     setError(null)
   }, [])
