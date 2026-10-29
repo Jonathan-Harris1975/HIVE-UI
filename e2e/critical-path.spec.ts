@@ -135,6 +135,7 @@ test.describe('HIVE-UI deployed gateway', () => {
         // A single API response can precede the remaining snapshot requests.
         // Advance again only once the entire refresh has committed.
         await expect(snapshotTime).not.toHaveAttribute('datetime', previousTime!, { timeout: 30_000 })
+        await expect(snapshotTime).toBeVisible()
         await expect(page.getByText(/Operational data is stale/)).toHaveCount(0)
       }
       console.info('Verified visible spend page and three complete Operations refresh cycles')
