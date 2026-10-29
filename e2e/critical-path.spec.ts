@@ -103,6 +103,40 @@ test.describe('HIVE-UI critical path', () => {
 test.describe('HIVE-UI deployed gateway', () => {
   test.skip(!usingRealDeployment, 'Requires HIVE_UI_E2E_BASE_URL pointing at the deployed Worker.')
 
+  test('spend evidence renders and Operations remains fresh', async ({ page, baseURL }) => {
+    test.setTimeout(90_000)
+    const accessKey = process.env.HIVE_UI_E2E_ACCESS_KEY?.trim() ?? ''
+    expect(Boolean(accessKey)).toBe(true)
+    const origin = new URL(baseURL!).origin
+    const login = await page.request.post('/api/auth/login', {
+      headers: { origin }, data: { access_key: accessKey },
+    })
+    expect(login.status()).toBe(200)
+    try {
+      const spend = await page.request.get('/api/v1/system/llm-spend')
+      expect(spend.status()).toBe(200)
+      const evidence = await spend.json()
+      // Keep actual private account charges out of public Actions logs.
+      expect(evidence.available === true && evidence.report?.reconciled === true
+        && Number.isFinite(evidence.report?.usd)).toBe(true)
+      await page.goto('/llm-spend')
+      await expect(page.getByText('Recorded USD spend', { exact: true })).toBeVisible()
+      await expect(page.getByText('Spend by model', { exact: true })).toBeVisible()
+      await page.goto('/ops')
+      await expect(page.getByRole('heading', { name: 'Weekly repository overview' })).toBeVisible()
+      await page.clock.install()
+      for (let pass = 0; pass < 3; pass += 1) {
+        const refreshed = page.waitForResponse(response =>
+          response.url().includes('/api/v1/system/lifecycle-reports/current') && response.status() === 200)
+        await page.clock.fastForward(61_000)
+        await refreshed
+        await expect(page.getByText(/Operational data is stale/)).toHaveCount(0)
+      }
+    } finally {
+      await page.request.post('/api/auth/logout', { headers: { origin } })
+    }
+  })
+
   test('real Worker login, session, HIVE proxy, communications handoff and AIMS delegation', async ({ request, baseURL }) => {
     const accessKey = process.env.HIVE_UI_E2E_ACCESS_KEY?.trim() ?? ''
     expect(accessKey, 'HIVE_UI_E2E_ACCESS_KEY must be configured for deployed integration').not.toBe('')
