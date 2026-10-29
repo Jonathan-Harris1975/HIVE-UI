@@ -132,14 +132,15 @@ test.describe('HIVE-UI deployed gateway', () => {
       expect(repositoryReport.status()).toBe(200)
       expect(repositoryReport.headers()['content-type']?.includes('text/html')).toBe(true)
       console.info('Verified the restored weekly overview and authenticated repository HTML link')
+      // Install before navigation creates the application's polling timers.
+      await page.clock.install()
+      clockInstalled = true
       await page.goto('/llm-spend', { waitUntil: 'domcontentloaded' })
       await expect(page.getByText('Recorded USD spend', { exact: true })).toBeVisible({ timeout: 30_000 })
       await expect(page.getByText('Spend by model', { exact: true })).toBeVisible()
       await page.goto('/ops', { waitUntil: 'domcontentloaded' })
       const snapshotTime = page.getByTestId('ops-snapshot-time')
       await expect(snapshotTime).toBeVisible({ timeout: 30_000 })
-      await page.clock.install()
-      clockInstalled = true
       for (let pass = 0; pass < 3; pass += 1) {
         const previousTime = await snapshotTime.getAttribute('datetime')
         await page.clock.fastForward(61_000)
