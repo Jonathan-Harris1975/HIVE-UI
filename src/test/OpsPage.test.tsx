@@ -45,6 +45,17 @@ beforeEach(() => {
 afterEach(() => vi.useRealTimers())
 
 describe('Operations snapshot refresh', () => {
+  it('does not expire a response received after the previous freshness clock tick', async () => {
+    fetchApi.mockImplementation(async (path) => {
+      await new Promise(resolve => setTimeout(resolve, 750))
+      return response(path)
+    })
+    await mount()
+    await act(async () => { await vi.advanceTimersByTimeAsync(1_000) })
+    expect(screen.getByText(/weekly-2026-W44/)).toBeInTheDocument()
+    expect(screen.queryByText(/Operational data is stale/)).not.toBeInTheDocument()
+  })
+
   it('keeps the entire snapshot current beyond the two-minute expiry', async () => {
     await mount()
     await act(async () => { await vi.advanceTimersByTimeAsync(180_000) })
