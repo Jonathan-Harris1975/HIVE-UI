@@ -845,6 +845,15 @@ export class LoginRateLimiter {
 export default {
   async fetch(request: Request, env: Env): Promise<Response> {
     const url = new URL(request.url)
+    // Persisted weekly HTML uses backend-root report links. Route those
+    // documents through the same authenticated gateway as the Operations UI.
+    if (request.method === 'GET' && [
+      '/v1/system/lifecycle-reports/html',
+      '/v1/system/lifecycle-reports/repository-html',
+    ].includes(url.pathname)) {
+      url.pathname = `/api${url.pathname}`
+      return Response.redirect(url.toString(), 307)
+    }
     if (url.pathname === '/health') return handleHealth(request, env)
     if (url.pathname === '/webhooks/textbee/kdp-otp') return handleTextBeeKdpOtpWebhook(request, env)
     if (url.pathname === '/api' || url.pathname.startsWith('/api/')) {

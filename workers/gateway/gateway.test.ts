@@ -5,6 +5,25 @@ import { isPrivilegedBrowserPath } from './proxy-policy'
 
 const TEXTBEE_SECRET = 'test-only-textbee-webhook-signing-secret'
 
+test('persisted report links enter the authenticated API instead of the SPA', async () => {
+  const env = {
+    HIVE_UI_SESSION_SECRET: 'test-only-session-signing-secret',
+    HIVE_ADMIN_TOKEN: 'test-only-admin-token',
+    HIVE_API_BASE_URL: 'https://backend.example',
+  } as Parameters<typeof gateway.fetch>[1]
+  for (const document of ['html', 'repository-html']) {
+    const response = await gateway.fetch(new Request(
+      `https://hive.example/v1/system/lifecycle-reports/${document}?year=2026&week=44&repository=HIVE`,
+    ), env)
+    expect(response.status).toBe(307)
+    expect(response.headers.get('location')).toBe(
+      `https://hive.example/api/v1/system/lifecycle-reports/${document}?year=2026&week=44&repository=HIVE`,
+    )
+    const protectedResponse = await gateway.fetch(new Request(response.headers.get('location')!), env)
+    expect(protectedResponse.status).toBe(401)
+  }
+})
+
 async function textBeeSignature(body: string, secret = TEXTBEE_SECRET): Promise<string> {
   const key = await crypto.subtle.importKey(
     'raw',
