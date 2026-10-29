@@ -104,7 +104,7 @@ test.describe('HIVE-UI deployed gateway', () => {
   test.skip(!usingRealDeployment, 'Requires HIVE_UI_E2E_BASE_URL pointing at the deployed Worker.')
 
   test('spend evidence renders and Operations remains fresh', async ({ page, baseURL }) => {
-    test.setTimeout(90_000)
+    test.setTimeout(120_000)
     const accessKey = process.env.HIVE_UI_E2E_ACCESS_KEY?.trim() ?? ''
     expect(Boolean(accessKey)).toBe(true)
     const origin = new URL(baseURL!).origin
@@ -112,28 +112,36 @@ test.describe('HIVE-UI deployed gateway', () => {
       headers: { origin }, data: { access_key: accessKey },
     })
     expect(login.status()).toBe(200)
+    let clockInstalled = false
     try {
-      const spend = await page.request.get('/api/v1/system/llm-spend')
+      const spend = await page.request.get('/api/v1/system/llm-spend', { timeout: 20_000 })
       expect(spend.status()).toBe(200)
       const evidence = await spend.json()
       // Keep actual private account charges out of public Actions logs.
       expect(evidence.available === true && evidence.report?.reconciled === true
         && Number.isFinite(evidence.report?.usd)).toBe(true)
-      await page.goto('/llm-spend')
-      await expect(page.getByText('Recorded USD spend', { exact: true })).toBeVisible()
+      console.info('Verified private spend evidence through the authenticated HIVE-UI gateway')
+      await page.goto('/llm-spend', { waitUntil: 'domcontentloaded' })
+      await expect(page.getByText('Recorded USD spend', { exact: true })).toBeVisible({ timeout: 30_000 })
       await expect(page.getByText('Spend by model', { exact: true })).toBeVisible()
-      await page.goto('/ops')
-      await expect(page.getByRole('heading', { name: 'Weekly repository overview' })).toBeVisible()
+      await page.goto('/ops', { waitUntil: 'domcontentloaded' })
+      const snapshotTime = page.getByTestId('ops-snapshot-time')
+      await expect(snapshotTime).toBeVisible({ timeout: 30_000 })
       await page.clock.install()
+      clockInstalled = true
       for (let pass = 0; pass < 3; pass += 1) {
-        const refreshed = page.waitForResponse(response =>
-          response.url().includes('/api/v1/system/lifecycle-reports/current') && response.status() === 200)
+        const previousTime = await snapshotTime.getAttribute('datetime')
         await page.clock.fastForward(61_000)
-        await refreshed
+        // A single API response can precede the remaining snapshot requests.
+        // Advance again only once the entire refresh has committed.
+        await expect(snapshotTime).not.toHaveAttribute('datetime', previousTime!, { timeout: 30_000 })
+        await expect(snapshotTime).toBeVisible()
         await expect(page.getByText(/Operational data is stale/)).toHaveCount(0)
       }
+      console.info('Verified visible spend page and three complete Operations refresh cycles')
     } finally {
-      await page.request.post('/api/auth/logout', { headers: { origin } })
+      if (clockInstalled) await page.clock.resume()
+      await page.request.post('/api/auth/logout', { headers: { origin }, timeout: 10_000 }).catch(() => undefined)
     }
   })
 

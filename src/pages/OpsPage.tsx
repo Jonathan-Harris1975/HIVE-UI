@@ -701,6 +701,13 @@ export function OpsPage() {
               <StatusBadge status={health?.ok ? 'healthy' : health ? 'down' : loading ? 'checking' : 'unknown'} variant="operational" compact />
             </div>
             <p className="mt-0.5 truncate text-[11px] text-slate-500">{health?.build ?? (loading ? 'checking…' : 'unavailable')} · {health?.env ?? 'environment unavailable'}</p>
+            {snapshotUpdatedAt !== null && (
+              <p className="mt-1 text-[11px] text-slate-400">
+                Updated <time data-testid="ops-snapshot-time" dateTime={new Date(snapshotUpdatedAt).toISOString()}>
+                  {formatDate(new Date(snapshotUpdatedAt).toISOString())}
+                </time> · refreshes automatically
+              </p>
+            )}
           </div>
           <button
             type="button"
