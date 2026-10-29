@@ -121,6 +121,17 @@ test.describe('HIVE-UI deployed gateway', () => {
       expect(evidence.available === true && evidence.report?.reconciled === true
         && Number.isFinite(evidence.report?.usd)).toBe(true)
       console.info('Verified private spend evidence through the authenticated HIVE-UI gateway')
+      const weekly = await page.request.get('/api/v1/system/lifecycle-reports/current', { timeout: 20_000 })
+      expect(weekly.status()).toBe(200)
+      const overview = await weekly.json()
+      expect(overview.available === true && overview.report?.repositories?.length === 8).toBe(true)
+      const repositoryReport = await page.request.get(
+        overview.report.repositories.find((row: { repository: string }) => row.repository === 'HIVE').report_url,
+        { timeout: 20_000 },
+      )
+      expect(repositoryReport.status()).toBe(200)
+      expect(repositoryReport.headers()['content-type']?.includes('text/html')).toBe(true)
+      console.info('Verified the restored weekly overview and authenticated repository HTML link')
       await page.goto('/llm-spend', { waitUntil: 'domcontentloaded' })
       await expect(page.getByText('Recorded USD spend', { exact: true })).toBeVisible({ timeout: 30_000 })
       await expect(page.getByText('Spend by model', { exact: true })).toBeVisible()
