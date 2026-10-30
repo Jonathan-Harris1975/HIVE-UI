@@ -1169,38 +1169,6 @@ export interface BucketsResponse {
   note?: string
 }
 
-export interface AiCouncilPromotion {
-  category: string
-  model_id: string
-  score: number
-  provider: string
-}
-
-export interface AiCouncilRunReport {
-  run_id: string
-  occurred_at: string
-  providers_discovered: number
-  models_seen: number
-  new_models: string[]
-  retired_models: string[]
-  promotions: AiCouncilPromotion[]
-  weights_used: Record<string, number>
-  completion_status?: 'completed' | 'degraded' | string
-  completed_at?: string
-  downstream_sync?: {
-    ok?: boolean
-    enabled?: boolean
-    sourceRunId?: string
-    error?: string
-    targets?: Record<string, unknown>
-  }
-  reused?: boolean
-}
-
-export interface AiCouncilHistoryResponse {
-  runs: AiCouncilRunReport[]
-}
-
 export interface BenchmarkMetricKeysResponse {
   metric_keys: readonly string[]
 }
@@ -1489,8 +1457,6 @@ export interface MonthlyReviewSummary {
     sections_ok?: number
     sections_total?: number
     ok?: boolean
-    qualified_model_count?: number
-    council_run_id?: string | null
     r2_object?: { bucket: string; key: string; size_bytes: number; sha256: string } | null
     cost_usd_total?: number | null
     open_execution_reviews?: number | null
@@ -1520,15 +1486,6 @@ export interface MonthlyReviewReport {
   generated_at: string
   sections_ok: number
   sections_total: number
-  qualified_model_count?: number
-  council_cycle?: {
-    ok: boolean
-    reused?: boolean
-    completion_status?: string
-    run?: AiCouncilRunReport
-    downstream_sync?: Record<string, unknown>
-    error?: string
-  }
   sections: Record<string, MonthlyReviewSection>
   r2_object?: { bucket: string; key: string; size_bytes: number; sha256: string } | null
   d1_index?: { ok: boolean; enabled?: boolean }

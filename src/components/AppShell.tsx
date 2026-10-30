@@ -47,7 +47,7 @@ const navigationGroups = [
     id: 'intelligence',
     label: 'Intelligence',
     items: [
-      { to: '/models', label: 'Models & optimisation', icon: Cpu, routes: ['/models', '/council', '/optimisation'] },
+      { to: '/models', label: 'Models & optimisation', icon: Cpu, routes: ['/models', '/optimisation'] },
     ],
   },
   {
@@ -66,10 +66,9 @@ const navigation = navigationGroups
 
 const sectionTabs = [
   {
-    routes: ['/models', '/council', '/optimisation'],
+    routes: ['/models', '/optimisation'],
     items: [
       { to: '/models', label: 'Registry' },
-      { to: '/council', label: 'AI Council' },
       { to: '/optimisation', label: 'Optimisation' },
     ],
   },
@@ -98,7 +97,6 @@ const pageMeta: Record<string, { title: string; subtitle: string }> = {
   '/memory': { title: 'Repositories', subtitle: 'Automated repository estate overview' },
   '/intelligence': { title: 'Repositories', subtitle: 'Automated repository estate overview' },
   '/models': { title: 'Models', subtitle: 'Ranked models, providers and evidence-based model review' },
-  '/council': { title: 'Models', subtitle: 'Ranked models, providers and evidence-based model review' },
   '/optimisation': { title: 'Models', subtitle: 'Registry, Council and recorded optimisation activity' },
   '/execution': { title: 'Execution', subtitle: 'Plan, preview and review controlled production work' },
   '/execution-reviews': { title: 'Execution', subtitle: 'Plan, preview and review controlled production work' },
