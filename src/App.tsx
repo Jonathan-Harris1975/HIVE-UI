@@ -20,9 +20,6 @@ const RepositoriesPage = lazy(() =>
 const IntegrationsPage = lazy(() =>
   import('./pages/IntegrationsPage').then((module) => ({ default: module.IntegrationsPage })),
 )
-const CouncilPage = lazy(() =>
-  import('./pages/CouncilPage').then((module) => ({ default: module.CouncilPage })),
-)
 const ExecutionReviewsPage = lazy(() =>
   import('./pages/ExecutionReviewsPage').then((module) => ({ default: module.ExecutionReviewsPage })),
 )
@@ -71,7 +68,6 @@ export default function App() {
               <Route path="repositories" element={<RepositoriesPage />} />
               <Route path="intelligence" element={<LegacyRepositoriesRedirect />} />
               <Route path="integrations" element={<IntegrationsPage />} />
-              <Route path="council" element={<CouncilPage />} />
               <Route path="execution" element={<ExecutionPlanPage />} />
               <Route path="execution-reviews" element={<ExecutionReviewsPage />} />
               <Route path="execution-simulation" element={<Navigate to="/execution" replace />} />

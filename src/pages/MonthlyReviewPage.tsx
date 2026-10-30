@@ -3,7 +3,6 @@ import { useCallback, useEffect, useState } from 'react'
 import { EmptyState } from '../components/EmptyState'
 import { useInspector } from '../context/InspectorContext'
 import { apiFetch, ApiError } from '../lib/api'
-import { isCouncilRunVerified } from '../lib/governance'
 import { formatDate } from '../lib/format'
 import type { MonthlyReviewHistoryResponse, MonthlyReviewReport, MonthlyReviewSummary } from '../types/api'
 
@@ -63,8 +62,6 @@ export function MonthlyReviewPage() {
       if (report.sections_total <= 0 || report.sections_ok !== report.sections_total) {
         failures.push(`sections incomplete (${report.sections_ok}/${report.sections_total})`)
       }
-      if (report.council_cycle?.ok !== true) failures.push('Council cycle unsuccessful')
-      if (!isCouncilRunVerified(report.council_cycle?.run)) failures.push('Council downstream synchronisation not verified')
       if (!report.r2_object) failures.push('R2 archive missing')
       if (report.d1_index?.ok !== true) failures.push('D1 index unconfirmed')
       if (failures.length > 0) {
@@ -88,7 +85,7 @@ export function MonthlyReviewPage() {
     try {
       const report = await apiFetch<MonthlyReviewReport>(`/v1/monthly-review/${encodeURIComponent(targetPeriod)}`)
       setPayload({
-        eyebrow: 'Governance',
+        eyebrow: 'Operations',
         title: `Monthly Review \u00b7 ${targetPeriod}`,
         description: `Generated ${formatDate(report.generated_at)} \u00b7 ${report.sections_ok}/${report.sections_total} sections ok`,
         json: report,
@@ -177,11 +174,7 @@ export function MonthlyReviewPage() {
                     <span className="flex items-center gap-1"><DollarSign className="h-3.5 w-3.5" /> {costLabel(item.metadata?.cost_usd_total)}</span>
                     <span>{sectionsLabel(item)}</span>
                   </div>
-                  {typeof item.metadata?.qualified_model_count === 'number' && (
-                    <p className={`mt-2 text-xs ${item.metadata.qualified_model_count > 0 ? 'text-emerald-200' : 'text-amber-200'}`}>
-                      {item.metadata.qualified_model_count} qualified registry model(s)
-                    </p>
-                  )}
+
                   {typeof item.metadata?.open_execution_reviews === 'number' && (
                     <p className="mt-2 text-xs text-violet-200">{item.metadata.open_execution_reviews} open execution review(s)</p>
                   )}
