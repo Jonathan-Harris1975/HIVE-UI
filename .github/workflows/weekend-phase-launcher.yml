@@ -2,8 +2,8 @@ name: Weekend CI phase launcher
 
 on:
   schedule:
-    - cron: "30 8 * * 6"
-    - cron: "30 7 * * 6"
+    - cron: "0 5 * * 6"
+    - cron: "0 4 * * 6"
     - cron: "0 4 1 * *"
     - cron: "0 3 1 * *"
     - cron: "0 11 * * 0"
@@ -54,7 +54,7 @@ jobs:
           else
             london_offset="$(TZ=Europe/London date '+%z')"
             case "${SCHEDULE_EXPR}:${london_offset}" in
-              "30 7 * * 6:+0100"|"30 8 * * 6:+0000")
+              "0 4 * * 6:+0100"|"0 5 * * 6:+0000")
                 phase="ci"; workflow="ci.yml" ;;
               "0 3 1 * *:+0100"|"0 4 1 * *:+0000")
                 phase="dast"; workflow="dast.yml" ;;
@@ -95,7 +95,7 @@ jobs:
       - name: Record allocated windows
         if: always()
         run: |
-          echo "CI: Sat 08:30–Sat 11:00"
+          echo "CI: Sat 05:00–Sat 07:30"
           echo "DAST: monthly on the 1st at 04:00 Europe/London"
           echo "Council: Sun 11:00–Sun 13:30"
           echo "Weekend operating envelope: Friday 20:00 to Monday 04:00 Europe/London"
