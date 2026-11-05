@@ -184,7 +184,7 @@ class KiloPermissionPolicyTests(unittest.TestCase):
         for tool in ("edit", "write", "apply_patch"):
             rules = permission[tool]
             self.assertEqual(rules["*"], "allow")
-            for path in ("kilo.jsonc", ".github/workflows/*", ".github/scripts/*", ".github/production-governance.json", ".github/scripts/native_auto_merge.py", "renovate.json"):
+            for path in ("kilo.jsonc", ".github/workflows/*", ".github/scripts/*", ".github/production-governance.json", "renovate.json"):
                 self.assertEqual(rules[path], "deny")
 
     def test_production_governance_contract_is_sensitive(self):
