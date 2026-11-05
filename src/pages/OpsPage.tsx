@@ -24,10 +24,10 @@ import { StatusBadge } from '../components/StatusBadge'
 import { WorkflowGraph } from '../components/WorkflowGraph'
 import { useAuth } from '../context/AuthContext'
 import { useInspector } from '../context/InspectorContext'
-import { ApiError, apiFetch, apiFetchWithMetadata } from '../lib/api'
+import { apiFetch, apiFetchWithMetadata } from '../lib/api'
 import { formatDate } from '../lib/format'
 import { weeklyReportHtmlHref } from '../lib/weekly-lifecycle-report'
-import { acquireActionLock, hasCurrentLifecycleApproval, isSnapshotFresh, lifecycleIdempotencyKey, releaseActionLock, safeRepairHandoffFailure } from '../lib/ops-action-policy'
+import { isSnapshotFresh } from '../lib/ops-action-policy'
 import { GOVERNED_REPOSITORIES } from '../lib/repositories'
 import type {
   ExecutionPreviewResponse,
@@ -193,11 +193,8 @@ export function OpsPage() {
   const [weeklyReportOpenError, setWeeklyReportOpenError] = useState<string | null>(null)
   const [reportHistory, setReportHistory] = useState<Array<Record<string, unknown>>>([])
   const [lifecycleReviews, setLifecycleReviews] = useState<Array<Record<string, unknown>>>([])
-  const [reviewActionMessage, setReviewActionMessage] = useState('')
-  const reviewActionLocks = useRef(new Set<string>())
   const snapshotRefresh = useRef(false)
   const [actionableDataError, setActionableDataError] = useState<string | null>(null)
-  const [actionableUpdatedAt, setActionableUpdatedAt] = useState<number | null>(null)
   const [snapshotUpdatedAt, setSnapshotUpdatedAt] = useState<number | null>(null)
   const [freshnessNow, setFreshnessNow] = useState<number | null>(null)
   const [opsEventDeleteTarget, setOpsEventDeleteTarget] = useState<{ eventId?: string; title?: string; clearAll?: boolean } | null>(null)
@@ -307,12 +304,8 @@ export function OpsPage() {
       setTemplates(templateResult.templates ?? {})
       setOpenReviewCount(Number(reviewResult.open_count ?? activeReviews.length))
       await refreshHealth()
-      const actionDataIsComplete = opsEventsResult.ok === true
-        && lifecycleReviewsResult !== null
-        && Array.isArray(lifecycleReviewsResult.items)
       const receivedAt = Date.now()
       setFreshnessNow(receivedAt)
-      setActionableUpdatedAt(actionDataIsComplete ? receivedAt : null)
       setSnapshotUpdatedAt(receivedAt)
     } catch (caught) {
       // Clear the previous snapshot so a failed refresh cannot leave stale green status on screen.
@@ -324,7 +317,6 @@ export function OpsPage() {
       setReportHistory([])
       setTemplates({})
       setOpenReviewCount(0)
-      setActionableUpdatedAt(null)
       setActionableDataError('Operations could not be refreshed. Alerts and review status are unknown until recovery.')
       setSnapshotUpdatedAt(null)
       setError(caught instanceof Error ? caught.message : 'Operations data could not be loaded.')
@@ -352,58 +344,10 @@ export function OpsPage() {
     setReportHistory([])
     setTemplates({})
     setOpenReviewCount(0)
-    setActionableUpdatedAt(null)
     setSnapshotUpdatedAt(null)
     setActionableDataError('Operational data is stale. Current status is unknown; refresh before acting.')
     setError('Operational data is stale. Refresh to load a current HIVE snapshot.')
   }, [operationalSnapshotFresh, snapshotUpdatedAt])
-
-  const acceptLifecycleFix = useCallback(async (reviewId: string) => {
-    const review = lifecycleReviews.find((item) => String(item.review_id) === reviewId)
-    if (!review || !isSnapshotFresh(actionableUpdatedAt, Date.now()) || !hasCurrentLifecycleApproval(review)) {
-      setReviewActionMessage('No current approval is available for this exact proposal and source revision. The action remains blocked.')
-      return
-    }
-    if (!acquireActionLock(reviewActionLocks.current, reviewId)) return
-    setReviewActionMessage('Recording decision and checking the exact PR head…')
-    try {
-      const idempotencyKey = await lifecycleIdempotencyKey(review)
-      const response = await apiFetchWithMetadata<Record<string, unknown>>(
-        `/v1/system/lifecycle-reviews/${encodeURIComponent(reviewId)}/accept-fix`,
-        {
-          method: 'POST',
-          headers: { 'Idempotency-Key': idempotencyKey },
-          body: JSON.stringify({
-            expected_repository: review.repository,
-            expected_head_sha: review.head_sha,
-            expected_proposal_revision: review.proposal_revision,
-          }),
-        },
-      )
-      const result = response.data
-      const message = result.dispatch === 'accepted'
-        ? [
-            `Repair handoff accepted by HIVE for ${String(review.repository || 'the reviewed repository')}`,
-            `at ${String(review.head_sha || 'unknown SHA')}.`,
-            `Request ID: ${response.requestId || 'not returned'}.`,
-            'Verify the correlated run and post-change health before treating recovery as complete.',
-          ].join(' ')
-        : [
-            `Decision recorded, but repair handoff is not confirmed (status: ${String(result.dispatch || 'unknown')}).`,
-            'Do not retry until the current review and handoff state have been checked.',
-          ].join(' ')
-      setReviewActionMessage(message)
-      await loadOps()
-    } catch (caught) {
-      if (caught instanceof ApiError) {
-        setReviewActionMessage(safeRepairHandoffFailure(caught.status, caught.requestId))
-      } else {
-        setReviewActionMessage('Repair handoff was not confirmed. Check HIVE’s current review and handoff state before retrying.')
-      }
-    } finally {
-      releaseActionLock(reviewActionLocks.current, reviewId)
-    }
-  }, [actionableUpdatedAt, lifecycleReviews, loadOps])
 
   const deleteOpsEvents = useCallback(async () => {
     if (!opsEventDeleteTarget) return
@@ -874,28 +818,10 @@ export function OpsPage() {
                             <p>Risk / impact: {String(proposal.risk_impact || 'Not recorded')}</p>
                           </div>
                         </details>
-                        <div className="mt-3 flex flex-wrap items-center gap-2">
-                          <button
-                            type="button"
-                            disabled
-                            onClick={() => {
-                              acknowledgeHIVENotification(reviewId)
-                              void acceptLifecycleFix(reviewId)
-                            }}
-                            className="rounded-lg border border-cyan-200/20 px-3 py-2 text-xs text-cyan-100 disabled:cursor-not-allowed disabled:opacity-40"
-                          >
-                            {review.decision_recorded === true ? 'Decision recorded' : 'Accept Fix unavailable'}
-                          </button>
-                          {review.decision_recorded !== true && (
-                            <span className="text-xs text-amber-200">
-                              Blocked: individual operator identity and exact-revision approval are not available in this UI. Use the trusted operator channel.
-                            </span>
-                          )}
-                          {review.decision_recorded === true && (
-                            <span className="text-xs text-slate-400">
-                              Dispatch: {String(review.dispatch_status || 'unknown')} · decision does not confirm repair completion
-                            </span>
-                          )}
+                        <div className="mt-3">
+                          <span className="text-xs text-slate-400">
+                            Read-only review. Repair dispatch is owned by AIMS.
+                          </span>
                         </div>
                       </article>
                     )
@@ -906,7 +832,6 @@ export function OpsPage() {
                   {actionableDataError ? 'Current review state is unknown.' : 'No unresolved human decision is recorded.'}
                 </p>
               )}
-              {reviewActionMessage && <p role="status" className="mt-2 text-xs text-slate-300">{reviewActionMessage}</p>}
             </section>
 
             <section className="mt-3 rounded-2xl border border-white/8 bg-hive-panel/60 p-4" aria-labelledby="weekly-lifecycle-report-title">
