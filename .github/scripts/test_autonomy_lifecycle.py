@@ -133,8 +133,8 @@ class ManagedBranchOwnershipTests(unittest.TestCase):
         self.assertNotIn("disablePullRequestAutoMerge", source)
         self.assertNotIn('gh", "pr", "merge', source)
 
-    def test_managed_branch_pr_is_admitted_to_mergify_after_green_checks(self):
-        admit = self.enterContext(patch.object(automation, "admit_to_mergify"))
+    def test_managed_branch_pr_is_admitted_to_github_native_auto_merge_after_green_checks(self):
+        admit = self.enterContext(patch.object(automation, "admit_to_github_native_auto_merge"))
         approve = self.enterContext(patch.object(automation, "approve_pr"))
         self.enterContext(
             patch.object(automation, "pr_files", return_value=["src/example.ts"])
@@ -159,7 +159,7 @@ class ManagedBranchOwnershipTests(unittest.TestCase):
         risk_label = self.enterContext(patch.object(automation, "add_labels"))
         self.enterContext(patch.object(automation, "comment"))
         hold = self.enterContext(patch.object(automation, "place_human_hold"))
-        admit = self.enterContext(patch.object(automation, "admit_to_mergify"))
+        admit = self.enterContext(patch.object(automation, "admit_to_github_native_auto_merge"))
         self.enterContext(
             patch.object(automation, "pr_files", return_value=[".github/workflows/security.yml"])
         )
@@ -184,7 +184,7 @@ class KiloPermissionPolicyTests(unittest.TestCase):
         for tool in ("edit", "write", "apply_patch"):
             rules = permission[tool]
             self.assertEqual(rules["*"], "allow")
-            for path in ("kilo.jsonc", ".github/workflows/*", ".github/scripts/*", ".github/production-governance.json", ".mergify.yml", "renovate.json"):
+            for path in ("kilo.jsonc", ".github/workflows/*", ".github/scripts/*", ".github/production-governance.json", ".GitHub native auto-merge.yml", "renovate.json"):
                 self.assertEqual(rules[path], "deny")
 
     def test_production_governance_contract_is_sensitive(self):
@@ -463,7 +463,7 @@ class OwnerCodexAdmissionTests(unittest.TestCase):
             patch.object(automation, "has_operator_risk_approval", return_value=False),
             patch.object(automation, "add_labels") as add_risk_label,
             patch.object(automation, "comment") as risk_comment,
-            patch.object(automation, "admit_to_mergify") as admit,
+            patch.object(automation, "admit_to_github_native_auto_merge") as admit,
             patch.object(automation, "set_admission_check"),
             patch.object(automation, "remove_label"),
         ):
