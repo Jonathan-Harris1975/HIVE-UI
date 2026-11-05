@@ -195,7 +195,6 @@ export function OpsPage() {
   const [lifecycleReviews, setLifecycleReviews] = useState<Array<Record<string, unknown>>>([])
   const snapshotRefresh = useRef(false)
   const [actionableDataError, setActionableDataError] = useState<string | null>(null)
-  const [actionableUpdatedAt, setActionableUpdatedAt] = useState<number | null>(null)
   const [snapshotUpdatedAt, setSnapshotUpdatedAt] = useState<number | null>(null)
   const [freshnessNow, setFreshnessNow] = useState<number | null>(null)
   const [opsEventDeleteTarget, setOpsEventDeleteTarget] = useState<{ eventId?: string; title?: string; clearAll?: boolean } | null>(null)
@@ -305,12 +304,8 @@ export function OpsPage() {
       setTemplates(templateResult.templates ?? {})
       setOpenReviewCount(Number(reviewResult.open_count ?? activeReviews.length))
       await refreshHealth()
-      const actionDataIsComplete = opsEventsResult.ok === true
-        && lifecycleReviewsResult !== null
-        && Array.isArray(lifecycleReviewsResult.items)
       const receivedAt = Date.now()
       setFreshnessNow(receivedAt)
-      setActionableUpdatedAt(actionDataIsComplete ? receivedAt : null)
       setSnapshotUpdatedAt(receivedAt)
     } catch (caught) {
       // Clear the previous snapshot so a failed refresh cannot leave stale green status on screen.
@@ -322,7 +317,6 @@ export function OpsPage() {
       setReportHistory([])
       setTemplates({})
       setOpenReviewCount(0)
-      setActionableUpdatedAt(null)
       setActionableDataError('Operations could not be refreshed. Alerts and review status are unknown until recovery.')
       setSnapshotUpdatedAt(null)
       setError(caught instanceof Error ? caught.message : 'Operations data could not be loaded.')
