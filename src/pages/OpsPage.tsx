@@ -344,7 +344,6 @@ export function OpsPage() {
     setReportHistory([])
     setTemplates({})
     setOpenReviewCount(0)
-    setActionableUpdatedAt(null)
     setSnapshotUpdatedAt(null)
     setActionableDataError('Operational data is stale. Current status is unknown; refresh before acting.')
     setError('Operational data is stale. Refresh to load a current HIVE snapshot.')
