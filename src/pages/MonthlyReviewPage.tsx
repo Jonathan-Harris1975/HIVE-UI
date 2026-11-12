@@ -103,9 +103,9 @@ export function MonthlyReviewPage() {
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <p className="mt-1 max-w-2xl text-xs leading-5 text-slate-400">
-            Consolidated system health, AI Council/model registry, optimisation stats, execution
-            review posture, and token usage/cost for each calendar month. The day-1 MAST job calls one HIVE endpoint that
-            now runs or reuses the current monthly Council before generating the review; the same full cycle runs on demand below.
+            Consolidated system health, model-policy compliance, recorded optimisation outcomes, execution
+            review posture, and token usage/cost for each calendar month. The day-1 MAST job generates the
+            monthly review from operational evidence; the same review runs on demand below.
           </p>
         </div>
         <button type="button" onClick={() => void load()} className="flex h-9 items-center justify-center gap-2 rounded-xl border border-white/8 bg-white/[0.035] px-3 text-xs text-slate-300">

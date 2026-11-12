@@ -357,7 +357,8 @@ export function OpsPage() {
       const query = opsEventDeleteTarget.clearAll
         ? '?clear_all=true'
         : `?event_id=${encodeURIComponent(opsEventDeleteTarget.eventId || '')}`
-      await apiFetch<{ ok: boolean }>(`/v1/system/ops-events${query}`, { method: 'DELETE' })
+      const result = await apiFetch<{ ok: boolean }>(`/v1/system/ops-events${query}`, { method: 'DELETE' })
+      if (result.ok !== true) throw new Error('Operational alerts were not deleted. Refresh and retry.')
       const deletedId = opsEventDeleteTarget.eventId
       setOpsEvents((current) => {
         if (!current) return current

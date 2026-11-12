@@ -21,7 +21,9 @@ export function isPrivilegedBrowserPath(path: string, method = 'GET'): boolean {
   if (segments[0] === 'v1' && segments[1] === 'db' && segments[2] === 'conversations'
     && method.toUpperCase() === 'DELETE') return true
   if (segments[0] === 'v1' && segments[1] === 'execution-reviews' && segments[3] === 'decision') return true
-  if (segments[0] === 'v1' && segments[1] === 'system' && segments[2] === 'ops-events' && !['GET', 'HEAD'].includes(method.toUpperCase())) return true
+  if (segments[0] === 'v1' && segments[1] === 'system' && segments[2] === 'ops-events' && (segments.length !== 3 || !['GET', 'HEAD', 'DELETE'].includes(method.toUpperCase()))) return true
+  // Inbox cleanup is not a production approval or repair. The exact endpoint
+  // still requires a valid same-origin session; the backend validates its target.
   // The service proxy can forward arbitrary operations to another service.
   return segments[0] === 'v1' && segments[1] === 'services' && segments[3] === 'proxy'
 }

@@ -183,7 +183,7 @@ function PreferenceCheckbox({
 export function toSharedNotification(item: HIVEOperationalEvent): SharedNotification {
   const kind = String(item.event_type || 'operational_event').toLowerCase()
   const required =
-    item.details?.requires_action === true || kind === 'review_required' || kind === 'service_blocked'
+    item.details?.requires_action === true || item.severity === 'critical' || kind === 'review_required' || kind === 'service_blocked'
   const severity =
     kind === 'resolved'
       ? 'resolved'
