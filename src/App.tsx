@@ -11,9 +11,7 @@ const ChatPage = lazy(() => import('./pages/ChatPage').then((module) => ({ defau
 const FilesPage = lazy(() => import('./pages/FilesPage').then((module) => ({ default: module.FilesPage })))
 const LlmSpendPage = lazy(() => import('./pages/LlmSpendPage').then((module) => ({ default: module.LlmSpendPage })))
 const OpsPage = lazy(() => import('./pages/OpsPage').then((module) => ({ default: module.OpsPage })))
-const ModelRegistryPage = lazy(() =>
-  import('./pages/ModelRegistryPage').then((module) => ({ default: module.ModelRegistryPage })),
-)
+
 const RepositoriesPage = lazy(() =>
   import('./pages/RepositoriesPage').then((module) => ({ default: module.RepositoriesPage })),
 )
@@ -26,9 +24,7 @@ const ExecutionReviewsPage = lazy(() =>
 const ExecutionPlanPage = lazy(() =>
   import('./pages/ExecutionPlanPage').then((module) => ({ default: module.ExecutionPlanPage })),
 )
-const OptimisationPage = lazy(() =>
-  import('./pages/OptimisationPage').then((module) => ({ default: module.OptimisationPage })),
-)
+
 const MonthlyReviewPage = lazy(() =>
   import('./pages/MonthlyReviewPage').then((module) => ({ default: module.MonthlyReviewPage })),
 )
@@ -71,9 +67,9 @@ export default function App() {
               <Route path="execution" element={<ExecutionPlanPage />} />
               <Route path="execution-reviews" element={<ExecutionReviewsPage />} />
               <Route path="execution-simulation" element={<Navigate to="/execution" replace />} />
-              <Route path="optimisation" element={<OptimisationPage />} />
+              <Route path="optimisation" element={<Navigate to="/monthly-review" replace />} />
               <Route path="monthly-review" element={<MonthlyReviewPage />} />
-              <Route path="models" element={<ModelRegistryPage />} />
+              <Route path="models" element={<Navigate to="/llm-spend" replace />} />
               <Route path="ops" element={<OpsPage />} />
               <Route path="llm-spend" element={<LlmSpendPage />} />
               <Route path="communications" element={<CommunicationsPage />} />

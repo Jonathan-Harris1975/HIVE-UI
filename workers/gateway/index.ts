@@ -785,7 +785,7 @@ function secureAssetResponse(response: Response): Response {
         "form-action 'self';",
         "manifest-src 'self';",
         "worker-src 'self' blob:;",
-        "media-src 'none';",
+        "media-src 'self';",
         'upgrade-insecure-requests',
       ].join(' '),
     )

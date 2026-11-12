@@ -37,9 +37,9 @@ The React application uses `BrowserRouter` with declarative `Routes`, nested und
 | `/council` | Council workflow |
 | `/execution` | Execution planning |
 | `/execution-reviews` | Execution review and evidence workflow |
-| `/optimisation` | Recorded optimisation decisions and experiments |
+| `/optimisation` | Legacy link redirects to monthly review |
 | `/monthly-review` | Monthly review workflow |
-| `/models` | Model registry |
+| `/models` | Legacy link redirects to LLM spend |
 | `/communications` | Embedded AIMS Comms Hub |
 | `/ops` | Ecosystem health and operations |
 | `/health` | Public Worker health endpoint |

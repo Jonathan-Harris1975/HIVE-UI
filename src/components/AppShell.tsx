@@ -2,7 +2,6 @@ import {
   Activity,
   Check,
   Copy,
-  Cpu,
   Files,
   FolderGit2,
   LogOut,
@@ -44,13 +43,6 @@ const navigationGroups = [
     ],
   },
   {
-    id: 'intelligence',
-    label: 'Intelligence',
-    items: [
-      { to: '/models', label: 'Models & optimisation', icon: Cpu, routes: ['/models', '/optimisation'] },
-    ],
-  },
-  {
     id: 'system',
     label: 'System',
     items: [
@@ -65,13 +57,6 @@ const navigation = navigationGroups
   .sort((a, b) => a.label.localeCompare(b.label, 'en-GB'))
 
 const sectionTabs = [
-  {
-    routes: ['/models', '/optimisation'],
-    items: [
-      { to: '/models', label: 'Registry' },
-      { to: '/optimisation', label: 'Optimisation' },
-    ],
-  },
   {
     routes: ['/execution', '/execution-reviews', '/execution-simulation'],
     items: [
@@ -96,8 +81,6 @@ const pageMeta: Record<string, { title: string; subtitle: string }> = {
   '/repositories': { title: 'Repositories', subtitle: 'Automated repository estate overview' },
   '/memory': { title: 'Repositories', subtitle: 'Automated repository estate overview' },
   '/intelligence': { title: 'Repositories', subtitle: 'Automated repository estate overview' },
-  '/models': { title: 'Models', subtitle: 'Ranked models, providers and evidence-based model review' },
-  '/optimisation': { title: 'Models', subtitle: 'Registry, Council and recorded optimisation activity' },
   '/execution': { title: 'Execution', subtitle: 'Plan, preview and review controlled production work' },
   '/execution-reviews': { title: 'Execution', subtitle: 'Plan, preview and review controlled production work' },
   '/execution-simulation': { title: 'Execution', subtitle: 'Plan, preview and review controlled production work' },

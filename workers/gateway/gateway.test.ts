@@ -136,7 +136,6 @@ for (const path of [
 for (const [path, method] of [
   ['v1/system/lifecycle-reviews/review-123/accept-fix', 'POST'],
   ['v1/db/purge-reset', 'POST'],
-  ['v1/system/ops-events?clear_all=true', 'DELETE'],
   ['v1/files/r2/uploads/objects', 'DELETE'],
   ['v1/db/conversations/conversation-123', 'DELETE'],
   ['v1/model-registry/coding', 'POST'],
@@ -224,7 +223,9 @@ test('privilege policy preserves ordinary UI and evidence routes', () => {
   ]) expect(isPrivilegedBrowserPath(path, 'GET'), path).toBe(false)
   expect(isPrivilegedBrowserPath('v1/db/purge-reset/preview', 'POST')).toBe(false)
   expect(isPrivilegedBrowserPath('v1/system/ops-events', 'GET')).toBe(false)
-  expect(isPrivilegedBrowserPath('v1/system/ops-events', 'DELETE')).toBe(true)
+  expect(isPrivilegedBrowserPath('v1/system/ops-events', 'DELETE')).toBe(false)
+  expect(isPrivilegedBrowserPath('v1/system/ops-events', 'POST')).toBe(true)
+  expect(isPrivilegedBrowserPath('v1/system/ops-events/nested', 'DELETE')).toBe(true)
 })
 
 
@@ -240,4 +241,37 @@ test('health exposes the complete source SHA and retains the legacy short commit
   expect(health.source_sha).toHaveLength(40)
   expect(health.commit).toBe(expectedSha.slice(0, 12))
   expect(response.headers.get('cache-control')).toContain('no-store')
+})
+
+for (const query of ['?clear_all=true', '?event_id=event-123']) {
+  test(`inbox cleanup ${query} requires a same-origin authenticated session`, async () => {
+    const secret = 'test-only-session-signing-secret'
+    const { token } = await createSessionToken(secret, 3600, 1800, true, true)
+    const upstream = vi.spyOn(globalThis, 'fetch').mockResolvedValue(Response.json({ ok: true }))
+    const env = {
+      HIVE_UI_SESSION_SECRET: secret,
+      HIVE_ADMIN_TOKEN: 'test-only-admin-token',
+      HIVE_API_BASE_URL: 'https://backend.example',
+    } as Parameters<typeof gateway.fetch>[1]
+    const url = `https://hive.example/api/v1/system/ops-events${query}`
+    const anonymous = await gateway.fetch(new Request(url, { method: 'DELETE', headers: { origin: 'https://hive.example' } }), env)
+    expect(anonymous.status).toBe(401)
+    const crossOrigin = await gateway.fetch(new Request(url, { method: 'DELETE', headers: { origin: 'https://evil.example', cookie: sessionCookie(token, 3600) } }), env)
+    expect(crossOrigin.status).toBe(403)
+    expect(upstream).not.toHaveBeenCalled()
+    const response = await gateway.fetch(new Request(url, { method: 'DELETE', headers: { origin: 'https://hive.example', cookie: sessionCookie(token, 3600) } }), env)
+    expect(response.status).toBe(200)
+    expect(upstream).toHaveBeenCalledTimes(1)
+    expect(String(upstream.mock.calls[0][0])).toBe(`https://backend.example/v1/system/ops-events${query}`)
+    expect(upstream.mock.calls[0][1]?.method).toBe('DELETE')
+  })
+}
+
+test('document policy allows bundled notification audio only from this origin', async () => {
+  const response = await gateway.fetch(new Request('https://hive.example/ops'), {
+    ASSETS: { fetch: vi.fn().mockResolvedValue(new Response('<html></html>', { headers: { 'content-type': 'text/html' } })) },
+  } as unknown as Parameters<typeof gateway.fetch>[1])
+  const csp = response.headers.get('content-security-policy') || ''
+  expect(csp).toContain("media-src 'self';")
+  expect(csp).toContain("object-src 'none';")
 })

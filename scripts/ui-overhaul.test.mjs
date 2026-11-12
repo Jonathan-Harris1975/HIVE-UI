@@ -207,3 +207,13 @@ test('declarative router keeps protected routes and compatibility redirects stab
   assert.doesNotMatch(app, /\b(?:loader|action)=/)
 })
 
+
+
+test('retired model council workspace redirects to operational evidence', () => {
+  const app = source('src/App.tsx')
+  const shell = source('src/components/AppShell.tsx')
+  assert.doesNotMatch(shell, /Models & optimisation|label: 'Registry'/)
+  assert.match(app, /path="models" element=\{<Navigate to="\/llm-spend" replace \/>\}/)
+  assert.match(app, /path="optimisation" element=\{<Navigate to="\/monthly-review" replace \/>\}/)
+  assert.doesNotMatch(app, /import\('\.\/pages\/(ModelRegistryPage|OptimisationPage)'\)/)
+})
