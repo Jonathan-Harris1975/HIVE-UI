@@ -275,3 +275,22 @@ test('document policy allows bundled notification audio only from this origin', 
   expect(csp).toContain("media-src 'self';")
   expect(csp).toContain("object-src 'none';")
 })
+
+test('only the read-only production evidence route gets its bounded collection timeout', async () => {
+  const secret = 'test-only-session-signing-secret'
+  const { token } = await createSessionToken(secret, 3600, 1800, true, true)
+  vi.spyOn(globalThis, 'fetch').mockImplementation(async () => Response.json({ ok: true }))
+  const timeout = vi.spyOn(AbortSignal, 'timeout')
+  const env = {
+    HIVE_UI_SESSION_SECRET: secret, HIVE_ADMIN_TOKEN: 'test-only-admin-token',
+    HIVE_API_BASE_URL: 'https://backend.example', HIVE_API_TIMEOUT_MS: '10000',
+  } as Parameters<typeof gateway.fetch>[1]
+  for (const path of ['v1/system/production-manager', 'v1/system/runtime-stats']) {
+    timeout.mockClear()
+    const response = await gateway.fetch(new Request(`https://hive.example/api/${path}`, {
+      headers: { origin: 'https://hive.example', cookie: sessionCookie(token, 3600) },
+    }), env)
+    expect(response.status).toBe(200)
+    expect(timeout).toHaveBeenCalledWith(path.endsWith('production-manager') ? 60_000 : 10_000)
+  }
+})

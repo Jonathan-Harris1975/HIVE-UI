@@ -8,6 +8,7 @@ import {
   Sparkles,
 } from 'lucide-react'
 import { useCallback, useEffect, useMemo, useState } from 'react'
+import { EcosystemProductionPanel, ScheduledWorkPanel } from '../components/EcosystemProductionPanel'
 import { EmptyState } from '../components/EmptyState'
 import { StatusBadge } from '../components/StatusBadge'
 import { apiFetch } from '../lib/api'
@@ -190,7 +191,7 @@ export function RepositoriesPage() {
             <div className="rounded-xl border border-white/8 bg-white/[0.025] p-3">
               <p className="text-[10px] uppercase tracking-wider text-slate-500">Services healthy</p>
               <p className="mt-1 text-xl font-semibold text-white">
-                {serviceHealthyCount}/{state.repoHealth?.repos?.length ?? 0}
+                {state.repoHealth?.ok ? `${serviceHealthyCount}/${GOVERNED_REPOSITORIES.length}` : 'Unknown'}
               </p>
             </div>
             <div className="rounded-xl border border-white/8 bg-white/[0.025] p-3">
@@ -209,6 +210,9 @@ export function RepositoriesPage() {
             {error}
           </div>
         )}
+
+        <EcosystemProductionPanel />
+        <ScheduledWorkPanel scheduler={healthMap.get('MAST')} />
 
         <section className="mt-4 rounded-2xl border border-white/8 bg-hive-panel/60 p-4 sm:p-5">
           <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
@@ -323,7 +327,7 @@ export function RepositoriesPage() {
                         <Sparkles className="h-3.5 w-3.5" /> Service
                       </span>
                       <StatusBadge
-                        status={service?.status ?? 'not_configured'}
+                        status={service?.status ?? 'unknown'}
                         variant="operational"
                         compact
                       />

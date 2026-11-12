@@ -698,11 +698,14 @@ export function OpsPage() {
               <details className="group mt-3 rounded-2xl border border-amber-300/15 bg-hive-panel/60">
                 <summary className="flex cursor-pointer list-none items-center justify-between gap-3 px-4 py-3">
                   <span className="flex items-center gap-2 text-sm font-semibold text-white"><BellRing className="h-4 w-4 text-amber-300" /> Operational alerts</span>
-                  <StatusBadge status={opsEvents.items.some((item) => item.severity === 'critical') ? 'critical' : 'warning'} label={`${opsEvents.count ?? 0} events`} compact />
+                  <StatusBadge status={opsEvents.items.some((item) => item.severity === 'critical') ? 'critical' : 'warning'} label={`${opsEvents.count ?? 0} recent alerts`} compact />
                 </summary>
                 <div className="border-t border-white/6 p-3">
                   <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
-                    <p className="text-xs text-slate-400">Showing up to 6 recent alerts. You can remove one alert or clear the inbox.</p>
+                    <p className="text-xs text-slate-400">
+                      Showing up to 6 stored alerts. These are historical events; clearing them does not repair a job or certify current health.
+                      {' '}<Link to="/repositories" className="text-cyan-200 underline">Check current ecosystem readiness</Link>.
+                    </p>
                     <button
                       type="button"
                       onClick={() => {
