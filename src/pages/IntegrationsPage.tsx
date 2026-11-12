@@ -49,10 +49,11 @@ export function IntegrationsPage() {
     setBucketsError(null)
     try {
       const response = await apiFetch<BucketsResponse>('/v1/buckets')
+      if (response.ok === false) throw new Error('R2 bucket availability could not be verified.')
       const normalised = (response.buckets ?? [])
         .map((item) =>
           typeof item === 'string'
-            ? { bucket: item, configured: true, readable: true, writable: false, access_mode: 'read_only' }
+            ? { bucket: item, configured: true, access_mode: 'unknown' }
             : item,
         )
         .filter((item) => isHiveManagedR2Source(item.lane, item.bucket))

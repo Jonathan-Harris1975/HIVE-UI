@@ -630,7 +630,11 @@ async function handleApi(request: Request, env: Env, path: string): Promise<Resp
   const incomingUrl = new URL(request.url)
   const retrySafe = request.method === 'GET' || request.method === 'HEAD'
   const requestBody = retrySafe ? undefined : await request.arrayBuffer()
-  const timeoutMs = backendTimeoutMs(env.HIVE_API_TIMEOUT_MS)
+  // This read-only report has a bounded 40-second GitHub evidence budget.
+  // Keep ordinary requests on their configured timeout.
+  const timeoutMs = retrySafe && path === 'v1/system/production-manager'
+    ? Math.max(60_000, backendTimeoutMs(env.HIVE_API_TIMEOUT_MS))
+    : backendTimeoutMs(env.HIVE_API_TIMEOUT_MS)
   let lastFailure: unknown = null
 
   for (let index = 0; index < backends.length; index += 1) {
