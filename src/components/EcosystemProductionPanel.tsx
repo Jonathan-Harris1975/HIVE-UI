@@ -17,6 +17,7 @@ type RepositoryEvidence = {
     reason?: string
     required_workflows?: Record<string, Gate>
     deployment?: Gate & { workflow?: string }
+    additional_workflows_complete?: boolean
     additional_workflow_failures?: Array<{ workflow: string; status: string; run_id?: number }>
   }
 }
@@ -63,6 +64,7 @@ export function EcosystemProductionPanel() {
   const complete = report?.repositories.length === GOVERNED_REPOSITORIES.length
     && GOVERNED_REPOSITORIES.every((id) => byId.has(id))
   const current = Boolean(report && complete && !stale)
+  const incomplete = report?.repositories.filter((item) => item.gate_evidence?.additional_workflows_complete !== true).length || 0
   const warnings = report?.repositories.reduce((total, item) => total + (item.gate_evidence?.additional_workflow_failures?.length || 0), 0) || 0
 
   return (
@@ -88,6 +90,7 @@ export function EcosystemProductionPanel() {
       </div>
       {error && <p role="alert" className="mt-3 text-xs text-rose-200">{error}</p>}
       {report && !current && <p className="mt-3 text-xs text-amber-200">Evidence is stale or incomplete. Refresh before relying on this decision.</p>}
+      {incomplete > 0 && <p className="mt-3 text-xs text-amber-200">Additional workflow discovery is incomplete for {incomplete} repositories; further failures may be unobserved.</p>}
       {warnings > 0 && <p className="mt-3 text-xs text-amber-200">{warnings} additional workflow failure(s) need attention, separate from the required release gates.</p>}
       <div className="mt-3 grid gap-2 md:grid-cols-2 xl:grid-cols-4">
         {GOVERNED_REPOSITORIES.map((id) => {

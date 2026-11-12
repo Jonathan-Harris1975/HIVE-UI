@@ -58,3 +58,10 @@ it('shows failed business work even when the scheduler heartbeat is healthy', ()
   expect(screen.getByText('Succeeded')).toBeInTheDocument()
   expect(screen.getByText('operation-thursday-am')).toBeInTheDocument()
 })
+
+
+it('does not present a partial additional-workflow scan as complete', async () => {
+  request.mockResolvedValue(report())
+  render(<EcosystemProductionPanel />)
+  await screen.findByText(/Additional workflow discovery is incomplete for 8 repositories/)
+})
