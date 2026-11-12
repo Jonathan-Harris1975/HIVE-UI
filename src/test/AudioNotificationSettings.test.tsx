@@ -118,3 +118,11 @@ describe('HIVE Elements audio notifications', () => {
     await waitFor(() => expect(shown).toEqual(['AIMS Comms Hub']))
   })
 })
+
+
+it('sounds critical operational failures without requiring a separate action flag', () => {
+  vi.stubGlobal('Audio', FakeAudio)
+  notifyNewHIVEEvents([{ event_id: 'critical-1', event_type: 'oidc_estate_readiness_failed', severity: 'critical' }])
+  notifyNewHIVEEvents([{ event_id: 'critical-1', event_type: 'oidc_estate_readiness_failed', severity: 'critical' }])
+  expect(play).toHaveBeenCalledTimes(1)
+})
