@@ -1,0 +1,93 @@
+{
+  "repository": "Jonathan-Harris1975/HIVE-UI",
+  "default_branch": "main",
+  "exact_evaluated_sha": "9553ff42bff2e6280ed4c89b74a714dbd3ddd0e6",
+  "source_council_run_id": "43741396965",
+  "source_council_run_attempt": "1",
+  "disposition": "NOT_READY",
+  "identity": {
+    "repository_verified": true,
+    "target_is_current_default_branch_head": true
+  },
+  "ci": {
+    "status": "PASS",
+    "workflow": "HIVE-UI CI",
+    "run_id": "43591896610",
+    "url": "https://github.com/Jonathan-Harris1975/HIVE-UI/actions/runs/43591896610",
+    "ci_gate": "PASS",
+    "notes": "Exact SHA run succeeded on 2026-11-14; not a same-day rerun."
+  },
+  "security": {
+    "codeql": {
+      "status": "PASS",
+      "run_id": "43591898627",
+      "url": "https://github.com/Jonathan-Harris1975/HIVE-UI/actions/runs/43591898627"
+    },
+    "trivy_gitleaks_actionlint": {
+      "status": "PASS",
+      "run_id": "43591900721",
+      "url": "https://github.com/Jonathan-Harris1975/HIVE-UI/actions/runs/43591900721"
+    }
+  },
+  "dependency_automation": {
+    "socket_config": "githubApp enabled; dependency overview enabled; comments/check runs enabled; unresolvedRequire enabled; dependency path limited",
+    "socket_exact_sha_evidence": "NOT_FOUND",
+    "renovate_config_present": true
+  },
+  "repair_ledger": {
+    "current_open_prs": [],
+    "repair_requests_directory": "NOT_FOUND_IN_CURRENT_TREE",
+    "autonomy_preflight": "PASS",
+    "history_wide_duplicate_carrier_check": "NOT_ESTABLISHED"
+  },
+  "merge_evidence": {
+    "ruleset": "Native branch PR safety",
+    "ruleset_enforcement": "active",
+    "trusted_automation_status": "PASS",
+    "run_id": "43740174385",
+    "url": "https://github.com/Jonathan-Harris1975/HIVE-UI/actions/runs/43740174385"
+  },
+  "deployment": {
+    "status": "STALE_EXACT_SHA_PASS",
+    "run_id": "43291548912",
+    "url": "https://github.com/Jonathan-Harris1975/HIVE-UI/actions/runs/43291548912",
+    "target_sha_verified": true,
+    "completed_at": "2026-11-12T19:35:26Z",
+    "current_assessment_date": "2026-11-15",
+    "fresh_exact_sha_verification_found": false
+  },
+  "dast": {
+    "status": "UNKNOWN",
+    "zap_run_found": false,
+    "dast_enabled_state": "UNKNOWN",
+    "dast_disabled_claimed": false
+  },
+  "council_source_workflow": {
+    "run_id": "43741396965",
+    "attempt": "1",
+    "status": "FAILURE",
+    "dispatch_to_kilo": "HTTP 2xx accepted; not treated as assessment completion",
+    "evidence_persist_step": "FAILURE",
+    "failure": "AWS CLI Invalid endpoint for configured R2 endpoint",
+    "url": "https://github.com/Jonathan-Harris1975/HIVE-UI/actions/runs/43741396965"
+  },
+  "report_return": {
+    "workflow": "council-result-r2.yml",
+    "run_id": "43741637658",
+    "url": "https://github.com/Jonathan-Harris1975/HIVE-UI/actions/runs/43741637658",
+    "status": "FAILURE",
+    "failed_step": "Validate returned Council result and collect supporting evidence",
+    "failure": "Checked-in workflow uses gh api --paginate --slurp with --jq; GitHub CLI rejects --slurp combined with --jq. Persistence step was not reached."
+  },
+  "remaining_risks": [
+    "DAST configuration and authorized scan result are unknown.",
+    "Exact deployment verification is stale and must be refreshed.",
+    "Source Council run R2 evidence persistence failed due to invalid endpoint configuration.",
+    "Required result-return workflow failed validation due to incompatible gh api flags before persistence."
+  ],
+  "assessment_actions": {
+    "source_code_changed": false,
+    "repair_pr_created": false,
+    "merge_or_deploy_performed": false
+  }
+}
