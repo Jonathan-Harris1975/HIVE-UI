@@ -21,6 +21,17 @@ it('shows production gates for all eight repositories independently of snapshots
   expect(request).toHaveBeenCalledWith('/v1/system/production-manager', expect.anything())
 })
 
+it('renders governed snapshot details in the corresponding production card', async () => {
+  request.mockResolvedValue(report())
+  render(<EcosystemProductionPanel renderRepositoryDetails={(id) => <span>Snapshot for {id}</span>} />)
+  await screen.findByText('Release decision: Allowed')
+  for (const id of GOVERNED_REPOSITORIES) {
+    const card = screen.getByRole('heading', { name: id }).closest('article')
+    expect(card).not.toBeNull()
+    expect(within(card!).getByText(`Snapshot for ${id}`)).toBeInTheDocument()
+  }
+})
+
 it('shows Ok for green runtimes and dot-only indicators without hiding warnings', async () => {
   const value = report()
   value.repositories[1].runtime_state = 'BLOCKED'

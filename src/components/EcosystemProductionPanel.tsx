@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useState, type ReactNode } from 'react'
 import { LoaderCircle, RefreshCcw } from 'lucide-react'
 import { apiFetch } from '../lib/api'
 import { formatDate } from '../lib/format'
@@ -39,7 +39,7 @@ const productionLabel = (state?: string) => state === 'GREEN' ? 'Ready' : state 
 const runtimeLabel = (state?: string) => state === 'GREEN' ? 'Ok' : productionLabel(state)
 const decisionLabel = (decision?: string) => decision === 'ALLOW' ? 'Allowed' : decision === 'BLOCK' ? 'Blocked' : decision || 'Unknown'
 
-export function EcosystemProductionPanel() {
+export function EcosystemProductionPanel({ renderRepositoryDetails }: { renderRepositoryDetails?: (id: string) => ReactNode }) {
   const [report, setReport] = useState<ProductionReport | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
@@ -77,10 +77,10 @@ export function EcosystemProductionPanel() {
     <section id="ecosystem-production-readiness" aria-label="Ecosystem production readiness" className="mt-4 rounded-2xl border border-white/8 bg-hive-panel/60 p-4 sm:p-5">
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
-          <h3 className="text-sm font-semibold text-white">Ecosystem production readiness</h3>
+          <h3 className="text-sm font-semibold text-white">Production readiness and governed repositories</h3>
           <p className="mt-1 max-w-3xl text-xs leading-5 text-slate-400">
-            Runtime readiness, required CI/security checks and deployment evidence for all eight repositories.
-            Snapshot freshness below describes HIVE’s indexed code; it does not certify production delivery.
+            One view of runtime, release evidence and governed snapshots for all eight repositories.
+            A current snapshot describes indexed code; it does not certify production delivery.
           </p>
         </div>
         <button type="button" onClick={() => void load()} disabled={loading}
@@ -110,6 +110,7 @@ export function EcosystemProductionPanel() {
               </div>
               <p className="mt-2">Runtime: {current ? runtimeLabel(item?.runtime_state) : 'Not verified'}</p>
               <p className="mt-1">Deployment: {current ? gates?.deployment?.status || 'Unknown' : 'Not verified'}</p>
+              {renderRepositoryDetails?.(id)}
               {current && item?.runtime_state !== 'GREEN' && (
                 <div className="mt-2 text-amber-200">
                   <p>Health: {item?.health_status || 'Unknown'} · Readiness: {item?.readiness_status || 'Unknown'}</p>
