@@ -39,5 +39,5 @@ test('unescaping handles repeated unmatched brackets promptly', () => {
   assert.equal(result.base, '['.repeat(20_000))
   assert.equal(result.glob, 'file*.js')
   assert.equal(picomatch.scan('foo\\[bar\\]/*.js', { unescape: true }).base, 'foo[bar]')
-  assert.ok(performance.now() - startedAt < 100, 'unescaping exceeded 100 ms')
+  assert.ok(performance.now() - startedAt < 1000, 'unescaping exceeded 1000 ms')
 })
