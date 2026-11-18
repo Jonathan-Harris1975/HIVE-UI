@@ -69,6 +69,52 @@ test('TextBee KDP OTP webhook verifies the raw signature and forwards to AIMS', 
   expect(new TextDecoder().decode(init.body as ArrayBuffer)).toBe(textBeePayload)
 })
 
+
+test('TextBee webhook does not acknowledge OTPs rejected by AIMS', async () => {
+  const signature = await textBeeSignature(textBeePayload)
+  const request = () => new Request('https://hive.example/webhooks/textbee/kdp-otp', {
+    method: 'POST', headers: { 'content-type': 'application/json', 'x-signature': signature },
+    body: textBeePayload,
+  })
+  const env = {
+    AIMS_API_BASE_URL: 'https://aims.example',
+    AIMS_ADMIN_TOKEN: 'test-only-aims-token',
+    TEXTBEE_WEBHOOK_SECRET: TEXTBEE_SECRET,
+  } as Parameters<typeof gateway.fetch>[1]
+
+  for (const [reason, expectedStatus, code] of [
+    ['no_active_challenge', 503, 'aims_kdp_challenge_unavailable'],
+    ['challenge_expired', 503, 'aims_kdp_challenge_unavailable'],
+    ['sender_not_allowed', 422, 'aims_kdp_otp_rejected'],
+    ['verification_code_not_found', 422, 'aims_kdp_otp_rejected'],
+  ] as const) {
+    vi.spyOn(globalThis, 'fetch').mockResolvedValue(Response.json({
+      ok: true, accepted: false, reason,
+    }, { status: 202 }))
+    const response = await gateway.fetch(request(), env)
+    expect(response.status).toBe(expectedStatus)
+    const result = await response.json()
+    expect(result).toMatchObject({ ok: false, accepted: false, code })
+    expect(JSON.stringify(result)).not.toContain('123456')
+    vi.restoreAllMocks()
+  }
+})
+
+test('TextBee webhook retries an empty AIMS acceptance response, never silently succeeds', async () => {
+  const signature = await textBeeSignature(textBeePayload)
+  vi.spyOn(globalThis, 'fetch').mockResolvedValue(Response.json({}, { status: 202 }))
+  const response = await gateway.fetch(new Request('https://hive.example/webhooks/textbee/kdp-otp', {
+    method: 'POST', headers: { 'content-type': 'application/json', 'x-signature': signature },
+    body: textBeePayload,
+  }), {
+    AIMS_API_BASE_URL: 'https://aims.example',
+    AIMS_ADMIN_TOKEN: 'test-only-aims-token',
+    TEXTBEE_WEBHOOK_SECRET: TEXTBEE_SECRET,
+  } as Parameters<typeof gateway.fetch>[1])
+  expect(response.status).toBe(503)
+  expect(await response.json()).toMatchObject({ accepted: false, code: 'aims_kdp_challenge_unavailable' })
+})
+
 test('TextBee KDP OTP webhook rejects a bad signature without forwarding SMS content', async () => {
   const upstream = vi.spyOn(globalThis, 'fetch').mockRejectedValue(new Error('Must not reach AIMS'))
   const response = await gateway.fetch(new Request('https://hive.example/webhooks/textbee/kdp-otp', {
