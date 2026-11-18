@@ -404,7 +404,10 @@ def linked_kilo_merged_review_source(pr: dict[str, Any]) -> int | None:
         for item in comments:
             if item.get("user", {}).get("login") != "github-actions[bot]":
                 continue
-            receipts.update(re.findall(r"<!-- kilo-auto-repair:([0-9a-f]{40}):", str(item.get("body") or "")))
+            comment_body = str(item.get("body") or "")
+            if "dispatch-state: accepted" not in comment_body:
+                continue
+            receipts.update(re.findall(r"<!-- kilo-auto-repair:([0-9a-f]{40}):", comment_body))
         for receipt_sha in receipts:
             if receipt_sha == source_sha:
                 return number
@@ -426,6 +429,8 @@ def adopt_linked_kilo_prs(open_prs: list[dict[str, Any]]) -> None:
         source = linked_kilo_carrier(pr, carriers)
         if source is None:
             source = linked_kilo_review_source(pr, open_prs)
+        if source is None:
+            source = linked_kilo_merged_review_source(pr)
         if source is None:
             log(f"Kilo PR #{pr['number']} has no verified repair source; leaving it untrusted.")
             continue
