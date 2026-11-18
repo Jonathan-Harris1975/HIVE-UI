@@ -311,12 +311,10 @@ export function OpsPage() {
     if (!snapshotUpdatedAt || operationalSnapshotFresh) return
     setHealth(null)
     setOpsEvents(null)
-    setRuntimeStats(null)
     setLifecycleReport(null)
     setLifecycleReviews([])
     setReportHistory([])
     setTemplates({})
-    setOpenReviewCount(0)
     setSnapshotUpdatedAt(null)
     setActionableDataError('Operational data is stale. Current status is unknown; refresh before acting.')
     setError('Operational data is stale. Refresh to load a current HIVE snapshot.')
