@@ -35,6 +35,7 @@ type ProductionReport = {
 
 const STALE_AFTER_MS = 120_000
 const tone = (state?: string) => state === 'GREEN' ? 'ready' : state === 'BLOCKED' ? 'error' : state === 'DEGRADED' ? 'warning' : 'unknown'
+const runtimeLabel = (state?: string) => state === 'GREEN' ? 'Ok' : state ? state[0] + state.slice(1).toLowerCase() : 'Unknown'
 
 export function EcosystemProductionPanel() {
   const [report, setReport] = useState<ProductionReport | null>(null)
@@ -87,7 +88,7 @@ export function EcosystemProductionPanel() {
         </button>
       </div>
       <div role="status" className="mt-3 flex flex-wrap items-center gap-3 text-xs text-slate-400">
-        <StatusBadge status={current ? tone(report?.state) : 'unknown'} label={loading ? 'Checking' : current ? report?.state : 'Unknown'} />
+        <StatusBadge status={current ? tone(report?.state) : 'unknown'} label={loading ? 'Checking' : current ? report?.state : 'Unknown'} dotOnly />
         <span>Release decision: {current ? report?.release_decision : 'Not verified'}</span>
         {report?.generated_at && <span>Observed {formatDate(report.generated_at)}</span>}
       </div>
@@ -103,9 +104,9 @@ export function EcosystemProductionPanel() {
             <article key={id} className="rounded-xl border border-white/8 bg-hive-surface p-3 text-xs text-slate-400">
               <div className="flex items-center justify-between gap-2">
                 <h4 className="font-semibold text-white">{id}</h4>
-                <StatusBadge status={current ? tone(item?.state) : 'unknown'} label={current ? item?.state : 'Unknown'} compact />
+                <StatusBadge status={current ? tone(item?.state) : 'unknown'} label={current ? item?.state : 'Unknown'} compact dotOnly />
               </div>
-              <p className="mt-2">Runtime: {current ? item?.runtime_state : 'Not verified'}</p>
+              <p className="mt-2">Runtime: {current ? runtimeLabel(item?.runtime_state) : 'Not verified'}</p>
               <p className="mt-1">Deployment: {current ? gates?.deployment?.status || 'Unknown' : 'Not verified'}</p>
               {gates?.sha && <p className="mt-1 font-mono">Commit {gates.sha.slice(0, 12)}</p>}
               {current && item?.runtime_state !== 'GREEN' && (
