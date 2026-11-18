@@ -131,9 +131,7 @@ test('operations does not duplicate repository overview status', () => {
   assert.doesNotMatch(ops, /Services healthy/)
   assert.match(ops, /Integration readiness/)
   assert.match(ops, /Operational alerts/)
-  assert.match(ops, /Live system snapshot/)
-  const liveSnapshot = ops.split('Live system snapshot')[1]?.split('</details>')[0] ?? ''
-  assert.doesNotMatch(liveSnapshot, /Integrations ready/)
+  assert.doesNotMatch(ops, /Live system snapshot/)
   assert.match(ops, /Delete all alerts/)
   assert.match(ops, /onDelete=/)
   assert.match(ops, /Workflow lab/)
