@@ -30,3 +30,14 @@ test('ordinary extglobs retain their expected behaviour', () => {
   assert.equal(picomatch.isMatch('jsjsx', '+(js|jsx)'), true)
   assert.equal(picomatch.isMatch('foobar', '*(foo|bar)'), true)
 })
+
+test('unescaping handles repeated unmatched brackets promptly', () => {
+  const input = `${'\\['.repeat(20_000)}/file*.js`
+  const startedAt = performance.now()
+  const result = picomatch.scan(input, { unescape: true })
+
+  assert.equal(result.base, '['.repeat(20_000))
+  assert.equal(result.glob, 'file*.js')
+  assert.equal(picomatch.scan('foo\\[bar\\]/*.js', { unescape: true }).base, 'foo[bar]')
+  assert.ok(performance.now() - startedAt < 100, 'unescaping exceeded 100 ms')
+})
