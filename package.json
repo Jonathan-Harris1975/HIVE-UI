@@ -18,7 +18,7 @@
     "check:bundle-budget": "node scripts/check-bundle-budget.mjs dist",
     "verify:lock": "node scripts/verify-lockfile.mjs",
     "verify:source": "node scripts/verify-source.mjs",
-    "test:security": "rm -rf .security-test && tsc -p tsconfig.security-test.json && node --test scripts/security.test.mjs",
+    "test:security": "rm -rf .security-test && tsc -p tsconfig.security-test.json && node --test scripts/security.test.mjs scripts/picomatch-security.test.mjs",
     "test:ux-contract": "node --test scripts/ux-contract.test.mjs scripts/ui-overhaul.test.mjs",
     "deploy": "npm run build && npx wrangler deploy",
     "secret:scan": "python3 scripts/secret_scan.py",
@@ -51,6 +51,7 @@
     "eslint-plugin-react-refresh": "^0.5.2",
     "globals": "^17.6.0",
     "jsdom": "^30.0.0",
+    "picomatch": "file:vendor/picomatch",
     "tailwindcss": "^4.2.1",
     "typescript": "~6.0.3",
     "typescript-eslint": "^8.59.2",
@@ -62,6 +63,7 @@
   },
   "overrides": {
     "browserslist": "^4.28.7",
+    "picomatch": "$picomatch",
     "source-map-js": "1.2.2"
   }
 }
