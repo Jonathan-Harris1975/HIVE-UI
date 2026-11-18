@@ -51,7 +51,7 @@
     "eslint-plugin-react-refresh": "^0.5.2",
     "globals": "^17.6.0",
     "jsdom": "^30.0.0",
-    "picomatch": "file:vendor/picomatch",
+    "picomatch": "file:vendor/picomatch-4.0.8-hive.1.tgz",
     "tailwindcss": "^4.2.1",
     "typescript": "~6.0.3",
     "typescript-eslint": "^8.59.2",
