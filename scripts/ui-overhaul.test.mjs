@@ -215,3 +215,16 @@ test('retired model council workspace redirects to operational evidence', () => 
   assert.match(app, /path="optimisation" element=\{<Navigate to="\/monthly-review" replace \/>\}/)
   assert.doesNotMatch(app, /import\('\.\/pages\/(ModelRegistryPage|OptimisationPage)'\)/)
 })
+
+
+test('status badges preserve unknown evidence and use variant-aware text tones', () => {
+  const badge = source('src/components/StatusBadge.tsx')
+  const ops = source('src/pages/OpsPage.tsx')
+  assert.match(badge, /'not_configured', 'not-configured', 'unavailable', 'disabled'\]\.includes\(value\)\) return 'bg-slate-500'/)
+  assert.match(badge, /dotTone\(status, variant\)/)
+  assert.match(badge, /textTone\(value, variant\)/)
+  assert.match(badge, /return value === 'starting' \? 'Starting' : 'Unknown'/)
+  assert.match(ops, /integrationAttentionCount > 0/)
+  assert.match(ops, /integrationUnknownCount > 0/)
+  assert.match(ops, /integrationDisabledCount > 0/)
+})
