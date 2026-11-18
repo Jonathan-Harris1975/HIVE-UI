@@ -36,6 +36,8 @@ CARRIER_PREFIX = "[autonomy] Repair "
 BRANCH_PR_LABEL = "automation:branch-pr"
 BRANCH_PR_RE = re.compile(r"^(fix|feat|chore|ci|work|codex)/[A-Za-z0-9._/-]+$")
 URL_END = r"(?![A-Za-z0-9/_-])"
+MAX_MERGED_SOURCE_CANDIDATES = 8
+MAX_MERGED_SOURCE_RECEIPTS = 8
 
 KILO_SENSITIVE_PREFIXES = (
     ".github/workflows/",
@@ -315,7 +317,7 @@ def linked_kilo_carrier(pr: dict[str, Any], carriers: list[dict[str, Any]]) -> i
             return int(carrier["number"])
         try:
             comments = carrier_comments(int(carrier["number"]))
-        except ApiError as exc:
+        except (ApiError, RuntimeError) as exc:
             log(f"Carrier #{carrier['number']} comments unavailable: {exc}")
             continue
         for item in comments:
@@ -339,7 +341,7 @@ def linked_kilo_review_source(pr: dict[str, Any], sources: list[dict[str, Any]])
             continue
         try:
             comments = carrier_comments(int(source["number"]))
-        except ApiError as exc:
+        except (ApiError, RuntimeError) as exc:
             log(f"Source PR #{source['number']} comments unavailable: {exc}")
             continue
         if not any(item.get("user", {}).get("login") == "github-actions[bot]" and
@@ -372,7 +374,11 @@ def linked_kilo_merged_review_source(pr: dict[str, Any]) -> int | None:
         return None
     pattern = rf"https://github\.com/{re.escape(REPO)}/pull/(\d+){URL_END}"
     numbers = list(dict.fromkeys(int(n) for n in re.findall(pattern, body)))
-    if len(numbers) > 8:
+    if len(numbers) > MAX_MERGED_SOURCE_CANDIDATES:
+        log(
+            f"Kilo PR #{pr.get('number')} references {len(numbers)} repo PRs; "
+            "refusing ambiguous merged-source resolution."
+        )
         return None
     for number in numbers:
         if number == int(pr.get("number", 0)):
@@ -392,12 +398,16 @@ def linked_kilo_merged_review_source(pr: dict[str, Any]) -> int | None:
         source_sha = str(source.get("head", {}).get("sha", ""))
         if not re.fullmatch(r"[0-9a-f]{40}", source_sha):
             continue
-        comparison = get(f"/repos/{REPO}/compare/{source_sha}...{sha}")
+        try:
+            comparison = get(f"/repos/{REPO}/compare/{source_sha}...{sha}")
+        except ApiError as exc:
+            log(f"Merged Kilo source #{number} ancestry unavailable: {exc}")
+            continue
         if comparison.get("behind_by") != 0 or comparison.get("status") not in {"ahead", "identical"}:
             continue
         try:
             comments = carrier_comments(number)
-        except ApiError as exc:
+        except (ApiError, RuntimeError) as exc:
             log(f"Merged Kilo source #{number} receipts unavailable: {exc}")
             continue
         receipts = set()
@@ -405,10 +415,14 @@ def linked_kilo_merged_review_source(pr: dict[str, Any]) -> int | None:
             if item.get("user", {}).get("login") != "github-actions[bot]":
                 continue
             receipts.update(re.findall(r"<!-- kilo-auto-repair:([0-9a-f]{40}):", str(item.get("body") or "")))
-        for receipt_sha in receipts:
+        for receipt_sha in sorted(receipts)[:MAX_MERGED_SOURCE_RECEIPTS]:
             if receipt_sha == source_sha:
                 return number
-            receipt_comparison = get(f"/repos/{REPO}/compare/{receipt_sha}...{source_sha}")
+            try:
+                receipt_comparison = get(f"/repos/{REPO}/compare/{receipt_sha}...{source_sha}")
+            except ApiError as exc:
+                log(f"Merged Kilo source #{number} receipt {receipt_sha[:12]} ancestry unavailable: {exc}")
+                continue
             if (receipt_comparison.get("behind_by") == 0
                     and receipt_comparison.get("status") in {"ahead", "identical"}):
                 return number
@@ -496,7 +510,8 @@ def admit_waiting_runs(open_prs: list[dict[str, Any]]) -> None:
             continue
         kind = automation_kind(pr)
         if kind == "kilo" and (linked_kilo_carrier(pr, carriers) is None and
-                                linked_kilo_review_source(pr, open_prs) is None):
+                                linked_kilo_review_source(pr, open_prs) is None and
+                                linked_kilo_merged_review_source(pr) is None):
             continue
         run_id = int(run["id"])
         name = str(run.get("name", "workflow"))
@@ -1064,4 +1079,3 @@ if __name__ == "__main__":
     except Exception as exc:
         print(f"::error::{exc}", file=sys.stderr)
         raise
-

@@ -267,6 +267,85 @@ class MergedKiloRepairSourceTests(unittest.TestCase):
         with patch.object(automation, "get", side_effect=non_ancestor):
             self.assertIsNone(automation.linked_kilo_merged_review_source(self.pr))
 
+    def test_unresolvable_receipt_sha_is_skipped(self):
+        def missing_receipt(path):
+            if path.endswith("/pulls/224"):
+                return self.source
+            if path.endswith(f"/compare/{self.source_sha}...{self.implementation_sha}"):
+                return {"behind_by": 0, "status": "ahead"}
+            if path.endswith(f"/compare/{self.receipt_sha}...{self.source_sha}"):
+                raise automation.ApiError(404, "commit not found")
+            raise AssertionError(f"Unexpected GitHub API call: {path}")
+
+        with (
+            patch.object(automation, "get", side_effect=missing_receipt),
+            patch.object(automation, "carrier_comments", return_value=[self.receipt]),
+            patch.object(automation, "log"),
+        ):
+            self.assertIsNone(automation.linked_kilo_merged_review_source(self.pr))
+
+    def test_comment_pagination_overflow_rejects_candidate_without_crashing(self):
+        with (
+            patch.object(automation, "get", side_effect=self.mock_get),
+            patch.object(automation, "carrier_comments", side_effect=RuntimeError("too many comments")),
+            patch.object(automation, "log"),
+        ):
+            self.assertIsNone(automation.linked_kilo_merged_review_source(self.pr))
+
+    def test_receipt_comparisons_are_capped(self):
+        receipts = [
+            {"user": {"login": "github-actions[bot]"},
+             "body": f"<!-- kilo-auto-repair:{index:040x}:review -->"}
+            for index in range(1, 11)
+        ]
+
+        def no_receipt_matches(path):
+            if path.endswith("/pulls/224"):
+                return self.source
+            if path.endswith(f"/compare/{self.source_sha}...{self.implementation_sha}"):
+                return {"behind_by": 0, "status": "ahead"}
+            if "/compare/" in path:
+                raise automation.ApiError(404, "commit not found")
+            raise AssertionError(f"Unexpected GitHub API call: {path}")
+
+        with (
+            patch.object(automation, "get", side_effect=no_receipt_matches) as get,
+            patch.object(automation, "carrier_comments", return_value=receipts),
+            patch.object(automation, "log"),
+        ):
+            self.assertIsNone(automation.linked_kilo_merged_review_source(self.pr))
+        receipt_calls = [call for call in get.call_args_list if "/compare/" in call.args[0]]
+        self.assertEqual(len(receipt_calls), automation.MAX_MERGED_SOURCE_RECEIPTS)
+
+    def test_too_many_source_candidates_are_logged_and_rejected(self):
+        self.pr["body"] = " ".join(
+            f"https://github.com/Jonathan-Harris1975/HIVE-UI/pull/{number}"
+            for number in range(300, 309)
+        )
+        with patch.object(automation, "log") as log:
+            self.assertIsNone(automation.linked_kilo_merged_review_source(self.pr))
+        log.assert_called_once()
+        self.assertIn("9 repo PRs", log.call_args.args[0])
+
+
+class MergedKiloWaitingRunAdmissionTests(unittest.TestCase):
+    def test_merged_review_source_allows_waiting_run_admission(self):
+        pr = {"number": 226, "head": {"sha": "c" * 40}}
+        with (
+            patch.object(automation, "get", return_value={"workflow_runs": [{"id": 71, "head_sha": "c" * 40}]}),
+            patch.object(automation, "current_pr_for_sha", return_value=pr),
+            patch.object(automation, "automation_kind", return_value="kilo"),
+            patch.object(automation, "linked_kilo_carrier", return_value=None),
+            patch.object(automation, "linked_kilo_review_source", return_value=None),
+            patch.object(automation, "linked_kilo_merged_review_source", return_value=224),
+            patch.object(automation, "post") as post,
+            patch.object(automation, "log"),
+        ):
+            automation.admit_waiting_runs([pr])
+        post.assert_called_once_with(
+            f"/repos/{automation.REPO}/actions/runs/71/approve", expected=(201,)
+        )
+
 
 class KiloPermissionPolicyTests(unittest.TestCase):
     @classmethod
