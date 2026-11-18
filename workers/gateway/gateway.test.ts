@@ -87,6 +87,7 @@ test('TextBee webhook does not acknowledge OTPs rejected by AIMS', async () => {
     ['challenge_expired', 503, 'aims_kdp_challenge_unavailable'],
     ['sender_not_allowed', 422, 'aims_kdp_otp_rejected'],
     ['verification_code_not_found', 422, 'aims_kdp_otp_rejected'],
+    ['future_unrecognized_reason', 503, 'aims_kdp_challenge_unavailable'],
   ] as const) {
     vi.spyOn(globalThis, 'fetch').mockResolvedValue(Response.json({
       ok: true, accepted: false, reason,
