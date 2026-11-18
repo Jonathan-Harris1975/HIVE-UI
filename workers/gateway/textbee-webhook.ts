@@ -175,7 +175,19 @@ export async function handleTextBeeKdpOtpWebhook(request: Request, env: TextBeeW
       return webhookResponse(503, { ok: false, code: 'aims_kdp_forward_failed' }, requestId)
     }
     const result = await upstream.json().catch(() => ({})) as Record<string, unknown>
-    return webhookResponse(202, { ok: true, accepted: result.accepted === true }, requestId)
+    // AIMS deliberately returns 202 for *rejected* OTPs too. Never acknowledge
+    // delivery to TextBee unless the one-time challenge actually consumed it.
+    // Only transient challenges are retryable; bad senders/codes stay rejected.
+    if (result.accepted !== true) {
+      const retryable = result.reason === 'no_active_challenge'
+        || result.reason === 'challenge_expired'
+        || typeof result.reason !== 'string'
+      return webhookResponse(retryable ? 503 : 422, {
+        ok: false, accepted: false,
+        code: retryable ? 'aims_kdp_challenge_unavailable' : 'aims_kdp_otp_rejected',
+      }, requestId)
+    }
+    return webhookResponse(202, { ok: true, accepted: true }, requestId)
   } catch {
     return webhookResponse(503, { ok: false, code: 'aims_kdp_forward_unavailable' }, requestId)
   }
