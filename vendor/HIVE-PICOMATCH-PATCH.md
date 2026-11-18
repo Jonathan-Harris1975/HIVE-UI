@@ -42,7 +42,9 @@ npm's normal audit graph, so `scripts/verify-vendored-advisories.mjs` queries
 npm's advisory service for upstream 4.0.7 and fails closed if any advisory
 other than the reviewed GHSA-fc5q-39xc-vjpf affects it. CI also continues to run
 `npm audit --audit-level=high` for the registry dependency graph; neither check
-suppresses high-severity findings.
+suppresses high-severity findings. CI supplies the scoped GitHub Actions token
+for the advisory fallback to avoid anonymous rate-limit failures; the fallback
+still fails closed when advisory evidence is missing or unverified.
 
 Replace the tarball with the first compatible official release that includes an
 equivalent fix, then remove the local dependency and override.
