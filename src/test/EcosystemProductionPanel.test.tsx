@@ -1,4 +1,4 @@
-import { act, render, screen, waitFor } from '@testing-library/react'
+import { act, render, screen, waitFor, within } from '@testing-library/react'
 import { afterEach, expect, it, vi } from 'vitest'
 import { EcosystemProductionPanel, ScheduledWorkPanel } from '../components/EcosystemProductionPanel'
 import { apiFetch } from '../lib/api'
@@ -31,11 +31,13 @@ it('shows Ok for green runtimes and dot-only indicators without hiding warnings'
   expect(screen.getAllByText('Runtime: Ok')).toHaveLength(7)
   expect(screen.getByText('Runtime: Blocked')).toBeInTheDocument()
   const section = screen.getByLabelText('Ecosystem production readiness')
-  const dots = section.querySelectorAll('.rounded-full')
-  expect(dots.length).toBeGreaterThanOrEqual(9)
-  expect(screen.getAllByText('GREEN')).toHaveLength(8)
-  expect(screen.getAllByText('GREEN').every((node) => node.classList.contains('sr-only'))).toBe(true)
-  expect(screen.getAllByText('BLOCKED').every((node) => node.classList.contains('sr-only'))).toBe(true)
+  const greenLabels = within(section).getAllByText('GREEN')
+  const blockedLabels = within(section).getAllByText('BLOCKED')
+  expect(greenLabels).toHaveLength(8)
+  expect(blockedLabels).toHaveLength(1)
+  expect([...greenLabels, ...blockedLabels].every((label) =>
+    label.parentElement?.querySelector('[aria-hidden="true"]'),
+  )).toBe(true)
 })
 
 it('does not certify an incomplete eight-repository report', async () => {
