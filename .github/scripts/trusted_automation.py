@@ -382,10 +382,12 @@ def linked_kilo_merged_review_source(pr: dict[str, Any]) -> int | None:
         except ApiError as exc:
             log(f"Merged Kilo source #{number} unavailable: {exc}")
             continue
+        source_url = str(source.get("html_url") or "")
         if (source.get("state") != "closed" or not source.get("merged_at")
                 or source.get("user", {}).get("login") == KILO_LOGIN
                 or not is_same_repo(source)
-                or not re.search(re.escape(str(source.get("html_url") or "")) + URL_END, body)):
+                or not source_url
+                or not re.search(re.escape(source_url) + URL_END, body)):
             continue
         source_sha = str(source.get("head", {}).get("sha", ""))
         if not re.fullmatch(r"[0-9a-f]{40}", source_sha):
