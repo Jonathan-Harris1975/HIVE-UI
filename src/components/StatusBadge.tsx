@@ -2,6 +2,7 @@ interface StatusBadgeProps {
   status?: string | null
   label?: string
   compact?: boolean
+  dotOnly?: boolean
   variant?: 'liveness' | 'readiness' | 'operational'
 }
 
@@ -100,12 +101,12 @@ function display(status: string, variant?: StatusBadgeProps['variant']): string 
   return status.replace(/_/g, ' ').replace(/\b\w/g, (character) => character.toUpperCase())
 }
 
-export function StatusBadge({ status, label, compact = false, variant }: StatusBadgeProps) {
+export function StatusBadge({ status, label, compact = false, dotOnly = false, variant }: StatusBadgeProps) {
   const value = status?.trim() || 'unknown'
   return (
     <span className={`inline-flex items-center gap-1.5 font-medium ${compact ? 'text-xs' : 'text-xs'} ${textTone(value)}`}>
       <span className={`h-2 w-2 shrink-0 rounded-full ${dotTone(value, variant)} shadow-[0_0_8px_currentColor]`} aria-hidden="true" />
-      <span>{label || display(value, variant)}</span>
+      <span className={dotOnly ? 'sr-only' : undefined}>{label || display(value, variant)}</span>
     </span>
   )
 }
