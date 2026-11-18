@@ -11,6 +11,9 @@ type RepositoryEvidence = {
   repository_id: string
   state: string
   runtime_state: string
+  health_status?: string
+  readiness_status?: string
+  readiness?: { status?: string; detail?: string; http_status?: number | null }
   detail?: string
   gate_evidence?: {
     sha?: string | null
@@ -105,7 +108,14 @@ export function EcosystemProductionPanel() {
               <p className="mt-2">Runtime: {current ? item?.runtime_state : 'Not verified'}</p>
               <p className="mt-1">Deployment: {current ? gates?.deployment?.status || 'Unknown' : 'Not verified'}</p>
               {gates?.sha && <p className="mt-1 font-mono">Commit {gates.sha.slice(0, 12)}</p>}
-              {current && <p className="mt-2 leading-5">{gates?.reason || item?.detail}</p>}
+              {current && item?.runtime_state !== 'GREEN' && (
+                <div className="mt-2 text-amber-200">
+                  <p>Health: {item?.health_status || 'Unknown'} · Readiness: {item?.readiness_status || 'Unknown'}</p>
+                  <p className="mt-1 leading-5">{item?.readiness?.detail || item?.detail || 'Runtime verification failed.'}</p>
+                  {item?.readiness?.http_status && <p>Readiness HTTP {item.readiness.http_status}</p>}
+                </div>
+              )}
+              {current && <p className="mt-2 leading-5">CI/deployment: {gates?.reason || 'No current gate summary.'}</p>}
               <details className="mt-2">
                 <summary className="cursor-pointer text-slate-300">Evidence and workflow warnings</summary>
                 {Object.entries(gates?.required_workflows || {}).map(([name, gate]) => (
