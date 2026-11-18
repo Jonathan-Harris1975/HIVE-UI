@@ -47,11 +47,14 @@ jobs:
       - name: Install locked dependencies
         run: npm ci --no-audit --no-fund
 
-      - name: Typecheck, lint, build and verify
+      - name: Verify vendored dependency advisories
         env:
           # Read-only GitHub API token avoids anonymous advisory quota failures.
           # The advisory verification remains fail-closed on HTTP or schema errors.
           GITHUB_TOKEN: ${{ github.token }}
+        run: npm run verify:vendor
+
+      - name: Typecheck, lint, build and verify
         run: npm run check
 
       - name: Upload coverage to Codecov
