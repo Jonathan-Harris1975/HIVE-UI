@@ -356,6 +356,68 @@ def linked_kilo_review_source(pr: dict[str, Any], sources: list[dict[str, Any]])
     return None
 
 
+
+def linked_kilo_merged_review_source(pr: dict[str, Any]) -> int | None:
+    """Admit a follow-up only when its referenced, merged source has a verified
+    GitHub Actions repair receipt in the exact source-to-implementation ancestry.
+
+    A merged source stops appearing in list_open_prs(), but that must not make
+    independently verified repairs permanently ineligible for admission.
+    """
+    if pr.get("user", {}).get("login") != KILO_LOGIN or not is_same_repo(pr):
+        return None
+    body = str(pr.get("body") or "")
+    sha = str(pr.get("head", {}).get("sha", ""))
+    if not re.fullmatch(r"[0-9a-f]{40}", sha):
+        return None
+    pattern = rf"https://github\.com/{re.escape(REPO)}/pull/(\d+){URL_END}"
+    numbers = list(dict.fromkeys(int(n) for n in re.findall(pattern, body)))
+    if len(numbers) > 8:
+        return None
+    for number in numbers:
+        if number == int(pr.get("number", 0)):
+            continue
+        try:
+            source = get(f"/repos/{REPO}/pulls/{number}")
+        except ApiError as exc:
+            log(f"Merged Kilo source #{number} unavailable: {exc}")
+            continue
+        source_url = str(source.get("html_url") or "")
+        if (source.get("state") != "closed" or not source.get("merged_at")
+                or source.get("user", {}).get("login") == KILO_LOGIN
+                or not is_same_repo(source)
+                or not source_url
+                or not re.search(re.escape(source_url) + URL_END, body)):
+            continue
+        source_sha = str(source.get("head", {}).get("sha", ""))
+        if not re.fullmatch(r"[0-9a-f]{40}", source_sha):
+            continue
+        comparison = get(f"/repos/{REPO}/compare/{source_sha}...{sha}")
+        if comparison.get("behind_by") != 0 or comparison.get("status") not in {"ahead", "identical"}:
+            continue
+        try:
+            comments = carrier_comments(number)
+        except ApiError as exc:
+            log(f"Merged Kilo source #{number} receipts unavailable: {exc}")
+            continue
+        receipts = set()
+        for item in comments:
+            if item.get("user", {}).get("login") != "github-actions[bot]":
+                continue
+            comment_body = str(item.get("body") or "")
+            if "dispatch-state: accepted" not in comment_body:
+                continue
+            receipts.update(re.findall(r"<!-- kilo-auto-repair:([0-9a-f]{40}):", comment_body))
+        for receipt_sha in receipts:
+            if receipt_sha == source_sha:
+                return number
+            receipt_comparison = get(f"/repos/{REPO}/compare/{receipt_sha}...{source_sha}")
+            if (receipt_comparison.get("behind_by") == 0
+                    and receipt_comparison.get("status") in {"ahead", "identical"}):
+                return number
+    return None
+
+
 def adopt_linked_kilo_prs(open_prs: list[dict[str, Any]]) -> None:
     carriers = [pr for pr in open_prs if is_carrier(pr)]
     for pr in open_prs:
@@ -367,6 +429,8 @@ def adopt_linked_kilo_prs(open_prs: list[dict[str, Any]]) -> None:
         source = linked_kilo_carrier(pr, carriers)
         if source is None:
             source = linked_kilo_review_source(pr, open_prs)
+        if source is None:
+            source = linked_kilo_merged_review_source(pr)
         if source is None:
             log(f"Kilo PR #{pr['number']} has no verified repair source; leaving it untrusted.")
             continue
@@ -893,7 +957,8 @@ def _reconcile_pr_candidate(pr: dict[str, Any]) -> None:
     if kind == "kilo":
         carriers = [source for source in list_open_prs() if is_carrier(source)]
         if (linked_kilo_carrier(pr, carriers) is None and
-                linked_kilo_review_source(pr, list_open_prs()) is None):
+                linked_kilo_review_source(pr, list_open_prs()) is None and
+                linked_kilo_merged_review_source(pr) is None):
             log(f"Kilo PR #{pr['number']} no longer has a current verified source; withholding merge.")
             return
 
