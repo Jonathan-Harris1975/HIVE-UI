@@ -16,6 +16,7 @@
     "verify:dist": "node scripts/verify-dist.mjs",
     "test:dist": "node --test scripts/verify-dist.test.mjs",
     "check:bundle-budget": "node scripts/check-bundle-budget.mjs dist",
+    "audit:vendored-picomatch": "node scripts/audit-vendored-picomatch.mjs",
     "verify:lock": "node scripts/verify-lockfile.mjs",
     "verify:source": "node scripts/verify-source.mjs",
     "test:security": "rm -rf .security-test && tsc -p tsconfig.security-test.json && node --test scripts/security.test.mjs scripts/picomatch-security.test.mjs",
