@@ -5,11 +5,9 @@ import {
   LoaderCircle,
   RefreshCcw,
   ShieldCheck,
-  Sparkles,
 } from 'lucide-react'
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { EcosystemProductionPanel, ScheduledWorkPanel } from '../components/EcosystemProductionPanel'
-import { EmptyState } from '../components/EmptyState'
 import { StatusBadge } from '../components/StatusBadge'
 import { apiFetch } from '../lib/api'
 import { formatBytes, formatDate } from '../lib/format'
@@ -211,7 +209,41 @@ export function RepositoriesPage() {
           </div>
         )}
 
-        <EcosystemProductionPanel />
+        <EcosystemProductionPanel renderRepositoryDetails={(repositoryId) => {
+          const repo = summariesById.get(repositoryId)
+          const service = healthMap.get(repositoryId)
+          const readiness = repo ? repositoryReadiness(repo) : 'warning'
+          return (
+            <div className="mt-3 space-y-2 border-t border-white/8 pt-3">
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <span>Governed snapshot</span>
+                <StatusBadge status={readiness} label={repo ? (readiness === 'ready' ? 'Current' : 'Attention') : 'Missing'} compact />
+              </div>
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <span>Service</span>
+                <StatusBadge status={service?.status ?? 'unknown'} variant="operational" compact />
+              </div>
+              {!repo && <p className="leading-5 text-amber-200">No governed snapshot registered for this repository.</p>}
+              {repo && (
+                <details>
+                  <summary className="cursor-pointer text-slate-300">Snapshot, memory and intelligence</summary>
+                  <p className="mt-2 break-words">{repo.source_filename ?? 'Source filename unavailable'}</p>
+                  <div className="mt-2 grid grid-cols-3 gap-2">
+                    {(['snapshot', 'memory', 'intelligence'] as const).map((domain) => (
+                      <div key={domain} className="min-w-0 rounded-lg border border-white/8 p-2">
+                        <p className="break-words capitalize">{domain}</p>
+                        <StatusBadge status={freshnessStatus(repo, domain)} label={freshnessLabel(repo, domain)} compact />
+                      </div>
+                    ))}
+                  </div>
+                  <p className="mt-2">{repo.file_count.toLocaleString()} files · {formatBytes(repo.total_bytes)} · index v{repo.indexed_version}</p>
+                  <p>Updated {formatUnixDate(repo.updated_at)}</p>
+                  {repo.source_commit_sha && <p className="break-all font-mono">SHA {repo.source_commit_sha}</p>}
+                </details>
+              )}
+            </div>
+          )
+        }} />
         <ScheduledWorkPanel scheduler={healthMap.get('MAST')} />
 
         <section className="mt-4 rounded-2xl border border-white/8 bg-hive-panel/60 p-4 sm:p-5">
@@ -251,93 +283,6 @@ export function RepositoriesPage() {
           )}
         </section>
 
-        <section className="mt-6">
-          <div className="flex items-center justify-between gap-3">
-            <div>
-              <h3 className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-400">Governed repositories</h3>
-              <p className="mt-1 text-xs text-slate-500">One card per governed repository. No repair or mutation controls.</p>
-            </div>
-            {state.repoHealth && (
-              <StatusBadge status={state.repoHealth.overall_status ?? 'unknown'} variant="operational" compact />
-            )}
-          </div>
-
-          {loading && state.repositories.length === 0 ? (
-            <div className="mt-4 flex items-center justify-center py-16 text-slate-400">
-              <LoaderCircle className="mr-2 h-5 w-5 animate-spin" /> Loading repository estate
-            </div>
-          ) : GOVERNED_REPOSITORIES.length === 0 ? (
-            <div className="mt-3">
-              <EmptyState title="No governed repositories configured." body="The repository catalogue is empty." />
-            </div>
-          ) : (
-            <div className="mt-3 grid gap-3 md:grid-cols-2 xl:grid-cols-3">
-              {GOVERNED_REPOSITORIES.map((repositoryId) => {
-                const repo = summariesById.get(repositoryId)
-                const service = healthMap.get(repositoryId)
-                const readiness = repo ? repositoryReadiness(repo) : 'warning'
-                return (
-                  <article key={repositoryId} className="rounded-2xl border border-white/8 bg-hive-panel/70 p-4">
-                    <div className="flex items-start justify-between gap-3">
-                      <div className="min-w-0">
-                        <h4 className="truncate text-sm font-semibold text-white">{repositoryId}</h4>
-                        <p className="mt-0.5 truncate text-xs text-slate-500">
-                          {repo?.source_filename ?? 'No governed snapshot registered'}
-                        </p>
-                      </div>
-                      <StatusBadge
-                        status={readiness}
-                        label={repo ? (readiness === 'ready' ? 'Current' : 'Attention') : 'Missing'}
-                        compact
-                      />
-                    </div>
-
-                    {repo ? (
-                      <>
-                        <div className="mt-4 grid grid-cols-3 gap-2 text-xs">
-                          {(['snapshot', 'memory', 'intelligence'] as const).map((domain) => (
-                            <div key={domain} className="rounded-lg border border-white/8 bg-white/[0.02] px-2.5 py-2">
-                              <p className="truncate text-[10px] uppercase tracking-wider text-slate-500">
-                                {domain === 'intelligence' ? 'Intelligence' : domain}
-                              </p>
-                              <div className="mt-1">
-                                <StatusBadge
-                                  status={freshnessStatus(repo, domain)}
-                                  label={freshnessLabel(repo, domain)}
-                                  compact
-                                />
-                              </div>
-                            </div>
-                          ))}
-                        </div>
-                        <div className="mt-3 grid gap-1 text-xs text-slate-500">
-                          <p>{repo.file_count.toLocaleString()} files · {formatBytes(repo.total_bytes)} · index v{repo.indexed_version}</p>
-                          <p>Updated {formatUnixDate(repo.updated_at)}</p>
-                          {repo.source_commit_sha && <p className="truncate font-mono">SHA {repo.source_commit_sha}</p>}
-                        </div>
-                      </>
-                    ) : (
-                      <p className="mt-4 text-xs leading-5 text-amber-100/80">
-                        This repository is part of the governed estate but has no current HIVE snapshot.
-                      </p>
-                    )}
-
-                    <div className="mt-4 flex items-center justify-between gap-3 border-t border-white/6 pt-3">
-                      <span className="flex items-center gap-1.5 text-xs text-slate-500">
-                        <Sparkles className="h-3.5 w-3.5" /> Service
-                      </span>
-                      <StatusBadge
-                        status={service?.status ?? 'unknown'}
-                        variant="operational"
-                        compact
-                      />
-                    </div>
-                  </article>
-                )
-              })}
-            </div>
-          )}
-        </section>
       </div>
     </div>
   )
