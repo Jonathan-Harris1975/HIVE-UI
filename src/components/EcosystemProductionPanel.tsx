@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useState, type ReactNode } from 'react'
 import { LoaderCircle, RefreshCcw } from 'lucide-react'
 import { apiFetch } from '../lib/api'
 import { formatDate } from '../lib/format'
@@ -11,6 +11,9 @@ type RepositoryEvidence = {
   repository_id: string
   state: string
   runtime_state: string
+  health_status?: string
+  readiness_status?: string
+  readiness?: { status?: string; detail?: string; http_status?: number | null }
   detail?: string
   gate_evidence?: {
     sha?: string | null
@@ -32,8 +35,11 @@ type ProductionReport = {
 
 const STALE_AFTER_MS = 120_000
 const tone = (state?: string) => state === 'GREEN' ? 'ready' : state === 'BLOCKED' ? 'error' : state === 'DEGRADED' ? 'warning' : 'unknown'
+const productionLabel = (state?: string) => state === 'GREEN' ? 'Ready' : state === 'BLOCKED' ? 'Blocked' : state === 'DEGRADED' ? 'Degraded' : 'Unknown'
+const runtimeLabel = (state?: string) => state === 'GREEN' ? 'Ok' : productionLabel(state)
+const decisionLabel = (decision?: string) => decision === 'ALLOW' ? 'Allowed' : decision === 'BLOCK' ? 'Blocked' : decision || 'Unknown'
 
-export function EcosystemProductionPanel() {
+export function EcosystemProductionPanel({ renderRepositoryDetails }: { renderRepositoryDetails?: (id: string) => ReactNode }) {
   const [report, setReport] = useState<ProductionReport | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
@@ -71,10 +77,10 @@ export function EcosystemProductionPanel() {
     <section id="ecosystem-production-readiness" aria-label="Ecosystem production readiness" className="mt-4 rounded-2xl border border-white/8 bg-hive-panel/60 p-4 sm:p-5">
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
-          <h3 className="text-sm font-semibold text-white">Ecosystem production readiness</h3>
+          <h3 className="text-sm font-semibold text-white">Production readiness and governed repositories</h3>
           <p className="mt-1 max-w-3xl text-xs leading-5 text-slate-400">
-            Runtime readiness, required CI/security checks and deployment evidence for all eight repositories.
-            Snapshot freshness below describes HIVE’s indexed code; it does not certify production delivery.
+            One view of runtime, release evidence and governed snapshots for all eight repositories.
+            A current snapshot describes indexed code; it does not certify production delivery.
           </p>
         </div>
         <button type="button" onClick={() => void load()} disabled={loading}
@@ -84,8 +90,8 @@ export function EcosystemProductionPanel() {
         </button>
       </div>
       <div role="status" className="mt-3 flex flex-wrap items-center gap-3 text-xs text-slate-400">
-        <StatusBadge status={current ? tone(report?.state) : 'unknown'} label={loading ? 'Checking' : current ? report?.state : 'Unknown'} />
-        <span>Release decision: {current ? report?.release_decision : 'Not verified'}</span>
+        <StatusBadge status={current ? tone(report?.state) : 'unknown'} label={loading ? 'Checking' : current ? productionLabel(report?.state) : 'Unknown'} dotOnly />
+        <span>Release decision: {current ? decisionLabel(report?.release_decision) : 'Not verified'}</span>
         {report?.generated_at && <span>Observed {formatDate(report.generated_at)}</span>}
       </div>
       {error && <p role="alert" className="mt-3 text-xs text-rose-200">{error}</p>}
@@ -100,14 +106,23 @@ export function EcosystemProductionPanel() {
             <article key={id} className="rounded-xl border border-white/8 bg-hive-surface p-3 text-xs text-slate-400">
               <div className="flex items-center justify-between gap-2">
                 <h4 className="font-semibold text-white">{id}</h4>
-                <StatusBadge status={current ? tone(item?.state) : 'unknown'} label={current ? item?.state : 'Unknown'} compact />
+                <StatusBadge status={current ? tone(item?.state) : 'unknown'} label={current ? productionLabel(item?.state) : 'Unknown'} compact dotOnly />
               </div>
-              <p className="mt-2">Runtime: {current ? item?.runtime_state : 'Not verified'}</p>
+              <p className="mt-2">Runtime: {current ? runtimeLabel(item?.runtime_state) : 'Not verified'}</p>
               <p className="mt-1">Deployment: {current ? gates?.deployment?.status || 'Unknown' : 'Not verified'}</p>
-              {gates?.sha && <p className="mt-1 font-mono">Commit {gates.sha.slice(0, 12)}</p>}
-              {current && <p className="mt-2 leading-5">{gates?.reason || item?.detail}</p>}
+              {renderRepositoryDetails?.(id)}
+              {current && item?.runtime_state !== 'GREEN' && (
+                <div className="mt-2 text-amber-200">
+                  <p>Health: {item?.health_status || 'Unknown'} · Readiness: {item?.readiness_status || 'Unknown'}</p>
+                  <p className="mt-1 leading-5">{item?.readiness?.detail || item?.detail || 'Runtime verification failed.'}</p>
+                  {item?.readiness?.http_status && <p>Readiness HTTP {item.readiness.http_status}</p>}
+                </div>
+              )}
+              {current && item?.state !== 'GREEN' && <p className="mt-2 leading-5">CI/deployment: {gates?.reason || 'No current gate summary.'}</p>}
               <details className="mt-2">
                 <summary className="cursor-pointer text-slate-300">Evidence and workflow warnings</summary>
+                {gates?.sha && <p className="mt-1 font-mono">Commit {gates.sha.slice(0, 12)}</p>}
+                {current && item?.state === 'GREEN' && <p className="mt-1 leading-5">CI/deployment: {gates?.reason || 'No current gate summary.'}</p>}
                 {Object.entries(gates?.required_workflows || {}).map(([name, gate]) => (
                   <p key={name} className="mt-1">{name}: {gate.status || 'Unknown'}</p>
                 ))}

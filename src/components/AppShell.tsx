@@ -365,7 +365,8 @@ function InspectorRowView({ row }: { row: InspectorRow }) {
 }
 
 function InspectorPanel() {
-  const { open, payload, setOpen } = useInspector()
+  const { open, available, payload, setOpen } = useInspector()
+  if (!available) return null
 
   return (
     <aside
@@ -457,14 +458,14 @@ function ContextTabs({ pathname }: { pathname: string }) {
   )
 }
 
-function HeaderActions({ health, open, toggle }: { health: ReturnType<typeof useAuth>['health']; open: boolean; toggle: () => void }) {
+function HeaderActions({ health, open, available, toggle }: { health: ReturnType<typeof useAuth>['health']; open: boolean; available: boolean; toggle: () => void }) {
   return (
     <div className="flex shrink-0 items-center gap-2">
       <div className="hidden items-center gap-2 rounded-full border border-white/8 bg-white/[0.035] px-3 py-1.5 text-xs text-slate-400 sm:flex">
         <span aria-hidden="true" className={`h-2 w-2 rounded-full ${health?.ok ? 'bg-emerald-300 shadow-[0_0_12px_rgba(110,231,183,.7)]' : 'bg-amber-300'}`} />
         {health?.build ?? 'HIVE'}
       </div>
-      <button
+      {available && <button
         type="button"
         onClick={toggle}
         aria-pressed={open}
@@ -473,7 +474,7 @@ function HeaderActions({ health, open, toggle }: { health: ReturnType<typeof use
         title="Toggle inspector"
       >
         {open ? <PanelRightClose className="h-4.5 w-4.5" /> : <PanelRightOpen className="h-4.5 w-4.5" />}
-      </button>
+      </button>}
     </div>
   )
 }
@@ -530,7 +531,7 @@ export function AppShell() {
   const { pathname } = useLocation()
   const { health } = useAuth()
   const online = useOnlineStatus()
-  const { open, toggle } = useInspector()
+  const { open, available, toggle } = useInspector()
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
   const [railCollapsed, setRailCollapsed] = useState(false)
   const closeMobileMenu = () => setMobileMenuOpen(false)
@@ -594,7 +595,7 @@ export function AppShell() {
               <p className="hidden truncate text-xs text-slate-400 sm:block">{meta.subtitle}</p>
             </div>
           </div>
-          <HeaderActions health={health} open={open} toggle={toggle} />
+          <HeaderActions health={health} open={open} available={available} toggle={toggle} />
         </header>
         <ContextTabs pathname={pathname} />
 

@@ -1,4 +1,4 @@
-import { act, render, screen, waitFor } from '@testing-library/react'
+import { act, render, screen, waitFor, within } from '@testing-library/react'
 import { afterEach, expect, it, vi } from 'vitest'
 import { EcosystemProductionPanel, ScheduledWorkPanel } from '../components/EcosystemProductionPanel'
 import { apiFetch } from '../lib/api'
@@ -16,9 +16,39 @@ afterEach(() => { vi.clearAllMocks(); vi.useRealTimers() })
 it('shows production gates for all eight repositories independently of snapshots', async () => {
   request.mockResolvedValue(report())
   render(<EcosystemProductionPanel />)
-  await screen.findByText('Release decision: ALLOW')
+  await screen.findByText('Release decision: Allowed')
   expect(screen.getAllByRole('article')).toHaveLength(8)
   expect(request).toHaveBeenCalledWith('/v1/system/production-manager', expect.anything())
+})
+
+it('renders governed snapshot details in the corresponding production card', async () => {
+  request.mockResolvedValue(report())
+  render(<EcosystemProductionPanel renderRepositoryDetails={(id) => <span>Snapshot for {id}</span>} />)
+  await screen.findByText('Release decision: Allowed')
+  for (const id of GOVERNED_REPOSITORIES) {
+    const card = screen.getByRole('heading', { name: id }).closest('article')
+    expect(card).not.toBeNull()
+    expect(within(card!).getByText(`Snapshot for ${id}`)).toBeInTheDocument()
+  }
+})
+
+it('shows Ok for green runtimes and dot-only indicators without hiding warnings', async () => {
+  const value = report()
+  value.repositories[1].runtime_state = 'BLOCKED'
+  value.repositories[1].state = 'BLOCKED'
+  request.mockResolvedValue(value)
+  render(<EcosystemProductionPanel />)
+  await screen.findByText('Release decision: Allowed')
+  expect(screen.getAllByText('Runtime: Ok')).toHaveLength(7)
+  expect(screen.getByText('Runtime: Blocked')).toBeInTheDocument()
+  const section = screen.getByLabelText('Ecosystem production readiness')
+  const readyLabels = within(section).getAllByText('Ready')
+  const blockedLabels = within(section).getAllByText('Blocked')
+  expect(readyLabels).toHaveLength(8)
+  expect(blockedLabels).toHaveLength(1)
+  expect([...readyLabels, ...blockedLabels].every((label) =>
+    label.parentElement?.querySelector('[aria-hidden="true"]'),
+  )).toBe(true)
 })
 
 it('does not certify an incomplete eight-repository report', async () => {
@@ -27,7 +57,7 @@ it('does not certify an incomplete eight-repository report', async () => {
   request.mockResolvedValue(value)
   render(<EcosystemProductionPanel />)
   await screen.findByText(/Evidence is stale or incomplete/)
-  expect(screen.queryByText('Release decision: ALLOW')).not.toBeInTheDocument()
+  expect(screen.queryByText('Release decision: Allowed')).not.toBeInTheDocument()
 })
 
 it('expires an old green decision instead of leaving it green indefinitely', async () => {
@@ -35,7 +65,7 @@ it('expires an old green decision instead of leaving it green indefinitely', asy
   request.mockResolvedValue(report())
   render(<EcosystemProductionPanel />)
   await act(async () => { await Promise.resolve() })
-  expect(screen.getByText('Release decision: ALLOW')).toBeInTheDocument()
+  expect(screen.getByText('Release decision: Allowed')).toBeInTheDocument()
   await act(async () => { vi.advanceTimersByTime(135_000) })
   expect(screen.getByText('Release decision: Not verified')).toBeInTheDocument()
 })
@@ -44,7 +74,7 @@ it('reports a failed fetch as unknown without certifying any repository', async 
   request.mockRejectedValue(new Error('Evidence unavailable'))
   render(<EcosystemProductionPanel />)
   await waitFor(() => expect(screen.getByRole('alert')).toHaveTextContent('Evidence unavailable'))
-  expect(screen.queryByText('Release decision: ALLOW')).not.toBeInTheDocument()
+  expect(screen.queryByText('Release decision: Allowed')).not.toBeInTheDocument()
 })
 
 it('shows failed business work even when the scheduler heartbeat is healthy', () => {
