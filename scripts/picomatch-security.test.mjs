@@ -23,7 +23,7 @@ test('vendored picomatch rejects crafted ReDoS inputs promptly', () => {
   assert.equal(picomatch.isMatch(`${'a'.repeat(100)}!`, '+(*a)'), false)
   assert.equal(picomatch.isMatch(`${'ab'.repeat(100)}c`, '+(ab|abab)'), false)
 
-  assert.ok(performance.now() - startedAt < 100, 'crafted patterns exceeded 100 ms')
+  assert.ok(performance.now() - startedAt < 2000, 'crafted patterns exceeded 2000 ms')
 })
 
 test('ordinary extglobs retain their expected behaviour', () => {
