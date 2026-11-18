@@ -222,6 +222,23 @@ class MergedKiloRepairSourceTests(unittest.TestCase):
     def test_valid_merged_source_with_ancestral_receipt_is_admitted(self):
         self.assertEqual(self.verify(), 224)
 
+    def test_pending_repair_receipt_is_rejected(self):
+        self.receipt["body"] = f"<!-- kilo-auto-repair:{self.source_sha}:review -->\\ndispatch-state: queued"
+        self.assertIsNone(self.verify())
+
+    def test_verified_merged_source_can_be_adopted_without_open_source_pr(self):
+        self.pr["labels"] = []
+        with (
+            patch.object(automation, "get", side_effect=self.mock_get),
+            patch.object(automation, "carrier_comments", return_value=[self.receipt]),
+            patch.object(automation, "linked_kilo_carrier", return_value=None),
+            patch.object(automation, "linked_kilo_review_source", return_value=None),
+            patch.object(automation, "add_labels") as add_labels,
+            patch.object(automation, "log"),
+        ):
+            automation.adopt_linked_kilo_prs([self.pr])
+            add_labels.assert_called_once_with(226, ["autonomy:repair", "autonomy:kilo-implementation"])
+
     def test_missing_verified_actions_receipt_is_rejected(self):
         self.receipt["user"]["login"] = "untrusted[bot]"
         self.assertIsNone(self.verify())
