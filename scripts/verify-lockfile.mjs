@@ -6,7 +6,7 @@ if (lock.lockfileVersion !== 3) throw new Error(`Expected package-lock version 3
 const allowedHosts = new Set(['registry.npmjs.org'])
 const problems = []
 const patchedPicomatchPath = 'file:vendor/picomatch-4.0.8-hive.1.tgz'
-const patchedPicomatchIntegrity = 'sha512-wqB7oiTLB0cIGtDFo9DK3xhqTzo973jJOLwUeikx43NhEVXBIaiqr6c2nrZk8NFod88p583e8Gmt3JUNY0jlkA=='
+const patchedPicomatchIntegrity = 'sha512-V5PqvO3nuVkyUJqziqNZZMQ5EkoZu99lhcDwZvgBDtuHdCPqpzT2vmEaiFC7ViUBQ5Nz7WUrkqxmgZTB4mXCLA=='
 
 for (const [name, entry] of Object.entries(lock.packages ?? {})) {
   if (!entry || typeof entry !== 'object' || typeof entry.resolved !== 'string') continue
