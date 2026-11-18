@@ -1,4 +1,4 @@
-import { act, render, screen, waitFor } from '@testing-library/react'
+import { act, render, screen, waitFor, within } from '@testing-library/react'
 import { afterEach, expect, it, vi } from 'vitest'
 import { EcosystemProductionPanel, ScheduledWorkPanel } from '../components/EcosystemProductionPanel'
 import { apiFetch } from '../lib/api'
@@ -19,6 +19,25 @@ it('shows production gates for all eight repositories independently of snapshots
   await screen.findByText('Release decision: ALLOW')
   expect(screen.getAllByRole('article')).toHaveLength(8)
   expect(request).toHaveBeenCalledWith('/v1/system/production-manager', expect.anything())
+})
+
+it('shows Ok for green runtimes and dot-only indicators without hiding warnings', async () => {
+  const value = report()
+  value.repositories[1].runtime_state = 'BLOCKED'
+  value.repositories[1].state = 'BLOCKED'
+  request.mockResolvedValue(value)
+  render(<EcosystemProductionPanel />)
+  await screen.findByText('Release decision: ALLOW')
+  expect(screen.getAllByText('Runtime: Ok')).toHaveLength(7)
+  expect(screen.getByText('Runtime: Blocked')).toBeInTheDocument()
+  const section = screen.getByLabelText('Ecosystem production readiness')
+  const greenLabels = within(section).getAllByText('GREEN')
+  const blockedLabels = within(section).getAllByText('BLOCKED')
+  expect(greenLabels).toHaveLength(8)
+  expect(blockedLabels).toHaveLength(1)
+  expect([...greenLabels, ...blockedLabels].every((label) =>
+    label.parentElement?.querySelector('[aria-hidden="true"]'),
+  )).toBe(true)
 })
 
 it('does not certify an incomplete eight-repository report', async () => {

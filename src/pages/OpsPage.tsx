@@ -8,7 +8,6 @@ import {
   PlayCircle,
   RefreshCw,
   ShieldCheck,
-  Sparkles,
   GitBranch,
   Trash2,
 } from 'lucide-react'
@@ -31,12 +30,9 @@ import { isSnapshotFresh } from '../lib/ops-action-policy'
 import { GOVERNED_REPOSITORIES } from '../lib/repositories'
 import type {
   ExecutionPreviewResponse,
-  ExecutionReviewItem,
-  ExecutionReviewsResponse,
   OpsEventItem,
   OpsEventsResponse,
   HealthResponse,
-  RuntimeStatsResponse,
   WorkflowGraphResponse,
   WorkflowNode,
   WorkflowTemplate,
@@ -171,18 +167,6 @@ function stringFrom(value: unknown): string | null {
   return typeof value === 'string' && value.trim() ? value : null
 }
 
-const OPEN_REVIEW_STATUSES = new Set(['pending_review', 'needs_changes'])
-
-function normaliseReviewStatus(status: unknown): string {
-  return typeof status === 'string' ? status.trim().toLowerCase().replace(/-/g, '_') : ''
-}
-
-function isOpenReview(review: ExecutionReviewItem): boolean {
-  if (review.is_open === true) return true
-  if (review.is_closed === true || review.is_ready === true || review.can_execute_now) return false
-  return OPEN_REVIEW_STATUSES.has(normaliseReviewStatus(review.status || 'pending_review'))
-}
-
 export function OpsPage() {
   const { refreshHealth } = useAuth()
   const { setPayload, setOpen } = useInspector()
@@ -232,9 +216,7 @@ export function OpsPage() {
       })))
     }
   }, [lifecycleReviews])
-  const [runtimeStats, setRuntimeStats] = useState<RuntimeStatsResponse | null>(null)
   const [templates, setTemplates] = useState<Record<string, WorkflowTemplate>>({})
-  const [openReviewCount, setOpenReviewCount] = useState(0)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [purgeDialogOpen, setPurgeDialogOpen] = useState(false)
@@ -266,30 +248,25 @@ export function OpsPage() {
       const [
         healthResult,
         templateResult,
-        reviewResult,
         opsEventsResult,
-        runtimeStatsResult,
         lifecycleResult,
         lifecycleReviewsResult,
         reportHistoryResult,
       ] = await Promise.all([
         apiFetch<HealthResponse>('/health', { signal }),
         apiFetch<WorkflowTemplatesResponse>('/v1/workflow-graphs/templates', { signal }),
-        apiFetch<ExecutionReviewsResponse>('/v1/execution-reviews?limit=50', { signal }),
         apiFetch<OpsEventsResponse>('/v1/system/ops-events?limit=30', { signal }).catch(
           (caught): OpsEventsResponse => ({
             ok: false,
             error: caught instanceof Error ? caught.message : 'Ops events could not be loaded.',
           }),
         ),
-        apiFetch<RuntimeStatsResponse>('/v1/system/runtime-stats', { signal }).catch(() => null),
         apiFetch<WeeklyLifecycleReportCurrentResponse>('/v1/system/lifecycle-reports/current', { signal }).catch(() => null),
         apiFetch<{ items?: Array<Record<string, unknown>> }>('/v1/system/lifecycle-reviews', { signal }).catch(() => null),
         apiFetch<{ items?: Array<Record<string, unknown>> }>('/v1/system/lifecycle-reports/history?limit=12', { signal }).catch(() => ({ items: [] })),
       ])
       setHealth(healthResult)
       setOpsEvents(opsEventsResult)
-      setRuntimeStats(runtimeStatsResult)
       setLifecycleReport(lifecycleResult)
       setLifecycleReviews(lifecycleReviewsResult?.items ?? [])
       const actionableFailures = [
@@ -300,9 +277,7 @@ export function OpsPage() {
         ? `${actionableFailures.join(' and ')} could not be loaded. Current status is unknown.`
         : null)
       setReportHistory(reportHistoryResult.items ?? [])
-      const activeReviews = (reviewResult.items ?? []).filter(isOpenReview)
       setTemplates(templateResult.templates ?? {})
-      setOpenReviewCount(Number(reviewResult.open_count ?? activeReviews.length))
       await refreshHealth()
       const receivedAt = Date.now()
       setFreshnessNow(receivedAt)
@@ -311,12 +286,10 @@ export function OpsPage() {
       // Clear the previous snapshot so a failed refresh cannot leave stale green status on screen.
       setHealth(null)
       setOpsEvents(null)
-      setRuntimeStats(null)
       setLifecycleReport(null)
       setLifecycleReviews([])
       setReportHistory([])
       setTemplates({})
-      setOpenReviewCount(0)
       setActionableDataError('Operations could not be refreshed. Alerts and review status are unknown until recovery.')
       setSnapshotUpdatedAt(null)
       setError(caught instanceof Error ? caught.message : 'Operations data could not be loaded.')
@@ -338,12 +311,10 @@ export function OpsPage() {
     if (!snapshotUpdatedAt || operationalSnapshotFresh) return
     setHealth(null)
     setOpsEvents(null)
-    setRuntimeStats(null)
     setLifecycleReport(null)
     setLifecycleReviews([])
     setReportHistory([])
     setTemplates({})
-    setOpenReviewCount(0)
     setSnapshotUpdatedAt(null)
     setActionableDataError('Operational data is stale. Current status is unknown; refresh before acting.')
     setError('Operational data is stale. Refresh to load a current HIVE snapshot.')
@@ -944,65 +915,6 @@ export function OpsPage() {
               </summary>
               <div className="grid grid-cols-1 gap-2 border-t border-white/6 p-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
                 {flags.map((flag) => <Flag key={flag.label} {...flag} />)}
-              </div>
-            </details>
-
-            <details className="group mt-3 rounded-2xl border border-white/8 bg-hive-panel/60">
-              <summary className="flex cursor-pointer list-none items-center justify-between gap-3 px-4 py-3">
-                <span className="text-sm font-semibold text-white">Live system snapshot</span>
-                <span className="text-xs text-slate-400">{openReviewCount} reviews · {runtimeStats?.providers?.count ?? 0} providers</span>
-              </summary>
-              <div className="grid grid-cols-2 gap-2 border-t border-white/6 p-3 sm:grid-cols-3">
-                <Link
-                  to="/execution-reviews"
-                  className="rounded-xl border border-white/8 bg-hive-surface p-3 text-left"
-                >
-                  <ShieldCheck className="h-4 w-4 text-violet-300" />
-                  <p className="mt-2 text-lg font-semibold text-white">{openReviewCount}</p>
-                  <span className="text-[10px] uppercase tracking-wider text-slate-500">Open reviews</span>
-                </Link>
-                <button
-                  type="button"
-                  onClick={() => inspect('Model Registry', runtimeStats?.model_registry ?? {})}
-                  className="rounded-xl border border-white/8 bg-hive-surface p-3 text-left"
-                >
-                  <Sparkles className="h-4 w-4 text-emerald-300" />
-                  <p className="mt-2 text-lg font-semibold text-white">
-                    {runtimeStats?.model_registry?.total_models ?? 0}
-                  </p>
-                  <span className="text-[10px] uppercase tracking-wider text-slate-500">Models</span>
-                </button>
-                <button
-                  type="button"
-                  onClick={() => inspect('Providers', runtimeStats?.providers ?? {})}
-                  className="rounded-xl border border-white/8 bg-hive-surface p-3 text-left"
-                >
-                  <Network className="h-4 w-4 text-violet-300" />
-                  <p className="mt-2 text-lg font-semibold text-white">{runtimeStats?.providers?.count ?? 0}</p>
-                  <span className="text-[10px] uppercase tracking-wider text-slate-500">Providers</span>
-                </button>
-                <button
-                  type="button"
-                  onClick={() => inspect('Operational events', opsEvents ?? {})}
-                  className="rounded-xl border border-white/8 bg-hive-surface p-3 text-left"
-                >
-                  <BellRing className="h-4 w-4 text-amber-300" />
-                  <p className="mt-2 text-lg font-semibold text-white">{opsEvents?.count ?? 0}</p>
-                  <span className="text-[10px] uppercase tracking-wider text-slate-500">Recent events</span>
-                </button>
-                <button
-                  type="button"
-                  onClick={() => inspect('Default coding model', {
-                    model: runtimeStats?.model_registry?.default_coding_model,
-                  })}
-                  className="rounded-xl border border-white/8 bg-hive-surface p-3 text-left"
-                >
-                  <Activity className="h-4 w-4 text-amber-300" />
-                  <p className="mt-2 truncate text-xs font-semibold text-white">
-                    {runtimeStats?.model_registry?.default_coding_model ?? '—'}
-                  </p>
-                  <span className="text-[10px] uppercase tracking-wider text-slate-500">Coding default</span>
-                </button>
               </div>
             </details>
 
