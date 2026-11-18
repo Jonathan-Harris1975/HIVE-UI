@@ -21,6 +21,23 @@ it('shows production gates for all eight repositories independently of snapshots
   expect(request).toHaveBeenCalledWith('/v1/system/production-manager', expect.anything())
 })
 
+it('shows Ok for green runtimes and dot-only indicators without hiding warnings', async () => {
+  const value = report()
+  value.repositories[1].runtime_state = 'BLOCKED'
+  value.repositories[1].state = 'BLOCKED'
+  request.mockResolvedValue(value)
+  render(<EcosystemProductionPanel />)
+  await screen.findByText('Release decision: ALLOW')
+  expect(screen.getAllByText('Runtime: Ok')).toHaveLength(7)
+  expect(screen.getByText('Runtime: Blocked')).toBeInTheDocument()
+  const section = screen.getByLabelText('Ecosystem production readiness')
+  const dots = section.querySelectorAll('.rounded-full')
+  expect(dots.length).toBeGreaterThanOrEqual(9)
+  expect(screen.getAllByText('GREEN')).toHaveLength(8)
+  expect(screen.getAllByText('GREEN').every((node) => node.classList.contains('sr-only'))).toBe(true)
+  expect(screen.getAllByText('BLOCKED').every((node) => node.classList.contains('sr-only'))).toBe(true)
+})
+
 it('does not certify an incomplete eight-repository report', async () => {
   const value = report()
   value.repositories.pop()
