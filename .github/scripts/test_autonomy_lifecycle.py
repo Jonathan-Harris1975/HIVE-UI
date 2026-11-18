@@ -171,6 +171,120 @@ class ManagedBranchOwnershipTests(unittest.TestCase):
         admit.assert_not_called()
         risk_label.assert_called_once_with(self.pr["number"], [automation.RISK_APPROVAL_LABEL])
 
+class MergedKiloRepairSourceTests(unittest.TestCase):
+    def setUp(self):
+        self.receipt_sha = "a" * 40
+        self.source_sha = "b" * 40
+        self.implementation_sha = "c" * 40
+        self.pr = {
+            "number": 226,
+            "user": {"login": "kilo-code-bot[bot]"},
+            "head": {
+                "sha": self.implementation_sha,
+                "repo": {"full_name": "Jonathan-Harris1975/HIVE-UI"},
+            },
+            "body": "Source: https://github.com/Jonathan-Harris1975/HIVE-UI/pull/224",
+        }
+        self.source = {
+            "number": 224,
+            "state": "closed",
+            "merged_at": "2026-11-18T14:54:26Z",
+            "user": {"login": "Jonathan-Harris1975"},
+            "head": {
+                "sha": self.source_sha,
+                "repo": {"full_name": "Jonathan-Harris1975/HIVE-UI"},
+            },
+            "html_url": "https://github.com/Jonathan-Harris1975/HIVE-UI/pull/224",
+        }
+        self.receipt = {
+            "user": {"login": "github-actions[bot]"},
+            "body": f"<!-- kilo-auto-repair:{self.receipt_sha}:review -->\\ndispatch-state: accepted",
+        }
+        self.enterContext(patch.object(automation, "REPO", "Jonathan-Harris1975/HIVE-UI"))
+        self.enterContext(patch.object(automation, "KILO_LOGIN", "kilo-code-bot[bot]"))
+
+    def mock_get(self, path):
+        if path.endswith("/pulls/224"):
+            return self.source
+        if path.endswith(f"/compare/{self.source_sha}...{self.implementation_sha}"):
+            return {"behind_by": 0, "status": "ahead"}
+        if path.endswith(f"/compare/{self.receipt_sha}...{self.source_sha}"):
+            return {"behind_by": 0, "status": "ahead"}
+        raise AssertionError(f"Unexpected GitHub API call: {path}")
+
+    def verify(self):
+        with (
+            patch.object(automation, "get", side_effect=self.mock_get),
+            patch.object(automation, "carrier_comments", return_value=[self.receipt]),
+        ):
+            return automation.linked_kilo_merged_review_source(self.pr)
+
+    def test_valid_merged_source_with_ancestral_receipt_is_admitted(self):
+        self.assertEqual(self.verify(), 224)
+
+    def test_pending_repair_receipt_is_rejected(self):
+        self.receipt["body"] = f"<!-- kilo-auto-repair:{self.source_sha}:review -->\\ndispatch-state: queued"
+        self.assertIsNone(self.verify())
+
+    def test_verified_merged_source_can_be_adopted_without_open_source_pr(self):
+        self.pr["labels"] = []
+        with (
+            patch.object(automation, "get", side_effect=self.mock_get),
+            patch.object(automation, "carrier_comments", return_value=[self.receipt]),
+            patch.object(automation, "linked_kilo_carrier", return_value=None),
+            patch.object(automation, "linked_kilo_review_source", return_value=None),
+            patch.object(automation, "add_labels") as add_labels,
+            patch.object(automation, "log"),
+        ):
+            automation.adopt_linked_kilo_prs([self.pr])
+            add_labels.assert_called_once_with(226, ["autonomy:repair", "autonomy:kilo-implementation"])
+
+    def test_missing_verified_actions_receipt_is_rejected(self):
+        self.receipt["user"]["login"] = "untrusted[bot]"
+        self.assertIsNone(self.verify())
+
+    def test_unmerged_source_is_rejected(self):
+        self.source["merged_at"] = None
+        self.assertIsNone(self.verify())
+
+    def test_forked_source_is_rejected(self):
+        self.source["head"]["repo"]["full_name"] = "another-owner/HIVE-UI"
+        self.assertIsNone(self.verify())
+
+    def test_unlinked_source_is_rejected(self):
+        self.pr["body"] = "Unrelated issue https://github.com/other/repo/pull/224"
+        self.assertIsNone(self.verify())
+
+    def test_repair_receipt_must_precede_merged_source_head(self):
+        def diverged_receipt(path):
+            if path.endswith("/pulls/224"):
+                return self.source
+            if path.endswith(f"/compare/{self.source_sha}...{self.implementation_sha}"):
+                return {"behind_by": 0, "status": "ahead"}
+            if path.endswith(f"/compare/{self.receipt_sha}...{self.source_sha}"):
+                return {"behind_by": 1, "status": "diverged"}
+            raise AssertionError(f"Unexpected API call: {path}")
+        with (
+            patch.object(automation, "get", side_effect=diverged_receipt),
+            patch.object(automation, "carrier_comments", return_value=[self.receipt]),
+        ):
+            self.assertIsNone(automation.linked_kilo_merged_review_source(self.pr))
+
+    def test_kilo_authored_source_cannot_self_attest(self):
+        self.source["user"]["login"] = "kilo-code-bot[bot]"
+        self.assertIsNone(self.verify())
+
+    def test_source_head_not_ancestor_of_implementation_is_rejected(self):
+        def non_ancestor(path):
+            if path.endswith("/pulls/224"):
+                return self.source
+            if path.endswith(f"/compare/{self.source_sha}...{self.implementation_sha}"):
+                return {"behind_by": 1, "status": "diverged"}
+            raise AssertionError(f"Unexpected API call: {path}")
+        with patch.object(automation, "get", side_effect=non_ancestor):
+            self.assertIsNone(automation.linked_kilo_merged_review_source(self.pr))
+
+
 class KiloPermissionPolicyTests(unittest.TestCase):
     @classmethod
     def setUpClass(cls):

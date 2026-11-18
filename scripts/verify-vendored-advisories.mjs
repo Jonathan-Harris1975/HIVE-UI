@@ -41,7 +41,11 @@ try {
   // GitHub's public advisory database supports the exact npm package@version
   // affects filter. Never accept an empty, malformed or truncated result.
   const response = await fetch(githubEndpoint, {
-    headers: { accept: 'application/vnd.github+json', 'user-agent': 'hive-ui-vendored-audit' },
+    headers: {
+      accept: 'application/vnd.github+json',
+      'user-agent': 'hive-ui-vendored-audit',
+      ...(process.env.GITHUB_TOKEN ? { authorization: `Bearer ${process.env.GITHUB_TOKEN}` } : {}),
+    },
     signal: AbortSignal.timeout(30_000),
   }).catch((cause) => {
     throw new Error('Both npm and GitHub advisory verification failed', { cause: new AggregateError([registryError, cause]) })
