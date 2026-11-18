@@ -238,6 +238,25 @@ class MergedKiloRepairSourceTests(unittest.TestCase):
         self.pr["body"] = "Unrelated issue https://github.com/other/repo/pull/224"
         self.assertIsNone(self.verify())
 
+    def test_repair_receipt_must_precede_merged_source_head(self):
+        def diverged_receipt(path):
+            if path.endswith("/pulls/224"):
+                return self.source
+            if path.endswith(f"/compare/{self.source_sha}...{self.implementation_sha}"):
+                return {"behind_by": 0, "status": "ahead"}
+            if path.endswith(f"/compare/{self.receipt_sha}...{self.source_sha}"):
+                return {"behind_by": 1, "status": "diverged"}
+            raise AssertionError(f"Unexpected API call: {path}")
+        with (
+            patch.object(automation, "get", side_effect=diverged_receipt),
+            patch.object(automation, "carrier_comments", return_value=[self.receipt]),
+        ):
+            self.assertIsNone(automation.linked_kilo_merged_review_source(self.pr))
+
+    def test_kilo_authored_source_cannot_self_attest(self):
+        self.source["user"]["login"] = "kilo-code-bot[bot]"
+        self.assertIsNone(self.verify())
+
     def test_source_head_not_ancestor_of_implementation_is_rejected(self):
         def non_ancestor(path):
             if path.endswith("/pulls/224"):
