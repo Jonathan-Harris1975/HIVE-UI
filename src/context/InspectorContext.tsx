@@ -3,9 +3,12 @@ import {
   useCallback,
   useContext,
   useMemo,
+  useEffect,
+  useRef,
   useState,
   type ReactNode,
 } from 'react'
+import { useLocation } from 'react-router'
 
 export interface InspectorRow {
   label: string
@@ -23,6 +26,7 @@ export interface InspectorPayload {
 
 interface InspectorContextValue {
   open: boolean
+  available: boolean
   payload: InspectorPayload
   setOpen: (open: boolean) => void
   toggle: () => void
@@ -38,10 +42,26 @@ const defaultPayload: InspectorPayload = {
 const InspectorContext = createContext<InspectorContextValue | null>(null)
 
 export function InspectorProvider({ children }: { children: ReactNode }) {
-  const [open, setOpen] = useState(false)
-  const [payload, setPayload] = useState<InspectorPayload>(defaultPayload)
-  const toggle = useCallback(() => setOpen((current) => !current), [])
-  const value = useMemo(() => ({ open, payload, setOpen, toggle, setPayload }), [open, payload, toggle])
+  const { pathname } = useLocation()
+  const previousPath = useRef(pathname)
+  const [requestedOpen, setOpen] = useState(false)
+  const [selection, setSelection] = useState<{ pathname: string; payload: InspectorPayload } | null>(null)
+  useEffect(() => {
+    if (previousPath.current === pathname) return
+    previousPath.current = pathname
+    setOpen(false)
+    setSelection(null)
+  }, [pathname])
+  const available = selection?.pathname === pathname
+  const open = requestedOpen && available
+  const payload = available && selection ? selection.payload : defaultPayload
+  const setPayload = useCallback((next: InspectorPayload) => {
+    setSelection({ pathname, payload: next })
+  }, [pathname])
+  const toggle = useCallback(() => {
+    if (available) setOpen((current) => !current)
+  }, [available])
+  const value = useMemo(() => ({ open, available, payload, setOpen, toggle, setPayload }), [open, available, payload, toggle, setPayload])
   return <InspectorContext.Provider value={value}>{children}</InspectorContext.Provider>
 }
 
