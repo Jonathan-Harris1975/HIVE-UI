@@ -14,7 +14,8 @@ function dotTone(status: string, variant?: StatusBadgeProps['variant']): string 
   const value = normalise(status)
 
   if (['standby', 'maintenance'].includes(value)) return 'bg-violet-300'
-  if (['starting', 'checking', 'unknown', 'not_configured', 'not-configured', 'disabled', 'unavailable'].includes(value)) return 'bg-cyan-300'
+  if (['starting', 'checking'].includes(value)) return 'bg-cyan-300'
+  if (['unknown', 'not_configured', 'not-configured', 'unavailable', 'disabled'].includes(value)) return 'bg-slate-500'
   if ([
     'busy',
     'warning',
@@ -52,8 +53,8 @@ function dotTone(status: string, variant?: StatusBadgeProps['variant']): string 
   return 'bg-slate-500'
 }
 
-function textTone(status: string): string {
-  const dot = dotTone(status)
+function textTone(status: string, variant?: StatusBadgeProps['variant']): string {
+  const dot = dotTone(status, variant)
   if (dot === 'bg-emerald-300') return 'text-emerald-200'
   if (dot === 'bg-amber-300') return 'text-amber-200'
   if (dot === 'bg-rose-300') return 'text-rose-200'
@@ -82,21 +83,21 @@ function display(status: string, variant?: StatusBadgeProps['variant']): string 
     if (['healthy', 'online', 'active', 'ok', 'ready'].includes(value)) return 'Online'
     if (['blocked', 'auth_blocked', 'forbidden', 'unauthorised', 'unauthorized'].includes(value)) return 'Blocked'
     if (['down', 'offline', 'failed', 'error'].includes(value)) return 'Offline'
-    return 'Checking'
+    return value === 'starting' ? 'Starting' : 'Unknown'
   }
   if (variant === 'readiness') {
     if (['ready', 'healthy', 'ok'].includes(value)) return 'Ready'
     if (['blocked', 'auth_blocked', 'forbidden', 'unauthorised', 'unauthorized'].includes(value)) return 'Auth blocked'
     if (['not_ready', 'not-ready', 'down', 'failed', 'error'].includes(value)) return 'Not ready'
     if (['partial', 'degraded'].includes(value)) return 'Degraded'
-    return 'Checking'
+    return value === 'starting' ? 'Starting' : 'Unknown'
   }
   if (variant === 'operational') {
     if (['healthy', 'ok', 'active', 'ready'].includes(value)) return 'Healthy'
     if (['blocked', 'auth_blocked', 'forbidden', 'unauthorised', 'unauthorized'].includes(value)) return 'Blocked'
     if (['down', 'failed', 'error', 'critical'].includes(value)) return 'Down'
     if (['partial', 'degraded'].includes(value)) return 'Degraded'
-    return 'Checking'
+    return value === 'starting' ? 'Starting' : 'Unknown'
   }
   return status.replace(/_/g, ' ').replace(/\b\w/g, (character) => character.toUpperCase())
 }
@@ -104,7 +105,7 @@ function display(status: string, variant?: StatusBadgeProps['variant']): string 
 export function StatusBadge({ status, label, compact = false, dotOnly = false, variant }: StatusBadgeProps) {
   const value = status?.trim() || 'unknown'
   return (
-    <span className={`inline-flex items-center gap-1.5 font-medium ${compact ? 'text-xs' : 'text-xs'} ${textTone(value)}`}>
+    <span className={`inline-flex items-center gap-1.5 font-medium ${compact ? 'text-xs' : 'text-xs'} ${textTone(value, variant)}`}>
       <span className={`h-2 w-2 shrink-0 rounded-full ${dotTone(value, variant)} shadow-[0_0_8px_currentColor]`} aria-hidden="true" />
       <span className={dotOnly ? 'sr-only' : undefined}>{label || display(value, variant)}</span>
     </span>
