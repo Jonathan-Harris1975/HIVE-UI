@@ -35,7 +35,9 @@ type ProductionReport = {
 
 const STALE_AFTER_MS = 120_000
 const tone = (state?: string) => state === 'GREEN' ? 'ready' : state === 'BLOCKED' ? 'error' : state === 'DEGRADED' ? 'warning' : 'unknown'
-const runtimeLabel = (state?: string) => state === 'GREEN' ? 'Ok' : state ? state[0] + state.slice(1).toLowerCase() : 'Unknown'
+const productionLabel = (state?: string) => state === 'GREEN' ? 'Ready' : state === 'BLOCKED' ? 'Blocked' : state === 'DEGRADED' ? 'Degraded' : 'Unknown'
+const runtimeLabel = (state?: string) => state === 'GREEN' ? 'Ok' : productionLabel(state)
+const decisionLabel = (decision?: string) => decision === 'ALLOW' ? 'Allowed' : decision === 'BLOCK' ? 'Blocked' : decision || 'Unknown'
 
 export function EcosystemProductionPanel() {
   const [report, setReport] = useState<ProductionReport | null>(null)
@@ -88,8 +90,8 @@ export function EcosystemProductionPanel() {
         </button>
       </div>
       <div role="status" className="mt-3 flex flex-wrap items-center gap-3 text-xs text-slate-400">
-        <StatusBadge status={current ? tone(report?.state) : 'unknown'} label={loading ? 'Checking' : current ? report?.state : 'Unknown'} dotOnly />
-        <span>Release decision: {current ? report?.release_decision : 'Not verified'}</span>
+        <StatusBadge status={current ? tone(report?.state) : 'unknown'} label={loading ? 'Checking' : current ? productionLabel(report?.state) : 'Unknown'} dotOnly />
+        <span>Release decision: {current ? decisionLabel(report?.release_decision) : 'Not verified'}</span>
         {report?.generated_at && <span>Observed {formatDate(report.generated_at)}</span>}
       </div>
       {error && <p role="alert" className="mt-3 text-xs text-rose-200">{error}</p>}
@@ -104,11 +106,10 @@ export function EcosystemProductionPanel() {
             <article key={id} className="rounded-xl border border-white/8 bg-hive-surface p-3 text-xs text-slate-400">
               <div className="flex items-center justify-between gap-2">
                 <h4 className="font-semibold text-white">{id}</h4>
-                <StatusBadge status={current ? tone(item?.state) : 'unknown'} label={current ? item?.state : 'Unknown'} compact dotOnly />
+                <StatusBadge status={current ? tone(item?.state) : 'unknown'} label={current ? productionLabel(item?.state) : 'Unknown'} compact dotOnly />
               </div>
               <p className="mt-2">Runtime: {current ? runtimeLabel(item?.runtime_state) : 'Not verified'}</p>
               <p className="mt-1">Deployment: {current ? gates?.deployment?.status || 'Unknown' : 'Not verified'}</p>
-              {gates?.sha && <p className="mt-1 font-mono">Commit {gates.sha.slice(0, 12)}</p>}
               {current && item?.runtime_state !== 'GREEN' && (
                 <div className="mt-2 text-amber-200">
                   <p>Health: {item?.health_status || 'Unknown'} · Readiness: {item?.readiness_status || 'Unknown'}</p>
@@ -116,9 +117,11 @@ export function EcosystemProductionPanel() {
                   {item?.readiness?.http_status && <p>Readiness HTTP {item.readiness.http_status}</p>}
                 </div>
               )}
-              {current && <p className="mt-2 leading-5">CI/deployment: {gates?.reason || 'No current gate summary.'}</p>}
+              {current && item?.state !== 'GREEN' && <p className="mt-2 leading-5">CI/deployment: {gates?.reason || 'No current gate summary.'}</p>}
               <details className="mt-2">
                 <summary className="cursor-pointer text-slate-300">Evidence and workflow warnings</summary>
+                {gates?.sha && <p className="mt-1 font-mono">Commit {gates.sha.slice(0, 12)}</p>}
+                {current && item?.state === 'GREEN' && <p className="mt-1 leading-5">CI/deployment: {gates?.reason || 'No current gate summary.'}</p>}
                 {Object.entries(gates?.required_workflows || {}).map(([name, gate]) => (
                   <p key={name} className="mt-1">{name}: {gate.status || 'Unknown'}</p>
                 ))}
