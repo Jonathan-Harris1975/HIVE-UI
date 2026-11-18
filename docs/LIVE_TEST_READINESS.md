@@ -8,13 +8,13 @@ Updated: 2026-10-10 UTC. Repository: Jonathan-Harris1975/HIVE-UI. This ledger is
 | Self-repair | Trusted failure starts bounded repair PR | blocked | `.github/workflows/autonomous-repair.yml` | Controlled failed-main CI simulation, inspect PR and agent trigger | App permissions, webhook, idempotency and safe escalation evidence; maintainer |
 | Production safeguards | Exact deployment SHA and gateway smoke test | blocked | `.github/workflows/deployed-integration.yml` | Dispatch with full expected SHA, inspect /health and Playwright results | Staging/current deployment run evidence and rollback rehearsal; deployment owner |
 | Production safeguards | Artifact integrity and correct target | blocked | `scripts/verify-dist.mjs` | `npm ci && npm run build && npm run verify:dist` | JS entry-point and referenced-asset existence now checked in scripts/verify-dist.mjs (commit c46b39e); manifest/digest, environment/API-target and CDN consistency still unverified; frontend owner |
-| Ecosystem coordination | OIDC claims and cross-repository contract | blocked | The GitHub-only OIDC claims self-check was retired in PR #227; it did not verify external provider trust | Review historical OIDC evidence only as a record of GitHub claim validation; verify provider trust independently | Confirm external provider acceptance and seven peer contracts; ecosystem owner |
+| Ecosystem coordination | Historical OIDC claim check (retired) | historical | The GitHub-only claims self-check was retired in PR #227 and is not a production acceptance gate | Retain old runs solely as historical records, not current readiness evidence | Check current non-OIDC provider authentication and seven peer contracts separately; ecosystem owner |
 | Production safeguards | UI access controls and operator boundaries | blocked | Worker gateway and UI tests require complete inspection | `npm run check && npm run test:e2e` | Authorisation, CSRF/replay, browser and outage scenarios; security owner |
 
 ## Safe controlled live-test runbook
 
 1. Record default-branch commit SHA, deployed Worker SHA, artifact digest, target environment, authorised operator, rollback artifact and incident channel.
-2. Require successful exact-commit CI, security, OIDC/provider checks, deploy integration, API contract tests and a staging rollback rehearsal. Do not count skipped jobs as passes.
+2. Require successful exact-commit CI, security, configured provider authentication checks, deploy integration, API contract tests and a staging rollback rehearsal. Do not count skipped jobs as passes.
 3. Run non-destructive tests for success, partial outage, stale R2 evidence, lease contention, unauthorised operator and mismatched deployment. Use mocks for privileged repair or production mutation.
 4. Inject one controlled staging failure. Verify classification, deduplication, lock/lease, bounded retry, agent repair PR, required human approval and immutable evidence. Do not allow automatic merge or production deployment.
 5. Abort on any unauthorised action, secret exposure, unexpected production mutation, wrong SHA, missing audit evidence, uncontrolled retries, or loss of rollback ability. Disable automation via the approved kill switch and restore the known-good release.
@@ -29,7 +29,7 @@ Updated: 2026-10-10 UTC. Repository: Jonathan-Harris1975/HIVE-UI. This ledger is
 - PR #129 branch contains a stronger `scripts/verify-dist.mjs`: rejects HTML without a JS entry and rejects missing referenced `/assets/` files. This code change has **not** yet been validated by an actual build/test run.
 - GitHub open-PR search returned PR #129 only at inspection time. No unrelated PR was modified.
 - Base commit `6533342999275a715fe47d251b42ed1864c958cf` returned a successful `codecov/patch` status only; this is not evidence that all required checks passed.
-- CI run history, current deployment SHA, provider OIDC acceptance, environment secrets, branch protections and rollback rehearsal remain unverified. Release verdict remains NOT READY.
+- CI run history, current deployment SHA, provider authentication acceptance, environment secrets, branch protections and rollback rehearsal remain unverified. Release verdict remains NOT READY.
 
 ## 2026-10-10 follow-up
 
@@ -43,7 +43,7 @@ Updated: 2026-10-10 UTC. Repository: Jonathan-Harris1975/HIVE-UI. This ledger is
 
 - GitHub Actions for commit `4d8f88568d99ab09e4aad3180f9d7839b3573767` returned **success** for Security and repository quality (`38013646165`), autofix.ci (`38013646171`), Item 6 hardening (`38013646229`), CodeQL (`38013646253`), and HIVE-UI CI (`38013646268`).
 - HIVE-UI CI jobs `verify`, `Playwright end-to-end`, `Release gate (exact SHA)` and `ci-gate` all returned **success**. Central operations failure notification was skipped on this successful run.
-- **Evidence boundary:** these runs apply to the referenced commit; the ledger itself has since changed the PR head. Require checks for the final merged SHA or current PR head. Staging deployment, real provider OIDC acceptance, rollback and recovery rehearsal remain unverified.
+- **Evidence boundary:** these runs apply to the referenced commit; the ledger itself has since changed the PR head. Require checks for the final merged SHA or current PR head. Staging deployment, current provider authentication acceptance, rollback and recovery rehearsal remain unverified.
 - PR #129 remains open and reported mergeable at inspection. **Controlled live-test readiness: NOT READY** pending environment-specific proof and final-head checks.
 
 ## Current-head verification, 2026-10-10 follow-up
@@ -57,8 +57,8 @@ Baseline: `350ee077fa374a55b0a0afd4261731b990ca0403` on `Jonathan-Harris1975/HIV
 | Production safeguards | Current-main CI/security and deployed gateway | verified | [CI](https://github.com/Jonathan-Harris1975/HIVE-UI/actions/runs/38025796178), [Security](https://github.com/Jonathan-Harris1975/HIVE-UI/actions/runs/38025796177), [CodeQL](https://github.com/Jonathan-Harris1975/HIVE-UI/actions/runs/38025796204), [deployed integration](https://github.com/Jonathan-Harris1975/HIVE-UI/actions/runs/38025934860) succeeded for the baseline above | Applies only to that SHA; new changes require their own checks |
 | Production safeguards | Nested artifact validation | verified | `scripts/verify-dist.mjs:34-60`; `node --test scripts/verify-dist.test.mjs`: 12 passed. Recursive source-map and secret-name checks cover nested modules; tests cover missing CSS, case mismatch, query strings and multiple entries | CI must confirm this follow-up commit |
 | Production safeguards | Staging rollback, artifact digests and browser privilege boundary | blocked | Current configuration has production custom domain and `preview_urls = false`; gateway accepts the broad `v1/` namespace with a server admin token | Deployment owner must supply an isolated rehearsal environment and known-good artifact. Security owner must verify backend authorisation and repair/deploy route restrictions before live injection |
-| Ecosystem coordination | OIDC claims | verified | Historical [OIDC run](https://github.com/Jonathan-Harris1975/HIVE-UI/actions/runs/38025796185) succeeded before the GitHub-only self-check was retired in PR #227; this is not current workflow evidence | Token claim inspection is not external provider acceptance |
-| Ecosystem coordination | Eight-repository contracts and provider trust | blocked | No witnessed cross-repository contract or provider trust acceptance evidence collected | Ecosystem/provider owners must supply exact audience, subject, permissions and contract evidence |
+| Ecosystem coordination | Historical OIDC claims | historical | Historical [OIDC run](https://github.com/Jonathan-Harris1975/HIVE-UI/actions/runs/38025796185) succeeded before the GitHub-only self-check was retired in PR #227; this is not current workflow evidence | Token claim inspection is not external provider acceptance |
+| Ecosystem coordination | Eight-repository contracts and provider authentication | blocked | No witnessed cross-repository contract or current provider authentication evidence collected | Ecosystem/provider owners must verify current credentials, permission scopes and contract evidence |
 
 Local checks before session reset passed: `npm run check` (37 unit tests plus security/UX/artifact checks), 66 Python automation tests, `npm audit --audit-level=high` (zero vulnerabilities), secret scan and bundle budget. Local Node was 24.19.0/npm 11.9.0, not CI's pinned 24.21.0/npm 10.9.9. Chromium download returned an invalid ZIP; no local browser success is claimed. Baseline GitHub CI and deployed integration provide separate browser evidence.
 
