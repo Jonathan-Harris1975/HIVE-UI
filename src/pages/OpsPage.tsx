@@ -83,7 +83,8 @@ function flagTone(status: FlagStatus): string {
   if (status === 'ready') return 'border-emerald-300/15 bg-emerald-300/7 text-emerald-200'
   if (status === 'not_ready') return 'border-rose-300/15 bg-rose-300/7 text-rose-200'
   if (status === 'partial') return 'border-amber-300/15 bg-amber-300/7 text-amber-200'
-  return 'border-cyan-300/15 bg-cyan-300/7 text-cyan-200'
+  if (status === 'disabled') return 'border-violet-300/15 bg-violet-300/7 text-violet-200'
+  return 'border-white/10 bg-white/[0.035] text-slate-300'
 }
 
 function Flag({ label, status, detail, icon: Icon }: FlagProps) {
@@ -502,6 +503,9 @@ export function OpsPage() {
     },
     { label: 'Execution adapters', status: executionStatus, detail: executionAdapterDetail, icon: PlayCircle },
   ]
+  const integrationAttentionCount = flags.filter((flag) => flag.status === 'not_ready' || flag.status === 'partial').length
+  const integrationUnknownCount = flags.filter((flag) => flag.status === 'unknown').length
+  const integrationDisabledCount = flags.filter((flag) => flag.status === 'disabled').length
 
   function inspect(title: string, value: unknown, description = 'Read-only operational data from the HIVE backend.') {
     setPayload({ eyebrow: 'Operations', title, description, json: value })
@@ -911,7 +915,16 @@ export function OpsPage() {
             <details className="group mt-3 rounded-2xl border border-white/8 bg-hive-panel/60">
               <summary className="flex cursor-pointer list-none items-center justify-between gap-3 px-4 py-3">
                 <span className="text-sm font-semibold text-white">Integration readiness</span>
-                <span className="text-xs text-slate-400">{flags.filter((flag) => flag.status === 'ready').length}/{flags.length} ready</span>
+                <span className="flex flex-wrap items-center justify-end gap-2 text-xs text-slate-400">
+                  <span>{flags.filter((flag) => flag.status === 'ready').length}/{flags.length} ready</span>
+                  {integrationAttentionCount > 0 && (
+                    <StatusBadge status="warning" label={`${integrationAttentionCount} need attention`} compact />
+                  )}
+                  {integrationUnknownCount > 0 && (
+                    <StatusBadge status="unknown" label={`${integrationUnknownCount} unknown`} compact />
+                  )}
+                  {integrationDisabledCount > 0 && <span>{integrationDisabledCount} disabled</span>}
+                </span>
               </summary>
               <div className="grid grid-cols-1 gap-2 border-t border-white/6 p-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
                 {flags.map((flag) => <Flag key={flag.label} {...flag} />)}
