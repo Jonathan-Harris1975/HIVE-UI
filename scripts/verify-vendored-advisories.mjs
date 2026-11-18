@@ -1,11 +1,11 @@
 // npm's bulk advisory endpoint can omit a package key even while a reviewed
-// GHSA is known to affect its upstream version. Cross-check with OSV rather
+// GHSA is known to affect its upstream version. Cross-check GitHub advisories rather
 // than interpreting missing data as an empty (clean) advisory list.
 const packageName = 'picomatch'
 const upstreamVersion = '4.0.7'
 const reviewedAdvisories = new Set(['GHSA-FC5Q-39XC-VJPF'])
 const bulkEndpoint = 'https://registry.npmjs.org/-/npm/v1/security/advisories/bulk'
-const osvEndpoint = 'https://api.osv.dev/v1/query'
+const githubEndpoint = `https://api.github.com/advisories?ecosystem=npm&affects=${encodeURIComponent(packageName + '@' + upstreamVersion)}&per_page=100`
 
 async function query(url, body) {
   const response = await fetch(url, {
@@ -38,19 +38,23 @@ try {
   }
   advisories = rows
 } catch (registryError) {
-  // A secondary independent vulnerability source preserves fail-closed CI
-  // without depending exclusively on npm registry response shape or freshness.
-  const payload = await query(osvEndpoint, {
-    version: upstreamVersion,
-    package: { name: packageName, ecosystem: 'npm' },
+  // GitHub's public advisory database supports the exact npm package@version
+  // affects filter. Never accept an empty, malformed or truncated result.
+  const response = await fetch(githubEndpoint, {
+    headers: { accept: 'application/vnd.github+json', 'user-agent': 'hive-ui-vendored-audit' },
+    signal: AbortSignal.timeout(30_000),
   }).catch((cause) => {
-    throw new Error('Both npm and OSV advisory verification failed', { cause: new AggregateError([registryError, cause]) })
+    throw new Error('Both npm and GitHub advisory verification failed', { cause: new AggregateError([registryError, cause]) })
   })
-  if (!Array.isArray(payload.vulns)) {
-    throw new Error('OSV advisory query did not certify the known vulnerable upstream version')
+  if (!response.ok) throw new Error(`GitHub advisory verification failed closed with HTTP ${response.status}`)
+  const payload = await response.json()
+  if (!Array.isArray(payload) || payload.length === 0 || payload.length >= 100) {
+    throw new Error('GitHub advisory query did not return a complete affected-package advisory list')
   }
-  advisories = payload.vulns
-  source = 'OSV fallback'
+  advisories = payload.map((item) => ({
+    id: item.ghsa_id, url: item.html_url, title: item.summary,
+  }))
+  source = 'GitHub advisory fallback'
 }
 
 if (!advisories.some((advisory) => ghsaIds(advisory).some((id) => reviewedAdvisories.has(id)))) {
