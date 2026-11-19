@@ -18,7 +18,7 @@ Primary user flows include:
 - authenticated HIVE conversations and file chat with citations;
 - file upload, R2-lane browsing and storage-backed file workflows;
 - repository intelligence and Repository Memory views;
-- execution planning/review, optimisation and monthly-review workflows;
+- execution planning/review and operational monitoring;
 - operational evidence for HIVE, AIMS, RAMS and the website;
 - a signed HIVE-to-AIMS Communications hand-off; and
 - model registry and integration views.
@@ -37,8 +37,8 @@ The React application uses `BrowserRouter` with declarative `Routes`, nested und
 | `/council` | Council workflow |
 | `/execution` | Execution planning |
 | `/execution-reviews` | Execution review and evidence workflow |
-| `/optimisation` | Legacy link redirects to monthly review |
-| `/monthly-review` | Monthly review workflow |
+| `/optimisation` | Legacy link redirects to Operations |
+| `/monthly-review` | Legacy link redirects to Operations (retired UI) |
 | `/models` | Legacy link redirects to LLM spend |
 | `/communications` | Embedded AIMS Comms Hub |
 | `/ops` | Ecosystem health and operations |
