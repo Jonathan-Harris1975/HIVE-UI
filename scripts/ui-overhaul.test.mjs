@@ -242,7 +242,7 @@ test('mobile Communications keeps the iframe unobscured after secure handoff', a
 test('retired monthly review cannot be opened from Operations', () => {
   const app = source('src/App.tsx')
   const shell = source('src/components/AppShell.tsx')
-  assert.match(app, /path="monthly-review" element=\\{<Navigate to="\\/ops" replace \\/>\\}/)
+  assert.match(app, /path="monthly-review" element=\{<Navigate to="\/ops" replace \/>\}/)
   assert.doesNotMatch(shell, /label: 'Monthly review'/)
   assert.doesNotMatch(app, /MonthlyReviewPage/)
 })
