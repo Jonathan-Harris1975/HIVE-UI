@@ -17,7 +17,7 @@ import {
   Pencil,
   X,
 } from 'lucide-react'
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { Link, NavLink, Outlet, useLocation, useNavigate } from 'react-router'
 import { useAuth } from '../context/AuthContext'
 import { useChat } from '../context/ChatContext'
@@ -47,7 +47,7 @@ const navigationGroups = [
     label: 'System',
     items: [
       { to: '/execution', label: 'Execution', icon: Workflow, routes: ['/execution', '/execution-reviews', '/execution-simulation'] },
-      { to: '/ops', label: 'Operations & review', icon: Activity, routes: ['/ops', '/llm-spend', '/integrations', '/monthly-review'] },
+      { to: '/ops', label: 'Operations', icon: Activity, routes: ['/ops', '/llm-spend', '/integrations'] },
     ],
   },
 ]
@@ -65,12 +65,11 @@ const sectionTabs = [
     ],
   },
   {
-    routes: ['/ops', '/llm-spend', '/integrations', '/monthly-review'],
+    routes: ['/ops', '/llm-spend', '/integrations'],
     items: [
       { to: '/ops', label: 'System' },
       { to: '/llm-spend', label: 'LLM spend' },
       { to: '/integrations', label: 'Integrations' },
-      { to: '/monthly-review', label: 'Monthly review' },
     ],
   },
 ]
@@ -87,7 +86,6 @@ const pageMeta: Record<string, { title: string; subtitle: string }> = {
   '/llm-spend': { title: 'Operations', subtitle: 'Daily LLM spend and evidence coverage' },
   '/ops': { title: 'Operations', subtitle: 'Live runtime health, infrastructure and integrations' },
   '/integrations': { title: 'Operations', subtitle: 'Live runtime health, infrastructure and integrations' },
-  '/monthly-review': { title: 'Operations', subtitle: 'Live runtime health, integrations and monthly governance review' },
   '/communications': { title: 'Communications', subtitle: 'AIMS Comms Hub conversations, approvals and channel operations' },
 }
 
@@ -534,13 +532,14 @@ export function AppShell() {
   const { open, available, toggle } = useInspector()
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
   const [railCollapsed, setRailCollapsed] = useState(false)
-  const closeMobileMenu = () => setMobileMenuOpen(false)
+  const closeMobileMenu = useCallback(() => setMobileMenuOpen(false), [])
   const mobileDrawerRef = useMobileDrawer(mobileMenuOpen, closeMobileMenu)
   const meta = pageMeta[pathname] ?? { title: 'HIVE', subtitle: 'Private operations console' }
 
   useEffect(() => {
     document.title = `${meta.title} · HIVE`
-  }, [meta.title])
+    document.getElementById('hive-main-content')?.focus({ preventScroll: true })
+  }, [pathname, meta.title])
 
   return (
     <div className="flex h-dvh min-h-[320px] overflow-hidden bg-hive-canvas text-slate-100">
@@ -551,7 +550,7 @@ export function AppShell() {
       <aside className={`relative hidden shrink-0 border-r border-white/[0.06] bg-hive-panel transition-[width] lg:block ${railCollapsed ? 'w-[76px]' : 'w-[280px]'}`}>
         <SidebarContent compact={railCollapsed} />
         <button type="button" onClick={() => setRailCollapsed((value) => !value)} aria-label={railCollapsed ? 'Expand navigation' : 'Collapse navigation'}
-          className="absolute -right-3 top-5 z-10 grid h-7 w-7 place-items-center rounded-full bg-hive-raised text-hive-muted shadow-hive hover:text-white">
+          className="absolute -right-5 top-5 z-10 grid h-10 w-10 place-items-center rounded-full border border-white/10 bg-hive-raised text-hive-muted shadow-hive hover:text-white">
           {railCollapsed ? <PanelRightOpen className="h-4 w-4" /> : <PanelRightClose className="h-4 w-4" />}
         </button>
       </aside>

@@ -290,6 +290,10 @@ export interface WeeklyLifecycleReportCurrentResponse {
   report: WeeklyLifecycleReport | null
   r2_key?: string
   reason?: string
+  scope?: 'historical_weekly_snapshot'
+  live_status_verified?: false
+  observed_at?: string
+  served_at?: string
 }
 
 export interface HealthResponse {
@@ -1442,51 +1446,3 @@ export interface RuntimeStatsResponse {
   }
 }
 
-export interface MonthlyReviewSummary {
-  id: string
-  lane: string
-  source_type: string
-  source_id: string | null
-  title: string | null
-  url: string | null
-  created_at?: string
-  updated_at?: string
-  metadata?: {
-    period?: string
-    generated_at?: string
-    sections_ok?: number
-    sections_total?: number
-    ok?: boolean
-    r2_object?: { bucket: string; key: string; size_bytes: number; sha256: string } | null
-    cost_usd_total?: number | null
-    open_execution_reviews?: number | null
-  }
-}
-
-export interface MonthlyReviewHistoryResponse {
-  ok: boolean
-  enabled?: boolean
-  count?: number
-  items: MonthlyReviewSummary[]
-}
-
-export interface MonthlyReviewSection {
-  ok: boolean
-  data?: unknown
-  error?: string
-  error_type?: string
-}
-
-export interface MonthlyReviewReport {
-  ok: boolean
-  report_id: string
-  period: string
-  period_since: string
-  period_until: string
-  generated_at: string
-  sections_ok: number
-  sections_total: number
-  sections: Record<string, MonthlyReviewSection>
-  r2_object?: { bucket: string; key: string; size_bytes: number; sha256: string } | null
-  d1_index?: { ok: boolean; enabled?: boolean }
-}

@@ -26,7 +26,7 @@ import { useInspector } from '../context/InspectorContext'
 import { apiFetch, apiFetchWithMetadata } from '../lib/api'
 import { formatDate } from '../lib/format'
 import { weeklyReportHtmlHref } from '../lib/weekly-lifecycle-report'
-import { isSnapshotFresh } from '../lib/ops-action-policy'
+import { isHistoricalLifecycleReport, isSnapshotFresh, verifiedReviewSnapshot } from '../lib/ops-action-policy'
 import { GOVERNED_REPOSITORIES } from '../lib/repositories'
 import type {
   ExecutionPreviewResponse,
@@ -133,7 +133,12 @@ function OpsEventCard({ item, onInspect, onDelete }: { item: OpsEventItem; onIns
   return (
     <article className={`rounded-xl border ${border} bg-hive-surface p-3`}>
       <div className="flex items-start gap-2">
-        <button type="button" onClick={onInspect} className="min-w-0 flex-1 text-left transition hover:bg-hive-panel-deep">
+        <button
+          type="button"
+          onClick={onInspect}
+          aria-label={`Inspect alert: ${item.title || item.event_type || 'Operational event'}`}
+          className="min-w-0 flex-1 text-left transition hover:bg-hive-panel-deep"
+        >
           <div className="flex items-start gap-3">
             <BellRing className={`mt-0.5 h-4 w-4 shrink-0 ${severity === 'critical' ? 'text-rose-300' : severity === 'warning' ? 'text-amber-300' : 'text-cyan-300'}`} />
             <div className="min-w-0 flex-1">
@@ -178,6 +183,8 @@ export function OpsPage() {
   const [weeklyReportOpenError, setWeeklyReportOpenError] = useState<string | null>(null)
   const [reportHistory, setReportHistory] = useState<Array<Record<string, unknown>>>([])
   const [lifecycleReviews, setLifecycleReviews] = useState<Array<Record<string, unknown>>>([])
+  const [unverifiedReviews, setUnverifiedReviews] = useState<Array<Record<string, unknown>>>([])
+  const [reviewSourceObservedAt, setReviewSourceObservedAt] = useState<string | null>(null)
   const snapshotRefresh = useRef(false)
   const [actionableDataError, setActionableDataError] = useState<string | null>(null)
   const [snapshotUpdatedAt, setSnapshotUpdatedAt] = useState<number | null>(null)
@@ -267,12 +274,18 @@ export function OpsPage() {
         apiFetch<{ items?: Array<Record<string, unknown>> }>('/v1/system/lifecycle-reports/history?limit=12', { signal }).catch(() => ({ items: [] })),
       ])
       setHealth(healthResult)
-      setOpsEvents(opsEventsResult)
-      setLifecycleReport(lifecycleResult)
-      setLifecycleReviews(lifecycleReviewsResult?.items ?? [])
+      setOpsEvents(opsEventsResult.ok === true && Array.isArray(opsEventsResult.items)
+        ? opsEventsResult : { ok: false, error: 'Stored operational alerts could not be verified.' })
+      const reviewSnapshot = verifiedReviewSnapshot(lifecycleReviewsResult, Date.now())
+      const historyVerified = lifecycleResult?.available !== true || isHistoricalLifecycleReport(lifecycleResult, Date.now())
+      setLifecycleReport(historyVerified ? lifecycleResult : null)
+      setLifecycleReviews(reviewSnapshot.items)
+      setUnverifiedReviews(reviewSnapshot.unverified)
+      setReviewSourceObservedAt(reviewSnapshot.observedAt)
       const actionableFailures = [
-        opsEventsResult.ok === true ? null : 'operational alerts',
-        lifecycleReviewsResult && Array.isArray(lifecycleReviewsResult.items) ? null : 'lifecycle reviews',
+        opsEventsResult.ok === true && Array.isArray(opsEventsResult.items) ? null : 'operational alerts',
+        reviewSnapshot.status === 'verified' ? null : 'current human-review verification',
+        historyVerified ? null : 'weekly historical report provenance',
       ].filter((value): value is string => value !== null)
       setActionableDataError(actionableFailures.length
         ? `${actionableFailures.join(' and ')} could not be loaded. Current status is unknown.`
@@ -289,6 +302,8 @@ export function OpsPage() {
       setOpsEvents(null)
       setLifecycleReport(null)
       setLifecycleReviews([])
+      setUnverifiedReviews([])
+      setReviewSourceObservedAt(null)
       setReportHistory([])
       setTemplates({})
       setActionableDataError('Operations could not be refreshed. Alerts and review status are unknown until recovery.')
@@ -314,6 +329,8 @@ export function OpsPage() {
     setOpsEvents(null)
     setLifecycleReport(null)
     setLifecycleReviews([])
+    setUnverifiedReviews([])
+    setReviewSourceObservedAt(null)
     setReportHistory([])
     setTemplates({})
     setSnapshotUpdatedAt(null)
@@ -617,13 +634,13 @@ export function OpsPage() {
         <section className="flex items-center justify-between gap-3 rounded-2xl border border-white/8 bg-hive-panel/65 px-4 py-3">
           <div className="min-w-0">
             <div className="flex items-center gap-2">
-              <p className="text-sm font-semibold text-white">System operations</p>
+              <p className="text-sm font-semibold text-white">Runtime status</p>
               <StatusBadge status={health?.ok ? 'healthy' : health ? 'down' : loading ? 'checking' : 'unknown'} variant="operational" compact />
             </div>
-            <p className="mt-0.5 truncate text-[11px] text-slate-500">{health?.build ?? (loading ? 'checking…' : 'unavailable')} · {health?.env ?? 'environment unavailable'}</p>
+            <p className="mt-0.5 text-xs text-slate-400 break-words">{health?.build ?? (loading ? 'checking…' : 'unavailable')} · {health?.env ?? 'environment unavailable'}</p>
             {snapshotUpdatedAt !== null && (
               <p className="mt-1 text-[11px] text-slate-400">
-                Updated <time data-testid="ops-snapshot-time" dateTime={new Date(snapshotUpdatedAt).toISOString()}>
+                Snapshot fetched <time data-testid="ops-snapshot-time" dateTime={new Date(snapshotUpdatedAt).toISOString()}>
                   {formatDate(new Date(snapshotUpdatedAt).toISOString())}
                 </time> · refreshes automatically
               </p>
@@ -656,7 +673,14 @@ export function OpsPage() {
           ))}
         </div>
 
-        {tab === 'overview' && <AudioNotificationSettings />}
+        {tab === 'overview' && (
+          <details className="ui-disclosure mt-3">
+            <summary>Notification preferences</summary>
+            <div className="ui-disclosure-body">
+              <AudioNotificationSettings />
+            </div>
+          </details>
+        )}
 
         {error && (
           <div role="alert" className="mt-4 rounded-xl border border-rose-400/20 bg-rose-400/8 px-4 py-3 text-sm text-rose-200">
@@ -670,7 +694,7 @@ export function OpsPage() {
           <>
             {actionableDataError && <p role="alert" className="mt-3 rounded-lg border border-amber-300/20 bg-amber-300/5 px-3 py-2 text-xs text-amber-100">{actionableDataError}</p>}
             {opsEvents?.items?.length ? (
-              <details className="group mt-3 rounded-2xl border border-amber-300/15 bg-hive-panel/60">
+              <details open={opsEvents.items.some((item) => item.severity === 'critical')} className="group mt-3 rounded-2xl border border-amber-300/15 bg-hive-panel/60">
                 <summary className="flex cursor-pointer list-none items-center justify-between gap-3 px-4 py-3">
                   <span className="flex items-center gap-2 text-sm font-semibold text-white"><BellRing className="h-4 w-4 text-amber-300" /> Operational alerts</span>
                   <StatusBadge status={opsEvents.items.some((item) => item.severity === 'critical') ? 'critical' : 'warning'} label={`${opsEvents.count ?? 0} recent alerts`} compact />
@@ -679,10 +703,11 @@ export function OpsPage() {
                   <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
                     <p className="text-xs text-slate-400">
                       Showing up to 6 stored alerts. These are historical events; clearing them does not repair a job or certify current health.
-                      {' '}<Link to="/repositories" className="text-cyan-200 underline">Check current ecosystem readiness</Link>.
+                      {' '}<Link to="/repositories" aria-label="Check current ecosystem readiness" className="text-cyan-200 underline">Check current ecosystem readiness</Link>.
                     </p>
                     <button
                       type="button"
+                      aria-label="Delete all operational alerts"
                       onClick={() => {
                         setOpsEventDeleteError(null)
                         setOpsEventDeleteTarget({ clearAll: true })
@@ -718,8 +743,8 @@ export function OpsPage() {
               </div>
             ) : (
               <div className="mt-3 flex items-center justify-between rounded-xl border border-white/8 bg-hive-panel/45 px-4 py-3">
-                <span className="flex items-center gap-2 text-xs text-slate-400"><BellRing className="h-4 w-4 text-emerald-300" /> Operational alerts</span>
-                <span className="text-xs font-medium text-emerald-200">None</span>
+                <span className="flex items-center gap-2 text-xs text-slate-400"><BellRing className="h-4 w-4 text-slate-400" /> Operational alerts</span>
+                <span className="text-xs font-medium text-slate-300">None recorded</span>
               </div>
             )}
 
@@ -735,10 +760,30 @@ export function OpsPage() {
                 </div>
                 <StatusBadge
                   status={actionableDataError ? 'unknown' : lifecycleReviews.length ? 'warning' : 'ready'}
-                  label={actionableDataError ? 'Unknown' : `${lifecycleReviews.length} open`}
+                  label={actionableDataError ? 'Unknown' : `${lifecycleReviews.length} verified open`}
                   compact
                 />
               </div>
+              {reviewSourceObservedAt && (
+                <p className="mt-2 text-xs text-slate-400">
+                  Persisted review evidence checked {formatDate(reviewSourceObservedAt)} against current GitHub heads.
+                  An empty stored queue does not certify all CI workflows.
+                </p>
+              )}
+              {unverifiedReviews.length > 0 && (
+                <div className="mt-3 rounded-xl border border-amber-300/25 p-3 text-xs text-amber-100" role="alert">
+                  <p className="font-medium">{unverifiedReviews.length} stored review(s) need source reconciliation.</p>
+                  <p className="mt-1">These are not presented as current failures or silently discarded.</p>
+                  <ul className="mt-2 list-disc space-y-1 pl-4">
+                    {unverifiedReviews.map((item) => (
+                      <li key={String(item.review_id)}>
+                        {String(item.source || 'Unknown repository')} · {String(item.title || 'Review')}
+                        {' '}({String(item.reason || 'source verification unavailable')})
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )}
               {lifecycleReviews.length ? (
                 <div className="mt-3 grid gap-2">
                   {lifecycleReviews.map((review) => {
@@ -808,7 +853,7 @@ export function OpsPage() {
                 </div>
               ) : (
                 <p className="mt-3 text-xs text-slate-400">
-                  {actionableDataError ? 'Current review state is unknown.' : 'No unresolved human decision is recorded.'}
+                  {actionableDataError ? 'Current review state is unknown.' : 'No unresolved human decision is recorded in the verified persisted queue.'}
                 </p>
               )}
             </section>
@@ -817,10 +862,10 @@ export function OpsPage() {
               <div className="flex flex-wrap items-center justify-between gap-3">
                 <div>
                   <h2 id="weekly-lifecycle-report-title" className="text-sm font-semibold text-white">
-                    Weekly repository overview
+                    Weekly repository overview · historical
                   </h2>
                   <p className="mt-1 text-xs text-slate-400">
-                    Deterministic report from the durable HIVE evidence store.
+                    Historical R2 observation, not a live repository-health claim.
                   </p>
                 </div>
                 {lifecycleReport?.available === true ? (
@@ -851,7 +896,7 @@ export function OpsPage() {
               {lifecycleReport?.available === true ? (
                 <p className="mt-2 text-xs text-slate-300">
                   Report {String((lifecycleReport.report as Record<string, unknown>)?.report_id || '')} ·
-                  {' '}R2 key {String(lifecycleReport.r2_key || '')}
+                  {' '}As at {formatDate(String(lifecycleReport.observed_at || ''))} · R2 key {String(lifecycleReport.r2_key || '')}
                 </p>
               ) : (
                 <p className="mt-2 text-xs text-slate-400">
@@ -912,7 +957,7 @@ export function OpsPage() {
               )}
             </section>
 
-            <details className="group mt-3 rounded-2xl border border-white/8 bg-hive-panel/60">
+            <details open={integrationAttentionCount > 0 || integrationUnknownCount > 0} className="group mt-3 rounded-2xl border border-white/8 bg-hive-panel/60">
               <summary className="flex cursor-pointer list-none items-center justify-between gap-3 px-4 py-3">
                 <span className="text-sm font-semibold text-white">Integration readiness</span>
                 <span className="flex flex-wrap items-center justify-end gap-2 text-xs text-slate-400">

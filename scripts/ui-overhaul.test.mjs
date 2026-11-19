@@ -131,6 +131,10 @@ test('operations does not duplicate repository overview status', () => {
   assert.doesNotMatch(ops, /repository_manager/)
   assert.doesNotMatch(ops, /Services healthy/)
   assert.match(ops, /Integration readiness/)
+  assert.match(ops, /open=\{integrationAttentionCount > 0 \|\| integrationUnknownCount > 0\}/)
+  assert.match(ops, /Notification preferences/)
+  assert.match(ops, /Snapshot fetched/)
+  assert.match(ops, /Runtime status/)
   assert.match(ops, /Operational alerts/)
   assert.doesNotMatch(ops, /Live system snapshot/)
   assert.match(ops, /Delete all alerts/)
@@ -213,6 +217,32 @@ test('retired model council workspace redirects to operational evidence', () => 
   const shell = source('src/components/AppShell.tsx')
   assert.doesNotMatch(shell, /Models & optimisation|label: 'Registry'/)
   assert.match(app, /path="models" element=\{<Navigate to="\/llm-spend" replace \/>\}/)
-  assert.match(app, /path="optimisation" element=\{<Navigate to="\/monthly-review" replace \/>\}/)
+  assert.match(app, /path="optimisation" element=\{<Navigate to="\/ops" replace \/>\}/)
+  assert.match(app, /path="monthly-review" element=\{<Navigate to="\/ops" replace \/>\}/)
+  assert.doesNotMatch(shell, /to: '\/monthly-review'/)
+  assert.doesNotMatch(app, /MonthlyReviewPage/)
   assert.doesNotMatch(app, /import\('\.\/pages\/(ModelRegistryPage|OptimisationPage)'\)/)
+})
+
+// A route or background auth update must not reset an open mobile dialog's focus trap.
+test('navigation focus remains stable across rerenders and route transitions', () => {
+  const shell = source('src/components/AppShell.tsx')
+  assert.match(shell, /useCallback\(\(\) => setMobileMenuOpen\(false\), \[\]\)/)
+  assert.match(shell, /document\.getElementById\('hive-main-content'\)\?\.focus\(\{ preventScroll: true \}\)/)
+  assert.match(shell, /absolute -right-5 top-5 z-10 grid h-10 w-10/)
+})
+
+// Screenshot acceptance: operator data must never be hidden by HIVE's reload affordance.
+test('mobile Communications keeps the iframe unobscured after secure handoff', async () => {
+  const file = source('src/pages/CommunicationsPage.tsx')
+  assert.match(file, /\{!ready && !error && <button/)
+  assert.match(file, /aria-label="Reload Communications Interface"/)
+})
+
+test('retired monthly review cannot be opened from Operations', () => {
+  const app = source('src/App.tsx')
+  const shell = source('src/components/AppShell.tsx')
+  assert.match(app, /path="monthly-review" element=\{<Navigate to="\/ops" replace \/>\}/)
+  assert.doesNotMatch(shell, /label: 'Monthly review'/)
+  assert.doesNotMatch(app, /MonthlyReviewPage/)
 })

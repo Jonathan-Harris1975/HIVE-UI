@@ -149,7 +149,7 @@ export function CommunicationsPage() {
         />
       )}
 
-      <button
+      {!ready && !error && <button
         type="button"
         onClick={reload}
         className={
@@ -161,7 +161,7 @@ export function CommunicationsPage() {
         title="Reload Communications Interface"
       >
         <RefreshCw className="h-4 w-4" />
-      </button>
+      </button>}
     </section>
   )
 }

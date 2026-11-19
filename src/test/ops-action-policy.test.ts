@@ -1,5 +1,9 @@
 import { describe, expect, it } from 'vitest'
-import { acquireActionLock, hasCurrentLifecycleApproval, isSnapshotFresh, lifecycleIdempotencyKey, releaseActionLock, safeRepairHandoffFailure } from '../lib/ops-action-policy'
+import {
+  acquireActionLock, hasCurrentLifecycleApproval, isHistoricalLifecycleReport,
+  isSnapshotFresh, lifecycleIdempotencyKey, releaseActionLock,
+  safeRepairHandoffFailure, verifiedReviewSnapshot,
+} from '../lib/ops-action-policy'
 
 const now = Date.parse('2026-10-19T01:00:00.000Z')
 const validReview = {
@@ -62,6 +66,38 @@ describe('operations action policy', () => {
     expect(isSnapshotFresh(null, 100_000)).toBe(false)
     expect(isSnapshotFresh(100_001, 100_000)).toBe(false)
     expect(isSnapshotFresh(100_000 - 120_001, 100_000)).toBe(false)
+  })
+
+  it('accepts verified review data and rejects stale or inconsistent payloads', () => {
+    const observed_at = '2026-11-19T12:00:00.000Z'
+    const current = { source: 'HIVE', review_id: 'review-current', head_sha: 'a'.repeat(40),
+      source_verification: 'exact_head_match' }
+    const data = { ok: true, scope: 'persisted_human_review_records', observed_at,
+      verification_status: 'verified', count: 1, items: [current],
+      unverified_count: 0, unverified_items: [] }
+    const at = Date.parse(observed_at) + 1000
+    expect(verifiedReviewSnapshot(data, at).items).toEqual([current])
+    expect(verifiedReviewSnapshot(data, at).status).toBe('verified')
+    expect(verifiedReviewSnapshot({ ...data, items: [] }, at).status).toBe('unknown')
+    expect(verifiedReviewSnapshot({ ...data, observed_at: '2026-11-19T11:00:00Z' }, at).status).toBe('unknown')
+    expect(verifiedReviewSnapshot({ ...data, observed_at: '2026-11-19T13:00:00Z' }, at).status).toBe('unknown')
+    expect(verifiedReviewSnapshot({ ...data, items: [{ ...current, head_sha: 'invalid' }] }, at).status).toBe('unknown')
+    expect(verifiedReviewSnapshot({ items: [] }, at).status).toBe('unknown')
+    const uncertain = { ...data, verification_status: 'unknown', unverified_count: 1,
+      unverified_items: [{ review_id: 'review-old', source_verification: 'unknown', reason: 'source_head_mismatch' }] }
+    expect(verifiedReviewSnapshot(uncertain, at).status).toBe('unknown')
+    expect(verifiedReviewSnapshot(uncertain, at).items).toEqual([current])
+    expect(verifiedReviewSnapshot(uncertain, at).unverified).toHaveLength(1)
+  })
+  it('accepts weekly reports only as historical observations', () => {
+    const observed_at = '2026-11-18T12:00:00Z'
+    const data = { ok: true, available: true, scope: 'historical_weekly_snapshot',
+      live_status_verified: false, observed_at, report: { generated_at: observed_at, overall_status: 'GREEN' } }
+    expect(isHistoricalLifecycleReport(data, Date.parse('2026-11-19T00:00:00Z'))).toBe(true)
+    expect(isHistoricalLifecycleReport({ ...data, scope: 'live' })).toBe(false)
+    expect(isHistoricalLifecycleReport({ ...data, live_status_verified: true })).toBe(false)
+    expect(isHistoricalLifecycleReport({ ...data, observed_at: '2026-11-15T00:00:00Z' })).toBe(false)
+    expect(isHistoricalLifecycleReport({ ...data, report: { overall_status: 'GREEN' } })).toBe(false)
   })
 
   it('reports repair-provider 403 safely with an actionable request reference', () => {
