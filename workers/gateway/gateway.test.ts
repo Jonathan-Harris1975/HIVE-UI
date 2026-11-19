@@ -137,7 +137,6 @@ for (const [path, method] of [
   ['v1/system/lifecycle-reviews/review-123/accept-fix', 'POST'],
   ['v1/db/purge-reset', 'POST'],
   ['v1/files/r2/uploads/objects', 'DELETE'],
-  ['v1/db/conversations/conversation-123', 'DELETE'],
   ['v1/model-registry/coding', 'POST'],
   ['v1/model-registry/coding/model-123', 'DELETE'],
 ] as const) {
@@ -210,6 +209,12 @@ test('upstream HTTP 403 remains an explicit rejection with its request correlati
   expect(response.status).toBe(403)
   expect(response.headers.get('x-request-id')).toBe('hive-ui-repair-403')
   expect(await response.json()).toMatchObject({ code: 'repair_provider_forbidden' })
+})
+
+test('chat deletion is a normal session-authenticated operation, not a privileged operator action', () => {
+  expect(isPrivilegedBrowserPath('v1/db/conversations/conversation-123', 'DELETE')).toBe(false)
+  expect(isPrivilegedBrowserPath('v1/db/conversations/conversation-123', 'GET')).toBe(false)
+  expect(isPrivilegedBrowserPath('v1/db/purge-reset', 'DELETE')).toBe(true)
 })
 
 test('privilege policy preserves ordinary UI and evidence routes', () => {
