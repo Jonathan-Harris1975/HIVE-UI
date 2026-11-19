@@ -231,14 +231,14 @@ test('navigation focus remains stable across rerenders and route transitions', (
 
 // Screenshot acceptance: operator data must never be hidden by HIVE's reload affordance.
 test('mobile Communications keeps the iframe unobscured after secure handoff', async () => {
-  const source = await readFile(new URL('../src/pages/CommunicationsPage.tsx', import.meta.url), 'utf8')
-  assert.match(source, /\{!ready && !error && <button/)
-  assert.match(source, /aria-label="Reload Communications Interface"/)
+  const file = source('src/pages/CommunicationsPage.tsx')
+  assert.match(file, /\{!ready && !error && <button/)
+  assert.match(file, /aria-label="Reload Communications Interface"/)
 })
 
 test('monthly review shows recorded cost once without duplicated currency symbols', async () => {
-  const source = await readFile(new URL('../src/pages/MonthlyReviewPage.tsx', import.meta.url), 'utf8')
-  assert.match(source, /Recorded \$\$\{value\.toFixed\(2\)\}/)
-  assert.doesNotMatch(source, /<DollarSign/)
-  assert.match(source, /Cost not recorded/)
+  const file = source('src/pages/MonthlyReviewPage.tsx')
+  assert.match(file, /Recorded \$\$\{value\.toFixed\(2\)\}/)
+  assert.doesNotMatch(file, /<DollarSign/)
+  assert.match(file, /Cost not recorded/)
 })
