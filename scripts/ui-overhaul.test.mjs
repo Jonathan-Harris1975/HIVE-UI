@@ -217,7 +217,10 @@ test('retired model council workspace redirects to operational evidence', () => 
   const shell = source('src/components/AppShell.tsx')
   assert.doesNotMatch(shell, /Models & optimisation|label: 'Registry'/)
   assert.match(app, /path="models" element=\{<Navigate to="\/llm-spend" replace \/>\}/)
-  assert.match(app, /path="optimisation" element=\{<Navigate to="\/monthly-review" replace \/>\}/)
+  assert.match(app, /path="optimisation" element=\{<Navigate to="\/ops" replace \/>\}/)
+  assert.match(app, /path="monthly-review" element=\{<Navigate to="\/ops" replace \/>\}/)
+  assert.doesNotMatch(shell, /to: '\/monthly-review'/)
+  assert.doesNotMatch(app, /MonthlyReviewPage/)
   assert.doesNotMatch(app, /import\('\.\/pages\/(ModelRegistryPage|OptimisationPage)'\)/)
 })
 
@@ -236,9 +239,10 @@ test('mobile Communications keeps the iframe unobscured after secure handoff', a
   assert.match(file, /aria-label="Reload Communications Interface"/)
 })
 
-test('monthly review shows recorded cost once without duplicated currency symbols', async () => {
-  const file = source('src/pages/MonthlyReviewPage.tsx')
-  assert.match(file, /Recorded \$\$\{value\.toFixed\(2\)\}/)
-  assert.doesNotMatch(file, /<DollarSign/)
-  assert.match(file, /Cost not recorded/)
+test('retired monthly review cannot be opened from Operations', () => {
+  const app = source('src/App.tsx')
+  const shell = source('src/components/AppShell.tsx')
+  assert.match(app, /path="monthly-review" element=\\{<Navigate to="\\/ops" replace \\/>\\}/)
+  assert.doesNotMatch(shell, /label: 'Monthly review'/)
+  assert.doesNotMatch(app, /MonthlyReviewPage/)
 })
