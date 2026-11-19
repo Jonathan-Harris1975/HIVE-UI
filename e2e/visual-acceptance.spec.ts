@@ -27,6 +27,8 @@ async function checkControlNames(page: Page, label: string) {
           && rect.right > 0 && rect.left < innerWidth
           && rect.bottom > 0 && rect.top < innerHeight
           && !element.closest('[inert], [aria-hidden="true"]')
+          && (!element.closest('details:not([open])') || Boolean(element.closest('summary')))
+          && getComputedStyle(element).visibility !== 'hidden'
       })
       .filter((node) => {
         const element = node as HTMLElement
@@ -34,7 +36,7 @@ async function checkControlNames(page: Page, label: string) {
         const labelNode = labelledBy ? document.getElementById(labelledBy) : null
         const accessible = element.getAttribute('aria-label')
           || labelNode?.textContent
-          || element.innerText
+          || element.textContent
           || element.getAttribute('title')
           || element.querySelector('img')?.getAttribute('alt')
         return !accessible?.trim()
@@ -101,6 +103,7 @@ test.describe('HIVE-UI deployed gateway browser acceptance', () => {
       const items = drawer.locator('button:visible, a[href]:visible, input:visible')
       await expect(items.first()).toBeVisible()
       await items.last().focus()
+      await expect(items.last()).toBeFocused()
       await page.keyboard.press('Tab')
       await expect(items.first()).toBeFocused()
       await page.keyboard.press('Shift+Tab')
