@@ -159,7 +159,16 @@ def reconcile(pr_summary: dict[str, Any]) -> None:
 
     if eligible:
         if active_request is None:
-            enable(node_id)
+            try:
+                enable(node_id)
+            except RuntimeError as exc:
+                # GitHub can reject auto-merge while non-required checks are
+                # unstable. Reconcile again on the next event/scheduled sweep;
+                # retain admission requirements and never merge here.
+                if "UNPROCESSABLE" in str(exc) and "Pull request is in unstable status" in str(exc):
+                    print(f"PR #{number} is unstable; deferring native auto-merge until reconciliation.")
+                    return
+                raise
             print(f"Enabled GitHub native auto-merge for admitted PR #{number} at {sha}.")
         return
 
