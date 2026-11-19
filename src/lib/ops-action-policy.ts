@@ -113,7 +113,7 @@ export function verifiedReviewSnapshot(payload: unknown, now = Date.now()): Veri
   }
   return {
     status: source.verification_status,
-    items, unverified, observedAt,
+    items, unverified, observedAt: typeof observedAt === 'string' ? observedAt : null,
     error: unverified.length ? 'Some stored human reviews cannot be verified against current GitHub heads.' : null,
   }
 }
