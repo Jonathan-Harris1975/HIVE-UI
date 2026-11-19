@@ -153,6 +153,7 @@ export function AudioNotificationSettings() {
       </label>
       <button
         type="button"
+        aria-label="Enable browser notifications"
         onClick={() => void enableBrowserNotifications()}
         className="mt-3 rounded-lg border border-white/10 px-3 py-2 text-xs text-slate-300 hover:bg-white/5"
       >
