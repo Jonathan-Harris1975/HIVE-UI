@@ -57,13 +57,13 @@ jobs:
       - name: Typecheck, lint, build and verify
         run: npm run check
 
-      - name: Upload coverage to Codecov
-        uses: codecov/codecov-action@303a32d7a59b442fa8d48b6a1cc6825c09c847a5 # v7.1.1
+      - name: Retain coverage report
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
-          use_oidc: true
-          files: coverage/lcov.info
-          flags: unit
-          fail_ci_if_error: false
+          name: hive-ui-coverage-${{ github.sha }}
+          path: coverage/lcov.info
+          if-no-files-found: error
+          retention-days: 30
 
       - name: Enforce production bundle size budget
         run: npm run check:bundle-budget
