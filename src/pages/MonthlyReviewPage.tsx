@@ -8,7 +8,7 @@ import type { MonthlyReviewHistoryResponse, MonthlyReviewReport, MonthlyReviewSu
 
 function costLabel(value: number | null | undefined): string {
   if (value === null || value === undefined) return 'Cost not recorded'
-  return `Recorded ${value.toFixed(2)}`
+  return `Recorded $${value.toFixed(2)}`
 }
 
 function sectionsLabel(item: MonthlyReviewSummary): string {
