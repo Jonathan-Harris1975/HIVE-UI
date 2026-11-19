@@ -2,6 +2,9 @@ import { expect, test, type Page } from '@playwright/test'
 
 const live = Boolean(process.env.HIVE_UI_E2E_BASE_URL)
 
+// Keep automatic failure captures disabled: the same file also exercises private dashboards.
+test.use({ screenshot: 'off', trace: 'off' })
+
 // These checks exercise actual rendered pixels/layout and keyboard behaviour.
 // They intentionally never save screenshots of authenticated operator content.
 async function checkViewport(page: Page, label: string) {
@@ -78,8 +81,6 @@ test.describe('HIVE-UI safe browser visual baseline', () => {
 })
 
 test.describe('HIVE-UI deployed gateway browser acceptance', () => {
-  // Never persist authenticated screenshots, retries or traces in public CI artifacts.
-  test.use({ screenshot: 'off', trace: 'off' })
   test.skip(!live, 'Requires live Worker and the existing HIVE_UI_ACCESS_KEY CI secret.')
 
   test('authenticated HIVE operations survive responsive layout and mobile keyboard navigation', async ({ page, baseURL }) => {
