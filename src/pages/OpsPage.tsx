@@ -269,7 +269,8 @@ export function OpsPage() {
         apiFetch<{ items?: Array<Record<string, unknown>> }>('/v1/system/lifecycle-reports/history?limit=12', { signal }).catch(() => ({ items: [] })),
       ])
       setHealth(healthResult)
-      setOpsEvents(opsEventsResult)
+      setOpsEvents(opsEventsResult.ok === true && Array.isArray(opsEventsResult.items)
+        ? opsEventsResult : { ok: false, error: 'Stored operational alerts could not be verified.' })
       const reviewSnapshot = verifiedReviewSnapshot(lifecycleReviewsResult, Date.now())
       const historyVerified = lifecycleResult?.available !== true || isHistoricalLifecycleReport(lifecycleResult, Date.now())
       setLifecycleReport(historyVerified ? lifecycleResult : null)
@@ -277,7 +278,7 @@ export function OpsPage() {
       setUnverifiedReviews(reviewSnapshot.unverified)
       setReviewSourceObservedAt(reviewSnapshot.observedAt)
       const actionableFailures = [
-        opsEventsResult.ok === true ? null : 'operational alerts',
+        opsEventsResult.ok === true && Array.isArray(opsEventsResult.items) ? null : 'operational alerts',
         reviewSnapshot.status === 'verified' ? null : 'current human-review verification',
         historyVerified ? null : 'weekly historical report provenance',
       ].filter((value): value is string => value !== null)
@@ -736,8 +737,8 @@ export function OpsPage() {
               </div>
             ) : (
               <div className="mt-3 flex items-center justify-between rounded-xl border border-white/8 bg-hive-panel/45 px-4 py-3">
-                <span className="flex items-center gap-2 text-xs text-slate-400"><BellRing className="h-4 w-4 text-emerald-300" /> Operational alerts</span>
-                <span className="text-xs font-medium text-emerald-200">None</span>
+                <span className="flex items-center gap-2 text-xs text-slate-400"><BellRing className="h-4 w-4 text-slate-400" /> Operational alerts</span>
+                <span className="text-xs font-medium text-slate-300">None recorded</span>
               </div>
             )}
 
