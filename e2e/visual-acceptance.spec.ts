@@ -153,6 +153,7 @@ test.describe('HIVE-UI deployed gateway browser acceptance', () => {
       await expect(page.locator('#aims-main-content')).toHaveAttribute('inert', '')
       const items = drawer.locator('button:visible, a[href]:visible')
       await items.last().focus()
+      await expect(items.last()).toBeFocused()
       await page.keyboard.press('Tab')
       await expect(items.first()).toBeFocused()
       await page.keyboard.press('Shift+Tab')
