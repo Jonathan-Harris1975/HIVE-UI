@@ -1,4 +1,4 @@
-import { CalendarClock, DollarSign, FileWarning, LoaderCircle, RefreshCcw, ShieldCheck, Sparkles } from 'lucide-react'
+import { CalendarClock, FileWarning, LoaderCircle, RefreshCcw, ShieldCheck, Sparkles } from 'lucide-react'
 import { useCallback, useEffect, useState } from 'react'
 import { EmptyState } from '../components/EmptyState'
 import { useInspector } from '../context/InspectorContext'
@@ -7,8 +7,8 @@ import { formatDate } from '../lib/format'
 import type { MonthlyReviewHistoryResponse, MonthlyReviewReport, MonthlyReviewSummary } from '../types/api'
 
 function costLabel(value: number | null | undefined): string {
-  if (value === null || value === undefined) return 'No cost data'
-  return `$${value.toFixed(2)}`
+  if (value === null || value === undefined) return 'Cost not recorded'
+  return `Recorded ${value.toFixed(2)}`
 }
 
 function sectionsLabel(item: MonthlyReviewSummary): string {
@@ -171,7 +171,7 @@ export function MonthlyReviewPage() {
                   </div>
                   <p className="mt-2 text-xs text-slate-400">Generated {formatDate(item.metadata?.generated_at || item.updated_at)}</p>
                   <div className="mt-3 flex items-center justify-between text-xs text-slate-400">
-                    <span className="flex items-center gap-1"><DollarSign className="h-3.5 w-3.5" /> {costLabel(item.metadata?.cost_usd_total)}</span>
+                    <span>{costLabel(item.metadata?.cost_usd_total)}</span>
                     <span>{sectionsLabel(item)}</span>
                   </div>
 
