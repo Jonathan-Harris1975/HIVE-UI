@@ -23,8 +23,18 @@ function response(path: string): unknown {
   if (path.includes('/templates')) return { templates: {} }
   if (path.includes('/ops-events')) return { ok: true, items: [], count: 0 }
   if (path.includes('/purge-reset/targets')) return { ok: true, targets: [] }
-  if (path.includes('/lifecycle-reports/current')) return {
-    ok: true, available: true, report: { report_id: 'weekly-2026-W44', overall_status: 'UNKNOWN', repositories: [] },
+  if (path.includes('/lifecycle-reports/current')) {
+    const observed_at = new Date(Date.now() - 60_000).toISOString()
+    return {
+      ok: true, available: true, scope: 'historical_weekly_snapshot',
+      live_status_verified: false, observed_at,
+      report: { report_id: 'weekly-2026-W44', generated_at: observed_at, overall_status: 'UNKNOWN', repositories: [] },
+    }
+  }
+  if (path.includes('/lifecycle-reviews')) return {
+    ok: true, scope: 'persisted_human_review_records', observed_at: new Date().toISOString(),
+    verification_status: 'verified', count: 0, items: [],
+    unverified_count: 0, unverified_items: [],
   }
   return { ok: true, items: [] }
 }
