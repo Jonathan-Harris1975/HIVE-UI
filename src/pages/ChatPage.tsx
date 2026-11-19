@@ -187,8 +187,8 @@ export function ChatPage() {
 
   const conversationUsage = useMemo(() => messages.reduce((total, message) => ({
     tokens: total.tokens + Number(message.usage?.total_tokens ?? message.token_total ?? 0),
-    cost: total.cost + Number(message.usage?.cost ?? message.cost_usd ?? 0),
-  }), { tokens: 0, cost: 0 }), [messages])
+  }), { tokens: 0 }), [messages])
+  const conversationCost = currentConversationSummary?.total_cost_usd ?? currentConversationSummary?.cost_usd
 
   function removeAttachment() {
     const next = new URLSearchParams(searchParams)
@@ -691,7 +691,7 @@ export function ChatPage() {
           </div>
           <p className="mt-2 hidden text-center text-xs text-slate-400 sm:block">
             Enter sends · Shift + Enter adds a line
-            {conversationUsage.tokens > 0 && <> · {conversationUsage.tokens.toLocaleString()} tokens · {formatCost(conversationUsage.cost)}</>}
+            {conversationUsage.tokens > 0 && <> · {conversationUsage.tokens.toLocaleString()} tokens · {conversationCost == null ? 'Cost unavailable' : formatCost(conversationCost)}</>}
           </p>
         </form>
       </div>
