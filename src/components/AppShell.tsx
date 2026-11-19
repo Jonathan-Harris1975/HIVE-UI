@@ -47,7 +47,7 @@ const navigationGroups = [
     label: 'System',
     items: [
       { to: '/execution', label: 'Execution', icon: Workflow, routes: ['/execution', '/execution-reviews', '/execution-simulation'] },
-      { to: '/ops', label: 'Operations & review', icon: Activity, routes: ['/ops', '/llm-spend', '/integrations', '/monthly-review'] },
+      { to: '/ops', label: 'Operations', icon: Activity, routes: ['/ops', '/llm-spend', '/integrations'] },
     ],
   },
 ]
@@ -65,12 +65,11 @@ const sectionTabs = [
     ],
   },
   {
-    routes: ['/ops', '/llm-spend', '/integrations', '/monthly-review'],
+    routes: ['/ops', '/llm-spend', '/integrations'],
     items: [
       { to: '/ops', label: 'System' },
       { to: '/llm-spend', label: 'LLM spend' },
       { to: '/integrations', label: 'Integrations' },
-      { to: '/monthly-review', label: 'Monthly review' },
     ],
   },
 ]
@@ -87,7 +86,6 @@ const pageMeta: Record<string, { title: string; subtitle: string }> = {
   '/llm-spend': { title: 'Operations', subtitle: 'Daily LLM spend and evidence coverage' },
   '/ops': { title: 'Operations', subtitle: 'Live runtime health, infrastructure and integrations' },
   '/integrations': { title: 'Operations', subtitle: 'Live runtime health, infrastructure and integrations' },
-  '/monthly-review': { title: 'Operations', subtitle: 'Live runtime health, integrations and monthly governance review' },
   '/communications': { title: 'Communications', subtitle: 'AIMS Comms Hub conversations, approvals and channel operations' },
 }
 

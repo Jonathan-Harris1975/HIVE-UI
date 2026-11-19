@@ -25,9 +25,6 @@ const ExecutionPlanPage = lazy(() =>
   import('./pages/ExecutionPlanPage').then((module) => ({ default: module.ExecutionPlanPage })),
 )
 
-const MonthlyReviewPage = lazy(() =>
-  import('./pages/MonthlyReviewPage').then((module) => ({ default: module.MonthlyReviewPage })),
-)
 const CommunicationsPage = lazy(() =>
   import('./pages/CommunicationsPage').then((module) => ({ default: module.CommunicationsPage })),
 )
@@ -67,8 +64,8 @@ export default function App() {
               <Route path="execution" element={<ExecutionPlanPage />} />
               <Route path="execution-reviews" element={<ExecutionReviewsPage />} />
               <Route path="execution-simulation" element={<Navigate to="/execution" replace />} />
-              <Route path="optimisation" element={<Navigate to="/monthly-review" replace />} />
-              <Route path="monthly-review" element={<MonthlyReviewPage />} />
+              <Route path="optimisation" element={<Navigate to="/ops" replace />} />
+              <Route path="monthly-review" element={<Navigate to="/ops" replace />} />
               <Route path="models" element={<Navigate to="/llm-spend" replace />} />
               <Route path="ops" element={<OpsPage />} />
               <Route path="llm-spend" element={<LlmSpendPage />} />
