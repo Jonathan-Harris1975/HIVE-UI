@@ -265,7 +265,7 @@ function ConversationSection({ closeMobile }: { closeMobile?: () => void }) {
           ? 'This updates the stored conversation title used in the sidebar and conversation record.'
           : 'This permanently removes the persisted conversation and its related message and cost records.'}
         objectName={pendingDialog?.title}
-        systems={pendingDialog?.type === 'rename' ? ['PostgreSQL conversation row'] : ['PostgreSQL conversation row', 'PostgreSQL message rows', 'PostgreSQL cost records']}
+        systems={pendingDialog?.type === 'rename' ? ['Conversation record'] : ['Conversation record', 'Message records', 'Cost records']}
         confirmLabel={pendingDialog?.type === 'rename' ? 'Rename' : 'Delete conversation'}
         tone={pendingDialog?.type === 'delete' ? 'destructive' : 'default'}
         busy={dialogBusy}
