@@ -617,13 +617,13 @@ export function OpsPage() {
         <section className="flex items-center justify-between gap-3 rounded-2xl border border-white/8 bg-hive-panel/65 px-4 py-3">
           <div className="min-w-0">
             <div className="flex items-center gap-2">
-              <p className="text-sm font-semibold text-white">System operations</p>
+              <p className="text-sm font-semibold text-white">Runtime status</p>
               <StatusBadge status={health?.ok ? 'healthy' : health ? 'down' : loading ? 'checking' : 'unknown'} variant="operational" compact />
             </div>
-            <p className="mt-0.5 truncate text-[11px] text-slate-500">{health?.build ?? (loading ? 'checking…' : 'unavailable')} · {health?.env ?? 'environment unavailable'}</p>
+            <p className="mt-0.5 text-xs text-slate-400 break-words">{health?.build ?? (loading ? 'checking…' : 'unavailable')} · {health?.env ?? 'environment unavailable'}</p>
             {snapshotUpdatedAt !== null && (
               <p className="mt-1 text-[11px] text-slate-400">
-                Updated <time data-testid="ops-snapshot-time" dateTime={new Date(snapshotUpdatedAt).toISOString()}>
+                Snapshot fetched <time data-testid="ops-snapshot-time" dateTime={new Date(snapshotUpdatedAt).toISOString()}>
                   {formatDate(new Date(snapshotUpdatedAt).toISOString())}
                 </time> · refreshes automatically
               </p>
@@ -656,7 +656,14 @@ export function OpsPage() {
           ))}
         </div>
 
-        {tab === 'overview' && <AudioNotificationSettings />}
+        {tab === 'overview' && (
+          <details className="ui-disclosure mt-3">
+            <summary>Notification preferences</summary>
+            <div className="ui-disclosure-body">
+              <AudioNotificationSettings />
+            </div>
+          </details>
+        )}
 
         {error && (
           <div role="alert" className="mt-4 rounded-xl border border-rose-400/20 bg-rose-400/8 px-4 py-3 text-sm text-rose-200">
@@ -670,7 +677,7 @@ export function OpsPage() {
           <>
             {actionableDataError && <p role="alert" className="mt-3 rounded-lg border border-amber-300/20 bg-amber-300/5 px-3 py-2 text-xs text-amber-100">{actionableDataError}</p>}
             {opsEvents?.items?.length ? (
-              <details className="group mt-3 rounded-2xl border border-amber-300/15 bg-hive-panel/60">
+              <details open={opsEvents.items.some((item) => item.severity === 'critical')} className="group mt-3 rounded-2xl border border-amber-300/15 bg-hive-panel/60">
                 <summary className="flex cursor-pointer list-none items-center justify-between gap-3 px-4 py-3">
                   <span className="flex items-center gap-2 text-sm font-semibold text-white"><BellRing className="h-4 w-4 text-amber-300" /> Operational alerts</span>
                   <StatusBadge status={opsEvents.items.some((item) => item.severity === 'critical') ? 'critical' : 'warning'} label={`${opsEvents.count ?? 0} recent alerts`} compact />
@@ -912,7 +919,7 @@ export function OpsPage() {
               )}
             </section>
 
-            <details className="group mt-3 rounded-2xl border border-white/8 bg-hive-panel/60">
+            <details open={integrationAttentionCount > 0 || integrationUnknownCount > 0} className="group mt-3 rounded-2xl border border-white/8 bg-hive-panel/60">
               <summary className="flex cursor-pointer list-none items-center justify-between gap-3 px-4 py-3">
                 <span className="text-sm font-semibold text-white">Integration readiness</span>
                 <span className="flex flex-wrap items-center justify-end gap-2 text-xs text-slate-400">
