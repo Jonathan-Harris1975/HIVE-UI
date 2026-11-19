@@ -70,3 +70,64 @@ export async function lifecycleIdempotencyKey(review: Record<string, unknown>): 
   const hex = Array.from(new Uint8Array(digest), (byte) => byte.toString(16).padStart(2, '0')).join('')
   return `hive-ui-${hex}`
 }
+
+/** Authoritative source verification must be fresh; HTTP retrieval alone is not evidence. */
+export type VerifiedReviewSnapshot = {
+  status: 'verified' | 'unknown'
+  items: Array<Record<string, unknown>>
+  unverified: Array<Record<string, unknown>>
+  observedAt: string | null
+  error: string | null
+}
+export function verifiedReviewSnapshot(payload: unknown, now = Date.now()): VerifiedReviewSnapshot {
+  const unknown = (error: string): VerifiedReviewSnapshot =>
+    ({ status: 'unknown', items: [], unverified: [], observedAt: null, error })
+  if (!payload || typeof payload !== 'object' || Array.isArray(payload)) {
+    return unknown('HIVE returned no verifiable review snapshot.')
+  }
+  const source = payload as Record<string, unknown>
+  if (source.ok !== true || source.scope !== 'persisted_human_review_records'
+    || (source.verification_status !== 'verified' && source.verification_status !== 'unknown')
+    || !Array.isArray(source.items) || !Array.isArray(source.unverified_items)
+    || source.count !== source.items.length || source.unverified_count !== source.unverified_items.length) {
+    return unknown('HIVE returned incomplete review verification metadata.')
+  }
+  const observedAt = source.observed_at
+  const timestamp = typeof observedAt === 'string' ? Date.parse(observedAt) : Number.NaN
+  if (!Number.isFinite(timestamp) || now - timestamp > 120_000 || timestamp - now > 30_000) {
+    return unknown('HIVE review-source verification is stale or undated.')
+  }
+  const items = source.items as Array<Record<string, unknown>>
+  const unverified = source.unverified_items as Array<Record<string, unknown>>
+  if (!items.every((item) => item && typeof item === 'object' && !Array.isArray(item)
+    && item.source_verification === 'exact_head_match'
+    && typeof item.review_id === 'string' && item.review_id.length > 0
+    && typeof item.source === 'string' && item.source.length > 0
+    && typeof item.head_sha === 'string' && /^[a-f0-9]{40}$/i.test(item.head_sha))
+    || !unverified.every((item) => item && typeof item === 'object' && !Array.isArray(item)
+      && item.source_verification === 'unknown'
+      && typeof item.review_id === 'string' && item.review_id.length > 0
+      && (item.reason === 'source_head_mismatch' || item.reason === 'source_head_unavailable'))
+    || (source.verification_status === 'verified' && unverified.length > 0)) {
+    return unknown('HIVE review-source verification is inconsistent.')
+  }
+  return {
+    status: source.verification_status,
+    items, unverified, observedAt,
+    error: unverified.length ? 'Some stored human reviews cannot be verified against current GitHub heads.' : null,
+  }
+}
+/** A weekly R2 report is a historical observation, never current repository health. */
+export function isHistoricalLifecycleReport(payload: unknown, now = Date.now()): boolean {
+  if (!payload || typeof payload !== 'object' || Array.isArray(payload)) return false
+  const response = payload as Record<string, unknown>
+  const report = response.report
+  if (response.ok !== true || response.available !== true
+    || response.scope !== 'historical_weekly_snapshot' || response.live_status_verified !== false
+    || !report || typeof report !== 'object' || Array.isArray(report)) return false
+  const data = report as Record<string, unknown>
+  const observedAt = response.observed_at
+  const millis = typeof observedAt === 'string' ? Date.parse(observedAt) : Number.NaN
+  return typeof data.generated_at === 'string' && observedAt === data.generated_at
+    && Number.isFinite(millis) && millis <= now + 30_000
+}
