@@ -78,6 +78,8 @@ test.describe('HIVE-UI safe browser visual baseline', () => {
 })
 
 test.describe('HIVE-UI deployed gateway browser acceptance', () => {
+  // Never persist authenticated screenshots, retries or traces in public CI artifacts.
+  test.use({ screenshot: 'off', trace: 'off' })
   test.skip(!live, 'Requires live Worker and the existing HIVE_UI_ACCESS_KEY CI secret.')
 
   test('authenticated HIVE operations survive responsive layout and mobile keyboard navigation', async ({ page, baseURL }) => {
@@ -88,6 +90,7 @@ test.describe('HIVE-UI deployed gateway browser acceptance', () => {
       await page.emulateMedia({ reducedMotion: 'reduce' })
       await page.goto('/ops', { waitUntil: 'domcontentloaded' })
       await expect(page.locator('#hive-main-content')).toBeVisible()
+      await expect(page.getByTestId('ops-snapshot-time')).toBeVisible({ timeout: 30_000 })
       await checkViewport(page, 'HIVE ops phone')
       await checkControlNames(page, 'HIVE ops phone')
       const menu = page.getByRole('button', { name: 'Open navigation' })
