@@ -1,5 +1,9 @@
 import { describe, expect, it } from 'vitest'
-import { acquireActionLock, hasCurrentLifecycleApproval, isHistoricalLifecycleReport, isSnapshotFresh, lifecycleIdempotencyKey, releaseActionLock, safeRepairHandoffFailure, verifiedReviewSnapshot } from '../lib/ops-action-policy'
+import {
+  acquireActionLock, hasCurrentLifecycleApproval, isHistoricalLifecycleReport,
+  isSnapshotFresh, lifecycleIdempotencyKey, releaseActionLock,
+  safeRepairHandoffFailure, verifiedReviewSnapshot,
+} from '../lib/ops-action-policy'
 
 const now = Date.parse('2026-10-19T01:00:00.000Z')
 const validReview = {
