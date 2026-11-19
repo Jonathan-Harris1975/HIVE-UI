@@ -220,3 +220,11 @@ test('retired model council workspace redirects to operational evidence', () => 
   assert.match(app, /path="optimisation" element=\{<Navigate to="\/monthly-review" replace \/>\}/)
   assert.doesNotMatch(app, /import\('\.\/pages\/(ModelRegistryPage|OptimisationPage)'\)/)
 })
+
+// A route or background auth update must not reset an open mobile dialog's focus trap.
+test('navigation focus remains stable across rerenders and route transitions', () => {
+  const shell = source('src/components/AppShell.tsx')
+  assert.match(shell, /useCallback\(\(\) => setMobileMenuOpen\(false\), \[\]\)/)
+  assert.match(shell, /document\.getElementById\('hive-main-content'\)\?\.focus\(\{ preventScroll: true \}\)/)
+  assert.match(shell, /absolute -right-5 top-5 z-10 grid h-10 w-10/)
+})
