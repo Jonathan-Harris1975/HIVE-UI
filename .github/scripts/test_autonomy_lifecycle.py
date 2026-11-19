@@ -612,6 +612,35 @@ class AdmissionRetryDelayTests(unittest.TestCase):
 
 
 class NativeAutoMergeCurrentLabelTests(unittest.TestCase):
+    def test_unstable_status_defers_then_retries_without_bypassing_admission(self):
+        summary = {"number": 7, "labels": [{"name": "autonomy:admitted"}], "node_id": "PR_node_7"}
+        detail = {"state": "open", "draft": False, "base": {"ref": "main"},
+                  "head": {"sha": "a" * 40}, "mergeable": True,
+                  "labels": [{"name": "autonomy:admitted"}]}
+        with (patch.object(native_auto_merge, "DEFAULT_BRANCH", "main"),
+              patch.object(native_auto_merge, "merge_request", return_value=None),
+              patch.object(native_auto_merge, "request", return_value=detail),
+              patch.object(native_auto_merge, "admission_check", return_value=(True, True)),
+              patch.object(native_auto_merge, "enable", side_effect=[
+                  RuntimeError("UNPROCESSABLE: Pull request is in unstable status"), None,
+              ]) as enable):
+            native_auto_merge.reconcile(summary)
+            native_auto_merge.reconcile(summary)
+        self.assertEqual(enable.call_count, 2)
+
+    def test_unrelated_auto_merge_error_still_fails(self):
+        summary = {"number": 7, "labels": [{"name": "autonomy:admitted"}], "node_id": "PR_node_7"}
+        detail = {"state": "open", "draft": False, "base": {"ref": "main"},
+                  "head": {"sha": "a" * 40}, "mergeable": True,
+                  "labels": [{"name": "autonomy:admitted"}]}
+        with (patch.object(native_auto_merge, "DEFAULT_BRANCH", "main"),
+              patch.object(native_auto_merge, "merge_request", return_value=None),
+              patch.object(native_auto_merge, "request", return_value=detail),
+              patch.object(native_auto_merge, "admission_check", return_value=(True, True)),
+              patch.object(native_auto_merge, "enable", side_effect=RuntimeError("permission denied"))):
+            with self.assertRaisesRegex(RuntimeError, "permission denied"):
+                native_auto_merge.reconcile(summary)
+
     def test_fresh_hold_label_blocks_auto_merge_enable(self):
         summary = {
             "number": 7,

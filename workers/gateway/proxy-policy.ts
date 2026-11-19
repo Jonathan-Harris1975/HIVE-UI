@@ -18,8 +18,9 @@ export function isPrivilegedBrowserPath(path: string, method = 'GET'): boolean {
   if (segments[0] === 'v1' && segments[1] === 'model-registry' && !['GET', 'HEAD'].includes(method.toUpperCase())) return true
   if (segments[0] === 'v1' && segments[1] === 'files' && segments[2] === 'r2' && segments[4] === 'objects'
     && method.toUpperCase() === 'DELETE') return true
-  if (segments[0] === 'v1' && segments[1] === 'db' && segments[2] === 'conversations'
-    && method.toUpperCase() === 'DELETE') return true
+  // Deleting a chat is ordinary user-owned conversation management, not an
+  // operator approval, repair or deployment. The gateway still requires a
+  // valid same-origin UI session and the backend validates the request.
   if (segments[0] === 'v1' && segments[1] === 'execution-reviews' && segments[3] === 'decision') return true
   if (segments[0] === 'v1' && segments[1] === 'system' && segments[2] === 'ops-events' && (segments.length !== 3 || !['GET', 'HEAD', 'DELETE'].includes(method.toUpperCase()))) return true
   // Inbox cleanup is not a production approval or repair. The exact endpoint

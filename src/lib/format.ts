@@ -23,8 +23,10 @@ export function formatBytes(value?: number | null): string {
 }
 
 export function formatCost(value?: number | string | null): string {
+  if (value == null || (typeof value === 'string' && !value.trim())) return 'Cost unavailable'
   const parsed = typeof value === 'string' ? Number(value) : value
-  if (parsed == null || Number.isNaN(parsed)) return '$0.0000'
+  if (!Number.isFinite(parsed)) return 'Cost unavailable'
+  if (parsed > 0 && parsed < 0.00005) return '<$0.0001'
   return `$${parsed.toFixed(4)}`
 }
 
