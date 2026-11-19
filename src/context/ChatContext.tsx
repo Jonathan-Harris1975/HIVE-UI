@@ -63,7 +63,18 @@ export function ChatProvider({ children }: { children: ReactNode }) {
     try {
       const response = await apiFetch<ConversationResponse>(`/v1/db/conversations/${encodeURIComponent(id)}?limit=200`)
       if (!response.ok) throw new Error(response.error || 'Conversation could not be loaded.')
-      setMessages((response.messages ?? []).map((message) => ({ ...message, pending: false, local: false })))
+      setMessages((response.messages ?? []).map((message) => {
+        const metadata = message.metadata
+        const interrupted = message.role === 'assistant' && (metadata?.stream_ended_early === true || metadata?.partial_response === true)
+        const truncated = message.role === 'assistant' && metadata?.completion_truncated === true
+        const failed = message.role === 'assistant' && metadata?.ok === false
+        return {
+          ...message,
+          pending: false,
+          local: false,
+          warning: interrupted ? 'This response was interrupted before completion.' : truncated ? 'This response was truncated.' : failed ? 'This response did not complete successfully.' : null,
+        }
+      }))
     } finally {
       setConversationLoading(false)
     }
