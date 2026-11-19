@@ -228,3 +228,17 @@ test('navigation focus remains stable across rerenders and route transitions', (
   assert.match(shell, /document\.getElementById\('hive-main-content'\)\?\.focus\(\{ preventScroll: true \}\)/)
   assert.match(shell, /absolute -right-5 top-5 z-10 grid h-10 w-10/)
 })
+
+// Screenshot acceptance: operator data must never be hidden by HIVE's reload affordance.
+test('mobile Communications keeps the iframe unobscured after secure handoff', async () => {
+  const source = await readFile(new URL('../src/pages/CommunicationsPage.tsx', import.meta.url), 'utf8')
+  assert.match(source, /\{!ready && !error && <button/)
+  assert.match(source, /aria-label="Reload Communications Interface"/)
+})
+
+test('monthly review shows recorded cost once without duplicated currency symbols', async () => {
+  const source = await readFile(new URL('../src/pages/MonthlyReviewPage.tsx', import.meta.url), 'utf8')
+  assert.match(source, /Recorded \$\$\{value\.toFixed\(2\)\}/)
+  assert.doesNotMatch(source, /<DollarSign/)
+  assert.match(source, /Cost not recorded/)
+})
