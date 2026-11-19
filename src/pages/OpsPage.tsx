@@ -133,7 +133,12 @@ function OpsEventCard({ item, onInspect, onDelete }: { item: OpsEventItem; onIns
   return (
     <article className={`rounded-xl border ${border} bg-hive-surface p-3`}>
       <div className="flex items-start gap-2">
-        <button type="button" onClick={onInspect} className="min-w-0 flex-1 text-left transition hover:bg-hive-panel-deep">
+        <button
+          type="button"
+          onClick={onInspect}
+          aria-label={`Inspect alert: ${item.title || item.event_type || 'Operational event'}`}
+          className="min-w-0 flex-1 text-left transition hover:bg-hive-panel-deep"
+        >
           <div className="flex items-start gap-3">
             <BellRing className={`mt-0.5 h-4 w-4 shrink-0 ${severity === 'critical' ? 'text-rose-300' : severity === 'warning' ? 'text-amber-300' : 'text-cyan-300'}`} />
             <div className="min-w-0 flex-1">
@@ -698,10 +703,11 @@ export function OpsPage() {
                   <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
                     <p className="text-xs text-slate-400">
                       Showing up to 6 stored alerts. These are historical events; clearing them does not repair a job or certify current health.
-                      {' '}<Link to="/repositories" className="text-cyan-200 underline">Check current ecosystem readiness</Link>.
+                      {' '}<Link to="/repositories" aria-label="Check current ecosystem readiness" className="text-cyan-200 underline">Check current ecosystem readiness</Link>.
                     </p>
                     <button
                       type="button"
+                      aria-label="Delete all operational alerts"
                       onClick={() => {
                         setOpsEventDeleteError(null)
                         setOpsEventDeleteTarget({ clearAll: true })
