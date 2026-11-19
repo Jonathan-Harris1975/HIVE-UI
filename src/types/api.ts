@@ -290,6 +290,10 @@ export interface WeeklyLifecycleReportCurrentResponse {
   report: WeeklyLifecycleReport | null
   r2_key?: string
   reason?: string
+  scope?: 'historical_weekly_snapshot'
+  live_status_verified?: false
+  observed_at?: string
+  served_at?: string
 }
 
 export interface HealthResponse {
