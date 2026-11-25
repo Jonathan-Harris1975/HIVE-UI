@@ -758,3 +758,9 @@ export function ChatPage() {
           <p className="mt-2 hidden text-center text-xs text-slate-400 sm:block">
             Enter sends · Shift + Enter adds a line
             {conversationUsage.tokens > 0 && <> · {conversationUsage.tokens.toLocaleString()} tokens · {conversationCost == null ? 'Cost unavailable' : formatCost(conversationCost)}</>}
+          </p>
+        </form>
+      </div>
+    </div>
+  )
+}
