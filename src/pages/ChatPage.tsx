@@ -443,6 +443,11 @@ export function ChatPage() {
         setMessages((current) => current.map((message) =>
           message.id === assistantMessage.id ? { ...message, pending: false, error: 'Generation stopped.' } : message,
         ))
+        if (completedConversationId) setCurrentConversationId(completedConversationId)
+        await refreshConversations().catch((refreshError) => {
+          const message = refreshError instanceof Error ? refreshError.message : 'Conversation list could not refresh.'
+          setError(`Persistence refresh failed: ${message}`)
+        })
       } else {
         const message = caught instanceof Error ? caught.message : 'HIVE chat failed.'
         setError(message)
