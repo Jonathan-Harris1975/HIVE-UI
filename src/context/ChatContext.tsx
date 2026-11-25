@@ -75,10 +75,14 @@ export function ChatProvider({ children }: { children: ReactNode }) {
           warning: interrupted ? 'This response was interrupted before completion.' : truncated ? 'This response was truncated.' : failed ? 'This response did not complete successfully.' : null,
         }
       }))
+      // Opening a conversation may reconcile delayed provider usage. Refresh the
+      // sidebar so its aggregate never remains stale or displays an unknown value
+      // as zero after the detail view has authoritative data.
+      await refreshConversations()
     } finally {
       setConversationLoading(false)
     }
-  }, [])
+  }, [refreshConversations])
 
   const newConversation = useCallback(() => {
     setCurrentConversationId(null)
