@@ -52,7 +52,8 @@ const starters: Array<{ category: string; description: string; mode: ChatMode; p
     mode: 'audit',
     prompt: `Act as the HIVE ecosystem operations lead for my Jonathan Harris automation ecosystem.
 
-Review the evidence available in this conversation and any attached files. Cover HIVE, HIVE-UI, AIMS, RAMS, KDP/eBooks, podcast, social content, GitHub, Koyeb, Cloudflare R2/D1 and OpenRouter where relevant. Do not invent live status and do not imply that you inspected a system unless its evidence is present.
+Review the evidence available in this conversation and any attached files. Cover HIVE, HIVE-UI, AIMS, RAMS, KDP/eBooks, podcast, social content, GitHub, Koyeb,
+Cloudflare R2/D1 and OpenRouter where relevant. Do not invent live status and do not imply that you inspected a system unless its evidence is present.
 
 Return:
 1. Current operational state: confirmed healthy, degraded, blocked and unknown.
@@ -68,7 +69,8 @@ This is an evidence and planning pass. Keep it read-only: do not recommend merge
     mode: 'code',
     prompt: `Act as an evidence-first production incident engineer for my Jonathan Harris ecosystem.
 
-Investigate the failure described in this conversation and any attached code, logs, issue text or deployment evidence. Reconstruct the timeline, identify the first meaningful failure rather than later symptoms, and separate confirmed facts from inferences. Never guess missing configuration, credentials, provider behaviour or deployment state.
+Investigate the failure described in this conversation and any attached code, logs, issue text or deployment evidence. Reconstruct the timeline, identify the first meaningful
+failure rather than later symptoms, and separate confirmed facts from inferences. Never guess missing configuration, credentials, provider behaviour or deployment state.
 
 Return:
 1. Incident summary and user/business impact.
@@ -86,7 +88,8 @@ Default to read-only diagnosis. Do not claim the issue is fixed until a specific
     mode: 'general',
     prompt: `Design a genuinely production-ready workflow for the objective in this conversation, using the Jonathan Harris ecosystem context.
 
-The workflow may involve HIVE/HIVE-UI, AIMS, RAMS, KDP/eBooks, podcast, social content, GitHub, Koyeb, Cloudflare R2/D1 and OpenRouter. Do not produce a generic checklist. Make it executable by a solo operator with minimal intervention.
+The workflow may involve HIVE/HIVE-UI, AIMS, RAMS, KDP/eBooks, podcast, social content, GitHub, Koyeb, Cloudflare R2/D1 and OpenRouter. Do not produce a generic checklist.
+Make it executable by a solo operator with minimal intervention.
 
 Return:
 1. Objective, scope and explicit non-goals.
@@ -568,7 +571,11 @@ export function ChatPage() {
                     }}
                     title={starter.prompt}
                     aria-label={`${starter.category}: ${starter.description}`}
-                    className="group flex min-h-24 flex-col items-start rounded-xl border border-white/10 bg-white/[0.025] px-4 py-3 text-left transition hover:border-cyan-300/25 hover:bg-cyan-300/[0.05] focus-visible:border-cyan-300/35"
+                    className={
+                      'group flex min-h-24 flex-col items-start rounded-xl border border-white/10 bg-white/[0.025] ' +
+                      'px-4 py-3 text-left transition hover:border-cyan-300/25 hover:bg-cyan-300/[0.05] ' +
+                      'focus-visible:border-cyan-300/35'
+                    }
                   >
                     <span className="flex items-center gap-2 text-xs font-semibold text-slate-100">
                       <Sparkles className="h-3.5 w-3.5 text-cyan-300/70" aria-hidden="true" />
@@ -751,9 +758,3 @@ export function ChatPage() {
           <p className="mt-2 hidden text-center text-xs text-slate-400 sm:block">
             Enter sends · Shift + Enter adds a line
             {conversationUsage.tokens > 0 && <> · {conversationUsage.tokens.toLocaleString()} tokens · {conversationCost == null ? 'Cost unavailable' : formatCost(conversationCost)}</>}
-          </p>
-        </form>
-      </div>
-    </div>
-  )
-}
