@@ -45,10 +45,63 @@ const modeOptions: Array<{ value: ChatMode; label: string }> = [
   { value: 'file_analysis', label: 'File analysis' },
 ]
 
-const starters = [
-  { category: 'Operations', prompt: 'Review the latest HIVE operational risks and give me a safe action order.' },
-  { category: 'Debugging', prompt: 'Help me trace a deployment failure without guessing.' },
-  { category: 'Workflows', prompt: 'Plan a safe, review-gated workflow for a new AIMS quality-control task.' },
+const starters: Array<{ category: string; description: string; mode: ChatMode; prompt: string }> = [
+  {
+    category: 'Operations',
+    description: 'Turn current evidence into a prioritised action queue',
+    mode: 'audit',
+    prompt: `Act as the HIVE ecosystem operations lead for my Jonathan Harris automation ecosystem.
+
+Review the evidence available in this conversation and any attached files. Cover HIVE, HIVE-UI, AIMS, RAMS, KDP/eBooks, podcast, social content, GitHub, Koyeb,
+Cloudflare R2/D1 and OpenRouter where relevant. Do not invent live status and do not imply that you inspected a system unless its evidence is present.
+
+Return:
+1. Current operational state: confirmed healthy, degraded, blocked and unknown.
+2. P0/P1/P2/P3 action queue, with the reason, dependency, evidence required and safest next action.
+3. Production risks, data-loss or missed-schedule risks, and cost/model-governance risks.
+4. A concise daily operator checklist and acceptance criteria for declaring each item complete.
+
+This is an evidence and planning pass. Keep it read-only: do not recommend merges, deployments, messages or schedule changes without an explicit approval gate.`
+  },
+  {
+    category: 'Debugging',
+    description: 'Trace the first causal failure and define a safe repair',
+    mode: 'code',
+    prompt: `Act as an evidence-first production incident engineer for my Jonathan Harris ecosystem.
+
+Investigate the failure described in this conversation and any attached code, logs, issue text or deployment evidence. Reconstruct the timeline, identify the first meaningful
+failure rather than later symptoms, and separate confirmed facts from inferences. Never guess missing configuration, credentials, provider behaviour or deployment state.
+
+Return:
+1. Incident summary and user/business impact.
+2. Evidence table: observation, source, confidence and implication.
+3. Most likely root cause, competing hypotheses and the smallest checks that distinguish them.
+4. Exact affected files, settings, services or workflow runs where visible.
+5. Minimal safe repair plan, tests, deployment checks, rollback plan and post-fix monitoring.
+6. Any action that would change external state, clearly marked as requiring approval.
+
+Default to read-only diagnosis. Do not claim the issue is fixed until a specific test or live verification proves it.`
+  },
+  {
+    category: 'Workflows',
+    description: 'Design an executable, review-gated ecosystem workflow',
+    mode: 'general',
+    prompt: `Design a genuinely production-ready workflow for the objective in this conversation, using the Jonathan Harris ecosystem context.
+
+The workflow may involve HIVE/HIVE-UI, AIMS, RAMS, KDP/eBooks, podcast, social content, GitHub, Koyeb, Cloudflare R2/D1 and OpenRouter. Do not produce a generic checklist.
+Make it executable by a solo operator with minimal intervention.
+
+Return:
+1. Objective, scope and explicit non-goals.
+2. Ordered stages with inputs, outputs, owner, dependency and completion evidence.
+3. Suitable model route for each LLM step, preferring the cheapest safe option and preserving quality; identify when Luna, Sonnet or Sol is justified.
+4. Cost controls, token limits, caching, retry limits, idempotency and duplicate-publication protection.
+5. Failure handling, quarantine, observability, alerts, recovery and rollback.
+6. Approval gates for every external or state-changing action.
+7. Acceptance tests, live smoke tests and ongoing health metrics.
+
+Separate what HIVE can do now from what requires an integration or implementation. Planning does not authorise execution.`
+  },
 ]
 
 function makeMessage(role: 'user' | 'assistant', content: string, pending = false): UiMessage {
@@ -357,7 +410,7 @@ export function ChatPage() {
     }
   }
 
-  async function submitMessage(value?: string) {
+  async function submitMessage(value?: string, modeOverride: ChatMode = mode) {
     const messageText = (value ?? prompt).trim()
     if (!messageText || streaming) return
 
@@ -376,12 +429,12 @@ export function ChatPage() {
     abortRef.current = controller
     const payload: ChatRequestPayload = {
       message: messageText,
-      mode,
+      mode: modeOverride,
       model: model || null,
       conversation_id: currentConversationId,
       use_persisted_history: true,
       db_history_limit: 12,
-      max_tokens: maxTokensForRoute(mode, hasAttachedFiles),
+      max_tokens: maxTokensForRoute(modeOverride, hasAttachedFiles),
     }
 
     try {
@@ -507,20 +560,28 @@ export function ChatPage() {
               <p className="mt-2 text-xs font-semibold uppercase tracking-[0.22em] text-cyan-300/80 sm:mt-5">Shared intelligence layer</p>
               <h2 className="mt-2 text-2xl font-semibold tracking-tight text-white sm:text-3xl">What are we solving?</h2>
               <p className="mt-2 max-w-xl text-sm leading-6 text-slate-400">Ask HIVE anything, or start with a common task.</p>
-              <div className="mt-5 flex w-full max-w-xl flex-wrap justify-center gap-2">
+              <div className="mt-5 grid w-full max-w-2xl gap-2 sm:grid-cols-3">
                 {starters.map((starter) => (
                   <button
                     key={starter.category}
                     type="button"
-                    onClick={() => void submitMessage(starter.prompt)}
+                    onClick={() => {
+                      setMode(starter.mode)
+                      void submitMessage(starter.prompt, starter.mode)
+                    }}
                     title={starter.prompt}
+                    aria-label={`${starter.category}: ${starter.description}`}
                     className={
-                      'inline-flex h-10 items-center gap-2 rounded-xl border border-white/10 bg-white/[0.025] px-4 text-xs font-medium text-slate-200 transition ' +
-                      'hover:border-cyan-300/25 hover:bg-cyan-300/[0.05] focus-visible:border-cyan-300/35'
+                      'group flex min-h-24 flex-col items-start rounded-xl border border-white/10 bg-white/[0.025] ' +
+                      'px-4 py-3 text-left transition hover:border-cyan-300/25 hover:bg-cyan-300/[0.05] ' +
+                      'focus-visible:border-cyan-300/35'
                     }
                   >
-                    <Sparkles className="h-3.5 w-3.5 text-cyan-300/70" aria-hidden="true" />
-                    {starter.category}
+                    <span className="flex items-center gap-2 text-xs font-semibold text-slate-100">
+                      <Sparkles className="h-3.5 w-3.5 text-cyan-300/70" aria-hidden="true" />
+                      {starter.category}
+                    </span>
+                    <span className="mt-2 text-[11px] leading-4 text-slate-400 group-hover:text-slate-300">{starter.description}</span>
                   </button>
                 ))}
               </div>
