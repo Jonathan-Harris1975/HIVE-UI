@@ -88,3 +88,165 @@ test('model picker escapes composer clipping with a viewport-positioned portal',
   assert.match(picker, /getBoundingClientRect\(\)/)
   assert.match(picker, /window\.visualViewport/)
   assert.match(picker, /className="fixed z-\[80\]/)
+  assert.match(picker, /popupRef\.current\?\.contains/)
+})
+
+
+test('repositories are a read-only overview of the automated estate', () => {
+  const repositories = source('src/pages/RepositoriesPage.tsx')
+  const catalogue = source('src/hooks/useRepositoryCatalog.ts')
+
+  assert.match(catalogue, /apiFetch<RepositoryListResponse>\('\/v1\/repositories'\)/)
+  assert.match(repositories, /Automated repository estate/)
+  assert.match(repositories, /Repository overview/)
+  assert.match(repositories, /backend automation and repository CI/)
+  assert.match(repositories, /\/v1\/repositories\/refresh-config/)
+  assert.match(repositories, /\/v1\/system\/repo-health\?force_refresh=/)
+  assert.match(repositories, /EcosystemProductionPanel renderRepositoryDetails=/)
+  assert.match(repositories, /No governed snapshot registered for this repository/)
+  assert.match(source('src/components/EcosystemProductionPanel.tsx'), /GOVERNED_REPOSITORIES\.map/)
+  assert.doesNotMatch(repositories, /method: 'POST'/)
+  assert.doesNotMatch(repositories, /method: 'DELETE'/)
+  assert.doesNotMatch(repositories, /RepositoryOperationsPanel/)
+  assert.doesNotMatch(repositories, /Run Repository Intelligence/)
+  assert.doesNotMatch(repositories, /Carry out improvements/)
+})
+
+test('legacy repository routes collapse into the single overview', () => {
+  const app = source('src/App.tsx')
+  const shell = source('src/components/AppShell.tsx')
+
+  assert.match(app, /function LegacyRepositoriesRedirect\(\)/)
+  assert.match(app, /Navigate to=\{`\/repositories\$\{location\.search\}`\} replace/)
+  assert.match(app, /path="memory" element=\{<LegacyRepositoriesRedirect \/>\}/)
+  assert.match(app, /path="intelligence" element=\{<LegacyRepositoriesRedirect \/>\}/)
+  assert.doesNotMatch(app, /RepositoryIntelligencePage/)
+  assert.doesNotMatch(shell, /Memory & Intelligence/)
+  assert.match(shell, /Automated repository estate overview/)
+})
+
+test('operations does not duplicate repository overview status', () => {
+  const ops = source('src/pages/OpsPage.tsx')
+  const repositories = source('src/pages/RepositoriesPage.tsx')
+
+  assert.match(repositories, /\/v1\/system\/repo-health/)
+  assert.doesNotMatch(ops, /\/v1\/system\/repo-health/)
+  assert.doesNotMatch(ops, /RepoHealthCard/)
+  assert.doesNotMatch(ops, /repository_manager/)
+  assert.doesNotMatch(ops, /Services healthy/)
+  assert.match(ops, /Integration readiness/)
+  assert.match(ops, /open=\{integrationAttentionCount > 0 \|\| integrationUnknownCount > 0\}/)
+  assert.match(ops, /Notification preferences/)
+  assert.match(ops, /Snapshot fetched/)
+  assert.match(ops, /Runtime status/)
+  assert.match(ops, /Operational alerts/)
+  assert.doesNotMatch(ops, /Live system snapshot/)
+  assert.match(ops, /Delete all alerts/)
+  assert.match(ops, /onDelete=/)
+  assert.match(ops, /Workflow lab/)
+})
+
+test('TypeScript source stays within the UI line-length budget', () => {
+  const roots = ['src', 'workers', 'shared', 'e2e']
+
+  for (const root of roots) {
+    const directory = new URL(`../${root}/`, import.meta.url)
+    const files = walk(directory.pathname).filter((path) => /\.tsx?$/.test(path))
+
+    for (const path of files) {
+      const lines = readFileSync(path, 'utf8').split(/\r?\n/)
+      lines.forEach((line, index) => {
+        assert.ok(
+          line.length <= 200,
+          `${path}:${index + 1} exceeds the 200-character Repository Intelligence source limit (${line.length})`,
+        )
+      })
+    }
+  }
+})
+
+test('execution planning is separated from optimisation and retains legacy routing', () => {
+  const app = source('src/App.tsx')
+  const shell = source('src/components/AppShell.tsx')
+  const plan = source('src/pages/ExecutionPlanPage.tsx')
+  const reviews = source('src/pages/ExecutionReviewsPage.tsx')
+  const optimisation = source('src/pages/OptimisationPage.tsx')
+  const types = source('src/types/api.ts')
+
+  assert.match(app, /path="execution" element={<ExecutionPlanPage \/>}/)
+  assert.match(app, /path="execution-simulation" element={<Navigate to="\/execution" replace \/>}/)
+  assert.match(shell, /to: '\/execution', label: 'Execution'/)
+  assert.doesNotMatch(shell, /to: '\/optimisation'.*execution-reviews/)
+  assert.match(plan, /\['Preview', 'Review', 'Approve', 'Execute'\]/)
+  assert.match(plan, /source_preview_id: sourcePreviewId/)
+  assert.match(plan, /preview_id: simulation\.preview_id \|\| null/)
+  assert.match(plan, /simulation_id: simulation\.simulation_id \|\| null/)
+  assert.match(plan, /workflow_preset: simulation\.workflow_preset \?\? null/)
+  assert.match(plan, /await persistPreview\(\)/)
+  assert.match(reviews, /Build an execution preview first/)
+  assert.match(reviews, /Manual review plan/)
+  assert.match(reviews, /response\.export_document/)
+  assert.doesNotMatch(reviews, /response\.content[^_]/)
+  assert.match(reviews, /review\.metadata/)
+  assert.match(optimisation, /ConfirmDialog/)
+  assert.match(optimisation, /statsResponse\.ok === false/)
+  assert.match(optimisation, /Ledger records/)
+  assert.match(optimisation, /proposed, not applied/)
+  assert.match(optimisation, /Mark reverted/)
+  assert.match(optimisation, /External state was not changed/)
+  assert.doesNotMatch(optimisation, /Environment Variable Audit/)
+  assert.match(types, /export interface ExecutionServiceRequirement/)
+  assert.match(types, /export interface ExecutionReviewExportResponse/)
+})
+
+test('declarative router keeps protected routes and compatibility redirects stable', () => {
+  const main = source('src/main.tsx')
+  const app = source('src/App.tsx')
+
+  assert.match(main, /import \{ BrowserRouter \} from 'react-router'/)
+  assert.match(main, /<BrowserRouter>[\s\S]*<AuthProvider>[\s\S]*<App \/>[\s\S]*<\/AuthProvider>[\s\S]*<\/BrowserRouter>/)
+  assert.match(app, /import \{ Navigate, Route, Routes, useLocation \} from 'react-router'/)
+  assert.match(app, /if \(status === 'signed-out'\) return <LoginScreen \/>/)
+  assert.match(app, /<Route index element={<Navigate to="\/chat" replace \/>} \/>/)
+  assert.match(app, /return <Navigate to={`\/repositories\$\{location\.search\}`} replace \/>/)
+  assert.match(app, /path="execution-simulation" element={<Navigate to="\/execution" replace \/>}/)
+  assert.match(app, /path="\*" element={<Navigate to="\/chat" replace \/>}/)
+  assert.doesNotMatch(app, /\b(?:loader|action)=/)
+})
+
+
+
+test('retired model council workspace redirects to operational evidence', () => {
+  const app = source('src/App.tsx')
+  const shell = source('src/components/AppShell.tsx')
+  assert.doesNotMatch(shell, /Models & optimisation|label: 'Registry'/)
+  assert.match(app, /path="models" element=\{<Navigate to="\/llm-spend" replace \/>\}/)
+  assert.match(app, /path="optimisation" element=\{<Navigate to="\/ops" replace \/>\}/)
+  assert.match(app, /path="monthly-review" element=\{<Navigate to="\/ops" replace \/>\}/)
+  assert.doesNotMatch(shell, /to: '\/monthly-review'/)
+  assert.doesNotMatch(app, /MonthlyReviewPage/)
+  assert.doesNotMatch(app, /import\('\.\/pages\/(ModelRegistryPage|OptimisationPage)'\)/)
+})
+
+// A route or background auth update must not reset an open mobile dialog's focus trap.
+test('navigation focus remains stable across rerenders and route transitions', () => {
+  const shell = source('src/components/AppShell.tsx')
+  assert.match(shell, /useCallback\(\(\) => setMobileMenuOpen\(false\), \[\]\)/)
+  assert.match(shell, /document\.getElementById\('hive-main-content'\)\?\.focus\(\{ preventScroll: true \}\)/)
+  assert.match(shell, /absolute -right-5 top-5 z-10 grid h-10 w-10/)
+})
+
+// Screenshot acceptance: operator data must never be hidden by HIVE's reload affordance.
+test('mobile Communications keeps the iframe unobscured after secure handoff', async () => {
+  const file = source('src/pages/CommunicationsPage.tsx')
+  assert.match(file, /\{!ready && !error && <button/)
+  assert.match(file, /aria-label="Reload Communications Interface"/)
+})
+
+test('retired monthly review cannot be opened from Operations', () => {
+  const app = source('src/App.tsx')
+  const shell = source('src/components/AppShell.tsx')
+  assert.match(app, /path="monthly-review" element=\{<Navigate to="\/ops" replace \/>\}/)
+  assert.doesNotMatch(shell, /label: 'Monthly review'/)
+  assert.doesNotMatch(app, /MonthlyReviewPage/)
+})
