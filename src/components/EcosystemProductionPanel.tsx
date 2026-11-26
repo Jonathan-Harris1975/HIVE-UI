@@ -203,11 +203,12 @@ function isJobReceipt(value: unknown): value is JobReceipt {
 export function ScheduledWorkPanel({ scheduler }: { scheduler?: RepoHealthItem }) {
   const payload = scheduler?.operational?.payload
   const receipts = Array.isArray(payload?.recent_jobs) ? payload.recent_jobs.filter(isJobReceipt) : []
-  const newestFirst = [...receipts].sort((left, right) =>
-    Date.parse(right.finished_at || '') - Date.parse(left.finished_at || ''),
+  const priorityReceipts = [...receipts].sort((left, right) =>
+    Number(left.ok) - Number(right.ok)
+      || Date.parse(right.finished_at || '') - Date.parse(left.finished_at || ''),
   )
-  const visibleReceipts = newestFirst.slice(0, 6)
-  const olderReceipts = newestFirst.slice(6)
+  const visibleReceipts = priorityReceipts.slice(0, 6)
+  const olderReceipts = priorityReceipts.slice(6)
   const failedCount = receipts.filter((item) => !item.ok).length
   const renderReceipt = (item: JobReceipt, index: number) => (
     <li key={`${item.job}-${item.finished_at || index}`} className={`rounded-xl border p-3 text-xs ${item.ok ? 'border-white/8' : 'border-rose-300/20 bg-rose-300/[0.035]'}`}>
