@@ -287,7 +287,7 @@ export function ScheduledWorkPanel({ scheduler }: { scheduler?: RepoHealthItem }
             }`}
           >
             {failedCount
-              ? `${failedCount} failed execution${failedCount === 1 ? '' : 's'} in ${receipts.length} recent receipts. Failed work is shown first for quick review.`
+              ? `Failed execution${failedCount === 1 ? '' : 's'}: ${failedCount} of ${receipts.length} recent receipts. Failed work is shown first for quick review.`
               : `No failures in ${receipts.length} recent receipts.`}
           </div>
           <ul className="mt-3 grid gap-2 md:grid-cols-2">
