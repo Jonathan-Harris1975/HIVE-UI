@@ -858,11 +858,17 @@ export function OpsPage() {
                   {' '}As at {formatDate(String(lifecycleReport.observed_at || ''))} · R2 key {String(lifecycleReport.r2_key || '')}
                 </p>
               ) : (
-                <p className="mt-2 text-xs text-slate-400">
-                  {lifecycleReport?.available === false
-                    ? 'No persisted report is available for this ISO week yet. The weekly report job needs checking; missing evidence remains unknown.'
-                    : 'The weekly report could not be loaded. It will be checked again automatically.'}
-                </p>
+                <div role={lifecycleReport?.available === false ? 'alert' : 'status'} aria-live="polite" className="mt-3 rounded-xl border border-amber-300/20 bg-amber-300/[0.05] px-3 py-2">
+                  <p className="text-xs font-semibold text-amber-100">
+                    {lifecycleReport?.available === false ? 'This week’s report is unavailable' : 'The report could not be loaded'}
+                  </p>
+                  <p className="mt-1 text-xs leading-5 text-amber-100/80">
+                    {lifecycleReport?.available === false
+                      ? 'No persisted report is available for this ISO week yet. The weekly report job needs checking; missing evidence remains unknown.'
+                      : 'The weekly report could not be loaded. It will be checked again automatically.'}
+                  </p>
+                  {reportHistory.length > 0 && <p className="mt-1 text-xs text-slate-300">The previous persisted reports are expanded below for comparison.</p>}
+                </div>
               )}
               {lifecycleReport?.available === true &&
                 Array.isArray((lifecycleReport.report as Record<string, unknown>)?.repositories) && (
@@ -894,7 +900,7 @@ export function OpsPage() {
                   </ul>
                 )}
               {reportHistory.length > 0 && (
-                <details className="mt-3 rounded-lg border border-white/8 px-3 py-2">
+                <details open={lifecycleReport?.available === false} className="mt-3 rounded-lg border border-white/8 px-3 py-2">
                   <summary className="cursor-pointer text-xs text-cyan-200">
                     Report history ({reportHistory.length})
                   </summary>
