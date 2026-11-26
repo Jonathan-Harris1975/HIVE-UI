@@ -123,17 +123,36 @@ export function EcosystemProductionPanel({ renderRepositoryDetails }: { renderRe
           Refresh production evidence
         </button>
       </div>
-      <div role="status" className="mt-3 flex flex-wrap items-center gap-3 text-xs text-slate-400">
+      <div role="status" aria-live="polite" className="mt-3 flex flex-wrap items-center gap-3 text-xs text-slate-400">
         <StatusBadge status={current ? tone(report?.state) : 'unknown'} label={loading ? 'Checking' : current ? productionLabel(report?.state) : 'Unknown'} dotOnly />
         <span>Release decision: {current ? decisionLabel(report?.release_decision) : 'Not verified'}</span>
+        <span>Runtime health: {current ? `${runtimeHealthy}/${GOVERNED_REPOSITORIES.length} healthy` : 'Not verified'}</span>
         {report?.generated_at && <span>Observed {formatDate(report.generated_at)}</span>}
       </div>
-      {error && <p role="alert" className="mt-3 text-xs text-rose-200">{error}</p>}
-      {report && !current && <p className="mt-3 text-xs text-amber-200">Evidence is stale or incomplete. Refresh before relying on this decision.</p>}
+      <p className="mt-2 max-w-4xl text-xs leading-5 text-slate-500">Runtime health means the service responded. The release decision reflects CI and deployment evidence. Snapshot freshness below describes indexed code; these checks answer different questions.</p>
+      {loading && <p role="status" aria-live="polite" className="mt-3 text-xs text-slate-300">Checking live runtime and release evidence. No status is inferred until the complete report is current.</p>}
+      {error && <p role="alert" className="mt-3 rounded-xl border border-rose-300/20 bg-rose-300/8 px-3 py-2 text-xs text-rose-100">Production evidence unavailable: {error} No release decision or runtime health is inferred.</p>}
+      {report && !current && <p role="status" className="mt-3 rounded-xl border border-amber-300/20 bg-amber-300/7 px-3 py-2 text-xs text-amber-100">Evidence is stale or incomplete. Runtime health and release readiness are unknown until a complete, current report is available.</p>}
       {incomplete > 0 && <p className="mt-3 text-xs text-amber-200">Additional workflow discovery is incomplete for {incomplete} repositories; further failures may be unobserved.</p>}
-      {warnings > 0 && <p className="mt-3 text-xs text-amber-200">{warnings} additional workflow failure(s) need attention, separate from the required release gates.</p>}
+      {warnings > 0 && <p className="mt-3 rounded-xl border border-amber-300/15 bg-amber-300/5 px-3 py-2 text-xs text-amber-100">{warnings} additional workflow failure(s) need attention, separate from the required release gates.</p>}
+      <div className="mt-4 grid gap-2 rounded-xl border border-white/8 bg-white/[0.02] p-3 sm:grid-cols-[minmax(180px,1fr)_auto_auto]">
+        <label className="text-xs text-slate-400">Find repository
+          <input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Search by repository name" className="mt-1.5 h-9 w-full rounded-lg border border-white/10 bg-hive-surface px-3 text-sm text-white placeholder:text-slate-500" />
+        </label>
+        <label className="text-xs text-slate-400">Show
+          <select value={filter} onChange={(event) => setFilter(event.target.value as typeof filter)} className="mt-1.5 h-9 w-full rounded-lg border border-white/10 bg-hive-surface px-3 text-sm text-white sm:min-w-40">
+            <option value="all">All repositories</option><option value="attention">Needs attention</option><option value="ready">Ready</option><option value="unknown">Unknown</option>
+          </select>
+        </label>
+        <label className="text-xs text-slate-400">Sort
+          <select value={sortBy} onChange={(event) => setSortBy(event.target.value as typeof sortBy)} className="mt-1.5 h-9 w-full rounded-lg border border-white/10 bg-hive-surface px-3 text-sm text-white sm:min-w-40">
+            <option value="attention">Attention first</option><option value="name">Name</option>
+          </select>
+        </label>
+        <p role="status" aria-live="polite" className="text-xs text-slate-500 sm:col-span-3">Showing {repositoryIds.length} of {GOVERNED_REPOSITORIES.length} repositories</p>
+      </div>
       <div className="mt-3 grid gap-2 md:grid-cols-2 xl:grid-cols-4">
-        {GOVERNED_REPOSITORIES.map((id) => {
+        {repositoryIds.map((id) => {
           const item = byId.get(id)
           const gates = item?.gate_evidence
           return (
@@ -168,6 +187,7 @@ export function EcosystemProductionPanel({ renderRepositoryDetails }: { renderRe
             </article>
           )
         })}
+        {!repositoryIds.length && <p className="rounded-xl border border-white/8 bg-hive-surface p-4 text-sm text-slate-400 md:col-span-2 xl:col-span-4">No repositories match these filters. Change the search or status filter.</p>}
       </div>
     </section>
   )
