@@ -154,7 +154,7 @@ export function RepositoriesPage() {
   return (
     <div className="h-full overflow-y-auto p-4 sm:p-6 lg:p-8">
       <div className="mx-auto max-w-7xl">
-        <section className="rounded-3xl border border-white/8 bg-hive-panel/75 p-5 sm:p-7">
+        <section aria-busy={loading} className="rounded-3xl border border-white/8 bg-hive-panel/75 p-5 sm:p-7">
           <div className="flex flex-col gap-5 lg:flex-row lg:items-end lg:justify-between">
             <div>
               <p className="text-xs font-semibold uppercase tracking-[0.2em] text-cyan-300/70">
@@ -180,25 +180,25 @@ export function RepositoriesPage() {
           <div className="mt-6 grid gap-2 border-t border-white/8 pt-5 sm:grid-cols-2 lg:grid-cols-5">
             <div className="rounded-xl border border-white/8 bg-white/[0.025] p-3">
               <p className="text-[10px] uppercase tracking-wider text-slate-500">Registered</p>
-              <p className="mt-1 text-xl font-semibold text-white">{registeredCount}/{GOVERNED_REPOSITORIES.length}</p>
+              <p className="mt-1 text-xl font-semibold text-white">{loading ? 'Loading…' : error ? 'Unavailable' : `${registeredCount}/${GOVERNED_REPOSITORIES.length}`}</p>
             </div>
             <div className="rounded-xl border border-white/8 bg-white/[0.025] p-3">
               <p className="text-[10px] uppercase tracking-wider text-slate-500">Fully current</p>
-              <p className="mt-1 text-xl font-semibold text-white">{fullyCurrentCount}/{registeredCount || 0}</p>
+              <p className="mt-1 text-xl font-semibold text-white">{loading ? 'Loading…' : error ? 'Unavailable' : `${fullyCurrentCount}/${GOVERNED_REPOSITORIES.length}`}</p>
             </div>
             <div className="rounded-xl border border-white/8 bg-white/[0.025] p-3">
               <p className="text-[10px] uppercase tracking-wider text-slate-500">Services healthy</p>
               <p className="mt-1 text-xl font-semibold text-white">
-                {state.repoHealth?.ok ? `${serviceHealthyCount}/${GOVERNED_REPOSITORIES.length}` : 'Unknown'}
+                {loading ? 'Loading…' : error ? 'Unavailable' : state.repoHealth?.ok ? `${serviceHealthyCount}/${GOVERNED_REPOSITORIES.length}` : 'Unknown'}
               </p>
             </div>
             <div className="rounded-xl border border-white/8 bg-white/[0.025] p-3">
               <p className="text-[10px] uppercase tracking-wider text-slate-500">Indexed files</p>
-              <p className="mt-1 text-xl font-semibold text-white">{totalFiles.toLocaleString()}</p>
+              <p className="mt-1 text-xl font-semibold text-white">{loading ? 'Loading…' : error ? 'Unavailable' : totalFiles.toLocaleString()}</p>
             </div>
             <div className="rounded-xl border border-white/8 bg-white/[0.025] p-3">
               <p className="text-[10px] uppercase tracking-wider text-slate-500">Snapshot size</p>
-              <p className="mt-1 text-xl font-semibold text-white">{formatBytes(totalBytes)}</p>
+              <p className="mt-1 text-xl font-semibold text-white">{loading ? 'Loading…' : error ? 'Unavailable' : formatBytes(totalBytes)}</p>
             </div>
           </div>
         </section>
