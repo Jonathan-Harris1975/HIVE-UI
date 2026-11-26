@@ -1,4 +1,4 @@
-import { act, render, screen, waitFor, within } from '@testing-library/react'
+import { act, fireEvent, render, screen, waitFor, within } from '@testing-library/react'
 import { afterEach, expect, it, vi } from 'vitest'
 import { EcosystemProductionPanel, ScheduledWorkPanel } from '../components/EcosystemProductionPanel'
 import { apiFetch } from '../lib/api'
@@ -9,9 +9,30 @@ const request = vi.mocked(apiFetch)
 const report = () => ({
   ok: true, state: 'GREEN', release_decision: 'ALLOW', generated_at: new Date().toISOString(),
   repositories: GOVERNED_REPOSITORIES.map((id) => ({ repository_id: id, state: 'GREEN', runtime_state: 'GREEN',
-    gate_evidence: { sha: 'a'.repeat(40), deployment: { status: 'success' }, required_workflows: { CI: { status: 'success' } } } })),
+    gate_evidence: { sha: 'a'.repeat(40), deployment: { status: 'success' }, additional_workflows_complete: true, required_workflows: { CI: { status: 'success' } } } })),
 })
 afterEach(() => { vi.clearAllMocks(); vi.useRealTimers() })
+
+it('shows an explicit unknown loading state before evidence arrives', () => {
+  request.mockReturnValue(new Promise(() => {}))
+  render(<EcosystemProductionPanel />)
+  expect(screen.getByText(/Checking live runtime and release evidence/)).toBeInTheDocument()
+  expect(screen.getByText('Release decision: Not verified')).toBeInTheDocument()
+  expect(screen.getByText('Runtime health: Not verified')).toBeInTheDocument()
+})
+
+it('filters repository cards to the attention items', async () => {
+  const value = report()
+  value.repositories[1].state = 'BLOCKED'
+  request.mockResolvedValue(value)
+  render(<EcosystemProductionPanel />)
+  await screen.findByText('Release decision: Allowed')
+  fireEvent.change(screen.getByLabelText('Show'), { target: { value: 'attention' } })
+  const section = screen.getByLabelText('Ecosystem production readiness')
+  expect(within(section).getByRole('heading', { name: 'HIVE-UI' })).toBeInTheDocument()
+  expect(within(section).queryByRole('heading', { name: 'HIVE' })).not.toBeInTheDocument()
+  expect(within(section).getByText('Showing 1 of 8 repositories')).toBeInTheDocument()
+})
 
 it('shows production gates for all eight repositories independently of snapshots', async () => {
   request.mockResolvedValue(report())
@@ -91,7 +112,9 @@ it('shows failed business work even when the scheduler heartbeat is healthy', ()
 
 
 it('does not present a partial additional-workflow scan as complete', async () => {
-  request.mockResolvedValue(report())
+  const value = report()
+  for (const item of value.repositories) item.gate_evidence!.additional_workflows_complete = false
+  request.mockResolvedValue(value)
   render(<EcosystemProductionPanel />)
   await screen.findByText(/Additional workflow discovery is incomplete for 8 repositories/)
 })
