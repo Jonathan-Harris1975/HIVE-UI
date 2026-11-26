@@ -832,10 +832,11 @@ export function FilesPage() {
 
           <div className="mt-6 grid gap-4 border-t border-white/8 pt-5 lg:grid-cols-[minmax(220px,300px)_1fr]">
             <label className="text-xs font-medium text-slate-400">
-              Storage lane
+              Storage area
               <select
                 value={selectedLane}
                 disabled={loadingLanes}
+                aria-describedby="storage-area-help"
                 onChange={(event) => {
                   const lane = lanes.find(
                     (item) => item.lane === event.target.value,
@@ -854,6 +855,7 @@ export function FilesPage() {
                   </option>
                 ))}
               </select>
+              <span id="storage-area-help" className="mt-1.5 block font-normal leading-5 text-slate-500">Each area is a governed R2 location. The access label shows whether HIVE can read or write there.</span>
             </label>
 
             <form onSubmit={submitSearch} className="self-end">
@@ -1245,15 +1247,16 @@ export function FilesPage() {
             <div className="rounded-3xl border border-dashed border-white/10 p-4">
               <EmptyState
                 icon={<FolderOpen className="h-8 w-8" />}
-                title="No matching objects found"
-                body="This prefix is empty or the current search has no matches."
+                title={activeSearch ? "No matching files" : "Folder is empty"}
+                body={activeSearch
+                  ? `Nothing matches “${activeSearch}” in this folder. Clear the search to see all files.`
+                  : "There are no files in this folder yet. Child folders, if any, appear above."}
                 action={
-                  activeLane?.writable
-                    ? {
-                        label: "Upload a file",
-                        onClick: () => setSelectedAction("upload"),
-                      }
-                    : undefined
+                  activeSearch
+                    ? { label: "Clear search", onClick: clearSearch }
+                    : activeLane?.writable
+                      ? { label: "Upload a file", onClick: () => setSelectedAction("upload") }
+                      : undefined
                 }
               />
             </div>
