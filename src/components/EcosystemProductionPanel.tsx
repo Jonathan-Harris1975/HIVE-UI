@@ -203,27 +203,48 @@ function isJobReceipt(value: unknown): value is JobReceipt {
 export function ScheduledWorkPanel({ scheduler }: { scheduler?: RepoHealthItem }) {
   const payload = scheduler?.operational?.payload
   const receipts = Array.isArray(payload?.recent_jobs) ? payload.recent_jobs.filter(isJobReceipt) : []
+  const newestFirst = [...receipts].sort((left, right) =>
+    Date.parse(right.finished_at || '') - Date.parse(left.finished_at || ''),
+  )
+  const visibleReceipts = newestFirst.slice(0, 6)
+  const olderReceipts = newestFirst.slice(6)
+  const failedCount = receipts.filter((item) => !item.ok).length
+  const renderReceipt = (item: JobReceipt, index: number) => (
+    <li key={`${item.job}-${item.finished_at || index}`} className={`rounded-xl border p-3 text-xs ${item.ok ? 'border-white/8' : 'border-rose-300/20 bg-rose-300/[0.035]'}`}>
+      <div className="flex items-start justify-between gap-3">
+        <span className="break-words font-medium text-slate-200">{item.job}</span>
+        <StatusBadge status={item.ok ? 'completed' : 'failed'} label={item.ok ? 'Succeeded' : 'Failed'} compact />
+      </div>
+      <p className="mt-1 text-slate-400">{item.group || 'Unassigned group'} · {formatDate(item.finished_at)}</p>
+      {item.operation_status && <p className="mt-1 leading-5 text-slate-300">{item.operation_status}</p>}
+    </li>
+  )
   return (
     <section aria-label="Recent scheduled work" className="mt-4 rounded-2xl border border-white/8 bg-hive-panel/60 p-4 sm:p-5">
-      <h3 className="text-sm font-semibold text-white">Recent scheduled work</h3>
-      <p className="mt-1 text-xs leading-5 text-slate-400">
-        Latest recorded MAST executions, including content and KDP jobs. A successful scheduler heartbeat confirms the worker is alive;
-        individual receipts show whether work completed. These are execution records, not the active schedule or proof of email delivery.
-      </p>
-      <p className="mt-2 text-xs text-slate-400">Last scheduler tick: {formatDate(typeof payload?.last_tick_at === 'string' ? payload.last_tick_at : null)}</p>
-      {!receipts.length ? <p className="mt-3 text-xs text-amber-200">Scheduled work evidence is unavailable. No successful deliveries are inferred.</p> : (
-        <ul className="mt-3 grid gap-2 md:grid-cols-2">
-          {receipts.map((item) => (
-            <li key={item.job} className="rounded-xl border border-white/8 p-3 text-xs text-slate-400">
-              <div className="flex items-start justify-between gap-3">
-                <span className="break-words font-medium text-slate-200">{item.job}</span>
-                <StatusBadge status={item.ok ? 'completed' : 'failed'} label={item.ok ? 'Succeeded' : 'Failed'} compact />
-              </div>
-              <p className="mt-1">{item.group} · {formatDate(item.finished_at)}</p>
-              {item.operation_status && <p className="mt-1">{item.operation_status}</p>}
-            </li>
-          ))}
-        </ul>
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <div>
+          <h3 className="text-sm font-semibold text-white">Recent scheduled work</h3>
+          <p className="mt-1 max-w-3xl text-xs leading-5 text-slate-400">
+            Latest recorded MAST executions, including content and KDP jobs. A heartbeat means the worker is alive; receipts show whether individual work completed. These are not the active schedule or proof of email delivery.
+          </p>
+        </div>
+        <span className="text-xs text-slate-400">Last scheduler tick: {formatDate(typeof payload?.last_tick_at === 'string' ? payload.last_tick_at : null)}</span>
+      </div>
+      {!receipts.length ? <p role="status" className="mt-3 rounded-xl border border-amber-300/15 bg-amber-300/[0.04] px-3 py-2 text-xs text-amber-100">Scheduled work evidence is unavailable. No successful deliveries are inferred.</p> : (
+        <>
+          <div role="status" aria-live="polite" className={`mt-3 rounded-xl border px-3 py-2 text-xs ${failedCount ? 'border-rose-300/20 bg-rose-300/[0.05] text-rose-100' : 'border-emerald-300/15 bg-emerald-300/[0.04] text-emerald-100'}`}>
+            {failedCount ? `${failedCount} failed execution${failedCount === 1 ? '' : 's'} in ${receipts.length} recent receipts. Failed work is shown first for quick review.` : `No failures in ${receipts.length} recent receipts.`}
+          </div>
+          <ul className="mt-3 grid gap-2 md:grid-cols-2">
+            {visibleReceipts.map(renderReceipt)}
+          </ul>
+          {olderReceipts.length > 0 && (
+            <details className="mt-3 rounded-xl border border-white/8 px-3 py-2">
+              <summary className="cursor-pointer text-xs text-cyan-100">Older execution receipts ({olderReceipts.length})</summary>
+              <ul className="mt-3 grid gap-2 md:grid-cols-2">{olderReceipts.map(renderReceipt)}</ul>
+            </details>
+          )}
+        </>
       )}
     </section>
   )
