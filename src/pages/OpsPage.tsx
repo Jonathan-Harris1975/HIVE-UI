@@ -47,7 +47,6 @@ type DatabaseResetTarget = {
   label: string
   kind: 'sql' | 'd1'
   enabled: boolean
-  required_confirmation: string
 }
 
 type DatabaseResetPreview = {
@@ -61,13 +60,6 @@ type DatabaseResetPreview = {
   preserves?: string[]
   message?: string
   unavailable?: unknown
-}
-
-type DatabasePurgeResetResponse = {
-  ok: boolean
-  target?: string
-  confirmation?: string
-  result?: Record<string, unknown>
 }
 
 type FlagStatus = 'ready' | 'not_ready' | 'disabled' | 'partial' | 'unknown'
@@ -227,11 +219,7 @@ export function OpsPage() {
   const [templates, setTemplates] = useState<Record<string, WorkflowTemplate>>({})
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
-  const [purgeDialogOpen, setPurgeDialogOpen] = useState(false)
-  const [purgeConfirmation, setPurgeConfirmation] = useState('')
-  const [purgingDatabases, setPurgingDatabases] = useState(false)
-  const [purgeError, setPurgeError] = useState<string | null>(null)
-  const [purgeResult, setPurgeResult] = useState<DatabasePurgeResetResponse | null>(null)
+  const [databasePreviewError, setDatabasePreviewError] = useState<string | null>(null)
   const [resetTargets, setResetTargets] = useState<DatabaseResetTarget[]>([])
   const [selectedResetTarget, setSelectedResetTarget] = useState('')
   const [purgePreview, setPurgePreview] = useState<DatabaseResetPreview | null>(null)
@@ -373,8 +361,7 @@ export function OpsPage() {
 
   const previewDatabaseReset = useCallback(async () => {
     if (!selectedResetTarget) return
-    setPurgeError(null)
-    setPurgeResult(null)
+    setDatabasePreviewError(null)
     setPurgePreview(null)
     try {
       const result = await apiFetch<DatabaseResetPreview>('/v1/db/purge-reset/preview', {
@@ -383,39 +370,11 @@ export function OpsPage() {
         body: JSON.stringify({ target: selectedResetTarget }),
       })
       setPurgePreview(result)
-      if (!result.ok) setPurgeError('A complete row-count preview is unavailable. No reset can be started.')
+      if (!result.ok) setDatabasePreviewError('A complete read-only row-count preview is unavailable. No data was changed.')
     } catch (caught) {
-      setPurgeError(caught instanceof Error ? caught.message : 'Reset preview could not be loaded.')
+      setDatabasePreviewError(caught instanceof Error ? caught.message : 'The read-only preview could not be loaded.')
     }
   }, [selectedResetTarget])
-
-  const purgeResetDatabases = useCallback(async () => {
-    const target = resetTargets.find((item) => item.id === selectedResetTarget)
-    if (!target || purgeConfirmation !== target.required_confirmation || purgePreview?.target !== target.id) return
-    setPurgingDatabases(true)
-    setPurgeError(null)
-    setPurgeResult(null)
-    try {
-      const result = await apiFetch<DatabasePurgeResetResponse>('/v1/db/purge-reset', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ target: target.id, confirmation: purgeConfirmation }),
-      })
-      setPurgeResult(result)
-      if (!result.ok) {
-        setPurgeError('The selected reset did not complete. Inspect the returned result before retrying.')
-        return
-      }
-      setPurgeDialogOpen(false)
-      setPurgeConfirmation('')
-      setPurgePreview(null)
-      await loadOps()
-    } catch (caught) {
-      setPurgeError(caught instanceof Error ? caught.message : 'Database reset failed.')
-    } finally {
-      setPurgingDatabases(false)
-    }
-  }, [loadOps, purgeConfirmation, purgePreview, resetTargets, selectedResetTarget])
 
   useEffect(() => {
     let active = true
@@ -426,7 +385,7 @@ export function OpsPage() {
         setSelectedResetTarget(result.targets.find((target) => target.enabled)?.id ?? '')
       })
       .catch((caught) => {
-        if (active) setPurgeError(caught instanceof Error ? caught.message : 'Reset targets could not be loaded.')
+        if (active) setDatabasePreviewError(caught instanceof Error ? caught.message : 'Database preview targets could not be loaded.')
       })
     return () => { active = false }
   }, [])
@@ -978,24 +937,26 @@ export function OpsPage() {
 
             <details className="group mt-3 rounded-2xl border border-rose-300/15 bg-rose-300/[0.025]">
               <summary className="flex cursor-pointer list-none items-center justify-between gap-3 px-4 py-3">
-                <span className="flex items-center gap-2 text-sm font-semibold text-rose-100"><Trash2 className="h-4 w-4 text-rose-300" /> Danger zone</span>
-                <span className="text-[11px] text-slate-500">Scoped data cleanup</span>
+                <span className="flex items-center gap-2 text-sm font-semibold text-slate-100"><Database className="h-4 w-4 text-slate-300" /> Database preview</span>
+                <span className="text-[11px] text-slate-500">Read-only</span>
               </summary>
               <div className="border-t border-rose-300/10 p-4">
                 <p className="text-xs leading-5 text-slate-400">
-                  Select one database, review its row counts, then confirm that target only. D1 migration history and database schemas are preserved.
+                  Preview row counts only. HIVE-UI cannot delete database data because this browser session does not establish an individual trusted operator identity.
                 </p>
-                <label className="mt-3 block text-xs font-medium text-slate-300" htmlFor="reset-target">Database to clean</label>
+                <p className="mt-3 rounded-xl border border-amber-300/20 bg-amber-300/5 p-3 text-xs leading-5 text-amber-100" role="note">
+                  This preview is read-only. Approved database resets must use the trusted operator channel.
+                </p>
+                <label className="mt-3 block text-xs font-medium text-slate-300" htmlFor="reset-target">Database to preview</label>
                 <select
                   id="reset-target"
                   value={selectedResetTarget}
                   onChange={(event) => {
                     setSelectedResetTarget(event.target.value)
                     setPurgePreview(null)
-                    setPurgeError(null)
-                    setPurgeResult(null)
+                    setDatabasePreviewError(null)
                   }}
-                  disabled={!resetTargets.length || purgingDatabases}
+                  disabled={!resetTargets.length}
                   className="mt-1 h-10 w-full rounded-xl border border-white/10 bg-hive-surface px-3 text-sm text-white"
                 >
                   {resetTargets.length === 0 && <option value="">No reset targets available</option>}
@@ -1005,8 +966,7 @@ export function OpsPage() {
                     </option>
                   ))}
                 </select>
-                {purgeResult?.ok && <p className="mt-2 text-xs font-medium text-emerald-200" role="status">{purgeResult.target} reset completed.</p>}
-                {purgeError && <p className="mt-2 text-xs text-rose-200" role="alert">{purgeError}</p>}
+                {databasePreviewError && <p className="mt-2 text-xs text-rose-200" role="alert">{databasePreviewError}</p>}
                 {purgePreview?.ok && purgePreview.target === selectedResetTarget && (
                   <div className="mt-3 rounded-xl border border-white/8 bg-hive-surface p-3">
                     <p className="text-xs font-semibold text-white">
@@ -1025,26 +985,13 @@ export function OpsPage() {
                 <button
                   type="button"
                   onClick={() => void previewDatabaseReset()}
-                  disabled={!activeResetTarget?.enabled || purgingDatabases}
+                  disabled={!activeResetTarget?.enabled}
                   className="mt-3 flex h-9 w-full items-center justify-center gap-2 rounded-xl border border-white/10 bg-white/5 px-4 text-xs font-semibold text-white disabled:opacity-50"
                 >
-                  Preview selected database
+                  Preview row counts
                 </button>
-                {purgePreview?.ok && purgePreview.target === selectedResetTarget && (purgePreview.total_rows ?? 0) > 0 && (
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setPurgeConfirmation('')
-                      setPurgeDialogOpen(true)
-                    }}
-                    disabled={purgingDatabases}
-                    className="mt-2 flex h-9 w-full items-center justify-center gap-2 rounded-xl border border-rose-300/25 bg-rose-300/10 px-4 text-xs font-semibold text-rose-100 disabled:opacity-50"
-                  >
-                    Review reset of {activeResetTarget?.label}
-                  </button>
-                )}
                 {purgePreview?.ok && purgePreview.target === selectedResetTarget && purgePreview.total_rows === 0 && (
-                  <p className="mt-2 text-xs text-slate-400">No rows to clear in this database.</p>
+                  <p className="mt-2 text-xs text-slate-400">No application rows were reported in this preview.</p>
                 )}
               </div>
             </details>
@@ -1194,44 +1141,6 @@ export function OpsPage() {
         onCancel={() => setOpsEventDeleteTarget(null)}
       />
 
-      <ConfirmDialog
-        open={purgeDialogOpen}
-        title={`Reset ${activeResetTarget?.label ?? 'database'}?`}
-        summary={activeResetTarget?.kind === 'sql'
-          ? 'This clears HIVE SQL conversations, messages, file metadata and chunks, and cost records.'
-          : 'This clears application rows from the selected D1 database while preserving its migration tables.'}
-        objectName={activeResetTarget?.label}
-        systems={[activeResetTarget?.kind === 'sql' ? 'HIVE SQL' : 'Cloudflare D1']}
-        confirmLabel={purgingDatabases ? 'Resetting…' : 'Reset selected database'}
-        cancelLabel="Keep data"
-        tone="destructive"
-        busy={purgingDatabases}
-        confirmDisabled={!activeResetTarget || purgeConfirmation !== activeResetTarget.required_confirmation}
-        error={purgeError}
-        textInput={activeResetTarget ? {
-          label: `Type ${activeResetTarget.required_confirmation} to confirm`,
-          value: purgeConfirmation,
-          onChange: setPurgeConfirmation,
-          placeholder: activeResetTarget.required_confirmation,
-          required: true,
-        } : undefined}
-        onConfirm={() => void purgeResetDatabases()}
-        onCancel={() => {
-          if (purgingDatabases) return
-          setPurgeDialogOpen(false)
-          setPurgeConfirmation('')
-          setPurgeError(null)
-        }}
-      >
-        <p>This action cannot be undone. It affects only the selected database. R2 objects, Vectorize data, Workers KV and Durable Object storage are not touched.</p>
-        {purgePreview?.tables && (
-          <ul className="mt-3 max-h-36 space-y-1 overflow-y-auto rounded-xl border border-white/8 bg-hive-surface p-3 text-xs text-slate-400">
-            {purgePreview.tables.map((table) => (
-              <li key={table.name} className="flex justify-between gap-3"><span>{table.name}</span><span>{table.rows.toLocaleString()} rows</span></li>
-            ))}
-          </ul>
-        )}
-      </ConfirmDialog>
     </div>
   )
 }
