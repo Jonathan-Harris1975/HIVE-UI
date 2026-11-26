@@ -78,7 +78,7 @@ export function ChatProvider({ children }: { children: ReactNode }) {
       // Opening a conversation may reconcile delayed provider usage. Refresh the
       // sidebar so its aggregate never remains stale or displays an unknown value
       // as zero after the detail view has authoritative data.
-      await refreshConversations()
+      await refreshConversations().catch(() => undefined)
     } finally {
       setConversationLoading(false)
     }
