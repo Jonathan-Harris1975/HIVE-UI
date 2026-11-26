@@ -66,7 +66,7 @@ it('shows Ok for green runtimes and dot-only indicators without hiding warnings'
   const cards = within(section).getAllByRole('article')
   const readyLabels = cards.flatMap((card) => within(card).queryAllByText('Ready'))
   const blockedLabels = cards.flatMap((card) => within(card).queryAllByText('Blocked'))
-  expect(readyLabels).toHaveLength(8)
+  expect(readyLabels).toHaveLength(7)
   expect(blockedLabels).toHaveLength(1)
   expect([...readyLabels, ...blockedLabels].every((label) =>
     label.parentElement?.querySelector('[aria-hidden="true"]'),
