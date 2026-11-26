@@ -246,7 +246,9 @@ export function ExecutionPlanPage() {
                 rows={3}
                 className="mt-1.5 w-full resize-y rounded-xl border border-white/8 bg-hive-surface px-3 py-2 text-sm text-slate-100 outline-none placeholder:text-slate-500 focus:border-cyan-300/30"
               />
-              <span id="execution-task-help" className="mt-1 block font-normal leading-5 text-slate-500">Describe what you want HIVE to plan. Previewing does not change data or start a workflow.</span>
+              <span id="execution-task-help" className="mt-1 block font-normal leading-5 text-slate-500">
+                  Describe what you want HIVE to plan. Previewing does not change data or start a workflow.
+                </span>
             </label>
             <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
               <label className="block min-w-0 text-xs font-medium text-slate-300">
@@ -271,7 +273,9 @@ export function ExecutionPlanPage() {
                   aria-describedby="execution-preset-help"
                   className="mt-1.5 h-10 w-full rounded-lg border border-white/8 bg-hive-surface px-3 text-sm text-slate-100 outline-none placeholder:text-slate-500 focus:border-cyan-300/30"
                 />
-                <span id="execution-preset-help" className="mt-1 block font-normal leading-5 text-slate-500">Use the preset identifier configured for your workflow. Leave blank to use the backend default.</span>
+                <span id="execution-preset-help" className="mt-1 block font-normal leading-5 text-slate-500">
+                  Use the preset identifier configured for your workflow. Leave blank to use the backend default.
+                </span>
               </label>
               <label className="block min-w-0 text-xs font-medium text-slate-300">
                 Policy profile
@@ -294,11 +298,16 @@ export function ExecutionPlanPage() {
                   type="submit"
                   disabled={simulating || !task.trim()}
                   aria-describedby="execution-preview-help"
-                  className="flex h-10 items-center justify-center gap-1.5 rounded-lg bg-gradient-to-r from-cyan-400 to-emerald-300 px-4 text-xs font-semibold text-hive-accent-deep disabled:cursor-not-allowed disabled:opacity-50"
+                  className={
+                    "flex h-10 items-center justify-center gap-1.5 rounded-lg bg-gradient-to-r from-cyan-400 to-emerald-300 px-4 text-xs" +
+                    " font-semibold text-hive-accent-deep disabled:cursor-not-allowed disabled:opacity-50"
+                  }
                 >
                   {simulating ? <LoaderCircle className="h-3.5 w-3.5 animate-spin" /> : <PlayCircle className="h-3.5 w-3.5" />} Preview plan
                 </button>
-                <p id="execution-preview-help" className="text-xs leading-5 text-slate-500">{task.trim() ? 'Creates a read-only planning estimate.' : 'Enter a task description to enable Preview plan.'}</p>
+                <p id="execution-preview-help" className="text-xs leading-5 text-slate-500">
+                  {task.trim() ? 'Creates a read-only planning estimate.' : 'Enter a task description to enable Preview plan.'}
+                </p>
               </div>
             </div>
           </form>
