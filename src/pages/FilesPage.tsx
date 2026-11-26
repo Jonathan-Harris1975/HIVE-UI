@@ -855,7 +855,12 @@ export function FilesPage() {
                   </option>
                 ))}
               </select>
-              <span id="storage-area-help" className="mt-1.5 block font-normal leading-5 text-slate-500">Each area is a governed R2 location. The access label shows whether HIVE can read or write there.</span>
+              <span
+                id="storage-area-help"
+                className="mt-1.5 block font-normal leading-5 text-slate-500"
+              >
+                Each area is a governed R2 location. The access label shows whether HIVE can read or write there.
+              </span>
             </label>
 
             <form onSubmit={submitSearch} className="self-end">
