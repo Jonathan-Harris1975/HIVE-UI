@@ -17,6 +17,7 @@ import { WorkflowGraph } from '../components/WorkflowGraph'
 import { EmptyState } from '../components/EmptyState'
 import { StatusBadge } from '../components/StatusBadge'
 import { apiFetch } from '../lib/api'
+import { GOVERNED_REPOSITORIES } from '../lib/repositories'
 import { formatDate } from '../lib/format'
 import type {
   ExecutionPreviewDetailResponse,
@@ -232,48 +233,73 @@ export function ExecutionPlanPage() {
             ))}
           </div>
 
-          <form onSubmit={runSimulation} className="mt-6 space-y-2 border-t border-white/8 pt-5">
-            <textarea
-              value={task}
-              onChange={(event) => setTask(event.target.value)}
-              placeholder="Describe the task to preview…"
-              aria-label="Task to preview"
-              rows={3}
-              className="w-full resize-none rounded-xl border border-white/8 bg-hive-surface px-3 py-2 text-sm text-slate-100 outline-none placeholder:text-slate-500 focus:border-cyan-300/30"
-            />
-            <div className="flex flex-wrap gap-2">
-              <input
-                value={repo}
-                onChange={(event) => setRepo(event.target.value)}
-                placeholder="Repo (optional)"
-                aria-label="Repository"
-                className="h-9 flex-1 rounded-lg border border-white/8 bg-hive-surface px-3 text-xs text-slate-100 outline-none placeholder:text-slate-500"
+          <form onSubmit={runSimulation} className="mt-6 space-y-3 border-t border-white/8 pt-5">
+            <label className="block text-xs font-medium text-slate-300">
+              Task to preview
+              <textarea
+                value={task}
+                onChange={(event) => setTask(event.target.value)}
+                placeholder="Describe the change or operational task…"
+                aria-label="Task to preview"
+                aria-describedby="execution-task-help"
+                required
+                rows={3}
+                className="mt-1.5 w-full resize-y rounded-xl border border-white/8 bg-hive-surface px-3 py-2 text-sm text-slate-100 outline-none placeholder:text-slate-500 focus:border-cyan-300/30"
               />
-              <input
-                value={preset}
-                onChange={(event) => setPreset(event.target.value)}
-                placeholder="Workflow preset (optional)"
-                aria-label="Workflow preset"
-                className="h-9 flex-1 rounded-lg border border-white/8 bg-hive-surface px-3 text-xs text-slate-100 outline-none placeholder:text-slate-500"
-              />
-              <select
-                value={policyProfileInput}
-                aria-label="Policy profile"
-                onChange={(event) => setPolicyProfileInput(event.target.value)}
-                className="h-9 rounded-lg border border-white/8 bg-hive-surface px-3 text-xs text-slate-300 outline-none"
-              >
-                <option value="">Default policy</option>
-                {Object.entries(profiles).map(([key, profile]) => (
-                  <option key={key} value={key}>{profile.label}</option>
-                ))}
-              </select>
-              <button
-                type="submit"
-                disabled={simulating || !task.trim()}
-                className="flex h-9 items-center gap-1.5 rounded-lg bg-gradient-to-r from-cyan-400 to-emerald-300 px-4 text-xs font-semibold text-hive-accent-deep disabled:opacity-50"
-              >
-                {simulating ? <LoaderCircle className="h-3.5 w-3.5 animate-spin" /> : <PlayCircle className="h-3.5 w-3.5" />} Preview plan
-              </button>
+              <span id="execution-task-help" className="mt-1 block font-normal leading-5 text-slate-500">Describe what you want HIVE to plan. Previewing does not change data or start a workflow.</span>
+            </label>
+            <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+              <label className="block min-w-0 text-xs font-medium text-slate-300">
+                Repository <span className="font-normal text-slate-500">(optional)</span>
+                <select
+                  value={repo}
+                  onChange={(event) => setRepo(event.target.value)}
+                  aria-label="Repository"
+                  className="mt-1.5 h-10 w-full rounded-lg border border-white/8 bg-hive-surface px-3 text-sm text-slate-100 outline-none focus:border-cyan-300/30"
+                >
+                  <option value="">All repositories / backend default</option>
+                  {GOVERNED_REPOSITORIES.map((repository) => <option key={repository} value={repository}>{repository}</option>)}
+                </select>
+              </label>
+              <label className="block min-w-0 text-xs font-medium text-slate-300">
+                Workflow preset <span className="font-normal text-slate-500">(optional)</span>
+                <input
+                  value={preset}
+                  onChange={(event) => setPreset(event.target.value)}
+                  placeholder="Enter configured preset name"
+                  aria-label="Workflow preset"
+                  aria-describedby="execution-preset-help"
+                  className="mt-1.5 h-10 w-full rounded-lg border border-white/8 bg-hive-surface px-3 text-sm text-slate-100 outline-none placeholder:text-slate-500 focus:border-cyan-300/30"
+                />
+                <span id="execution-preset-help" className="mt-1 block font-normal leading-5 text-slate-500">Use the preset identifier configured for your workflow. Leave blank to use the backend default.</span>
+              </label>
+              <label className="block min-w-0 text-xs font-medium text-slate-300">
+                Policy profile
+                <select
+                  value={policyProfileInput}
+                  aria-label="Policy profile"
+                  onChange={(event) => setPolicyProfileInput(event.target.value)}
+                  disabled={profilesLoading}
+                  className="mt-1.5 h-10 w-full rounded-lg border border-white/8 bg-hive-surface px-3 text-sm text-slate-100 outline-none disabled:opacity-60"
+                >
+                  <option value="">{profilesLoading ? 'Loading policy profiles…' : 'Default policy'}</option>
+                  {Object.entries(profiles).map(([key, profile]) => (
+                    <option key={key} value={key}>{profile.label}</option>
+                  ))}
+                </select>
+                <span className="mt-1 block font-normal leading-5 text-slate-500">Leave blank to apply the backend default policy.</span>
+              </label>
+              <div className="flex flex-col justify-end gap-1.5">
+                <button
+                  type="submit"
+                  disabled={simulating || !task.trim()}
+                  aria-describedby="execution-preview-help"
+                  className="flex h-10 items-center justify-center gap-1.5 rounded-lg bg-gradient-to-r from-cyan-400 to-emerald-300 px-4 text-xs font-semibold text-hive-accent-deep disabled:cursor-not-allowed disabled:opacity-50"
+                >
+                  {simulating ? <LoaderCircle className="h-3.5 w-3.5 animate-spin" /> : <PlayCircle className="h-3.5 w-3.5" />} Preview plan
+                </button>
+                <p id="execution-preview-help" className="text-xs leading-5 text-slate-500">{task.trim() ? 'Creates a read-only planning estimate.' : 'Enter a task description to enable Preview plan.'}</p>
+              </div>
             </div>
           </form>
         </section>
