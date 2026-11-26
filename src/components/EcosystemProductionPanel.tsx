@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState, type ReactNode } from 'react'
+import { useCallback, useEffect, useMemo, useState, type ReactNode } from 'react'
 import { LoaderCircle, RefreshCcw } from 'lucide-react'
 import { apiFetch } from '../lib/api'
 import { formatDate } from '../lib/format'
@@ -44,6 +44,9 @@ export function EcosystemProductionPanel({ renderRepositoryDetails }: { renderRe
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [now, setNow] = useState(Date.now)
+  const [query, setQuery] = useState('')
+  const [filter, setFilter] = useState<'all' | 'attention' | 'ready' | 'unknown'>('all')
+  const [sortBy, setSortBy] = useState<'attention' | 'name'>('attention')
   const load = useCallback(async () => {
     setLoading(true)
     setError(null)
@@ -72,6 +75,37 @@ export function EcosystemProductionPanel({ renderRepositoryDetails }: { renderRe
   const current = Boolean(report && complete && !stale)
   const incomplete = report?.repositories.filter((item) => item.gate_evidence?.additional_workflows_complete !== true).length || 0
   const warnings = report?.repositories.reduce((total, item) => total + (item.gate_evidence?.additional_workflow_failures?.length || 0), 0) || 0
+  const runtimeHealthy = current ? report!.repositories.filter((item) => item.runtime_state === 'GREEN').length : null
+  const repositoryIds = useMemo(() => {
+    const matches = GOVERNED_REPOSITORIES.filter((id) => {
+      const item = byId.get(id)
+      const textMatches = id.toLowerCase().includes(query.trim().toLowerCase())
+      const attention = current && Boolean(item) && (
+        item!.state !== 'GREEN'
+        || item!.runtime_state !== 'GREEN'
+        || item!.gate_evidence?.additional_workflows_complete !== true
+        || Boolean(item!.gate_evidence?.additional_workflow_failures?.length)
+      )
+      const statusMatches = filter === 'all'
+        || (filter === 'unknown' && !current)
+        || (filter === 'attention' && attention)
+        || (filter === 'ready' && current && !attention)
+      return textMatches && statusMatches
+    })
+    return matches.sort((left, right) => {
+      if (sortBy === 'name') return left.localeCompare(right)
+      const attentionRank = (id: string) => {
+        const item = byId.get(id)
+        return current && item && (
+          item.state !== 'GREEN'
+          || item.runtime_state !== 'GREEN'
+          || item.gate_evidence?.additional_workflows_complete !== true
+          || Boolean(item.gate_evidence?.additional_workflow_failures?.length)
+        ) ? 0 : 1
+      }
+      return attentionRank(left) - attentionRank(right) || left.localeCompare(right)
+    })
+  }, [byId, current, filter, query, sortBy])
 
   return (
     <section id="ecosystem-production-readiness" aria-label="Ecosystem production readiness" className="mt-4 rounded-2xl border border-white/8 bg-hive-panel/60 p-4 sm:p-5">
