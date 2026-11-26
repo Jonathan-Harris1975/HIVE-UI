@@ -63,8 +63,9 @@ it('shows Ok for green runtimes and dot-only indicators without hiding warnings'
   expect(screen.getAllByText('Runtime: Ok')).toHaveLength(7)
   expect(screen.getByText('Runtime: Blocked')).toBeInTheDocument()
   const section = screen.getByLabelText('Ecosystem production readiness')
-  const readyLabels = within(section).getAllByText('Ready')
-  const blockedLabels = within(section).getAllByText('Blocked')
+  const cards = within(section).getAllByRole('article')
+  const readyLabels = cards.flatMap((card) => within(card).queryAllByText('Ready'))
+  const blockedLabels = cards.flatMap((card) => within(card).queryAllByText('Blocked'))
   expect(readyLabels).toHaveLength(8)
   expect(blockedLabels).toHaveLength(1)
   expect([...readyLabels, ...blockedLabels].every((label) =>
