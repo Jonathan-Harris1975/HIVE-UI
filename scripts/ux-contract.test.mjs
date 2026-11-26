@@ -32,16 +32,17 @@ test('ChatPage checks title and auto_titled state before requesting auto-title',
   assert.match(page, /autoTitleConversation\(completedConversationId\)/)
 })
 
-test('Operations database reset requires scoped preview and target-specific confirmation', () => {
+test('Operations database reset is read-only in HIVE-UI', () => {
   const page = source('src/pages/OpsPage.tsx')
   assert.match(page, /\/v1\/db\/purge-reset\/targets/)
   assert.match(page, /\/v1\/db\/purge-reset\/preview/)
-  assert.match(page, /body: JSON\.stringify\(\{ target: target\.id, confirmation: purgeConfirmation \}\)/)
-  assert.match(page, /Preview selected database/)
-  assert.match(page, /Type \$\{activeResetTarget\.required_confirmation\} to confirm/)
-  assert.match(page, /No rows to clear in this database/)
-  assert.match(page, /R2 objects, Vectorize data, Workers KV and Durable Object storage are not touched/)
-  assert.doesNotMatch(page, /PURGE ALL DATABASES/)
+  assert.match(page, /Database to preview/)
+  assert.match(page, /This preview is read-only\. Approved database resets must use the trusted operator channel\./)
+  assert.match(page, /Preview row counts/)
+  assert.match(page, /No application rows were reported in this preview/)
+  assert.doesNotMatch(page, /apiFetch<DatabasePurgeResetResponse>\('\/v1\/db\/purge-reset'/)
+  assert.doesNotMatch(page, /Review reset of/)
+  assert.doesNotMatch(page, /purgeResetDatabases/)
 })
 
 test('Operational alert deletion updates the inbox without a full page refresh', () => {
