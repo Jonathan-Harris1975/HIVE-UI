@@ -1,5 +1,6 @@
 import {
   Activity,
+  ArrowLeft,
   Check,
   Copy,
   Files,
@@ -54,7 +55,7 @@ const navigationGroups = [
 ]
 
 const mobileDestinations = navigationGroups.flatMap((group) => group.items)
-  .filter((item) => ['/overview', '/chat', '/repositories', '/ops'].includes(item.to))
+  .filter((item) => ['/overview', '/communications', '/chat', '/repositories', '/ops'].includes(item.to))
 
 const sectionTabs = [
   {
@@ -87,7 +88,7 @@ const pageMeta: Record<string, { title: string; subtitle: string }> = {
   '/llm-spend': { title: 'Operations', subtitle: 'Daily LLM spend and evidence coverage' },
   '/ops': { title: 'Operations', subtitle: 'Live runtime health, infrastructure and integrations' },
   '/integrations': { title: 'Operations', subtitle: 'Live runtime health, infrastructure and integrations' },
-  '/communications': { title: 'Communications', subtitle: 'AIMS Comms Hub conversations, approvals and channel operations' },
+  '/communications': { title: 'AIMS Comms Hub', subtitle: 'Communications workspace' },
 }
 
 interface PendingConversationDialog {
@@ -605,7 +606,13 @@ export function AppShell() {
               <p className="hidden truncate text-xs text-slate-400 sm:block">{meta.subtitle}</p>
             </div>
           </div>
-          <HeaderActions health={health} open={open} available={available} toggle={toggle} />
+          {pathname === '/communications' ? (
+            <Link to="/overview" aria-label="Return to HIVE overview"
+              className="flex min-h-11 shrink-0 items-center gap-2 rounded-hive border border-white/10 px-3 text-sm text-hive-muted hover:text-hive-text">
+              <ArrowLeft className="h-4 w-4" aria-hidden="true" />
+              <span>HIVE</span>
+            </Link>
+          ) : <HeaderActions health={health} open={open} available={available} toggle={toggle} />}
         </header>
         <ContextTabs pathname={pathname} />
 
@@ -614,11 +621,16 @@ export function AppShell() {
         </main>
         {pathname !== '/chat' && pathname !== '/communications' && (
           <nav aria-label="Quick navigation" className="hive-mobile-nav lg:hidden">
-            {mobileDestinations.map(({ to, label, icon: Icon, routes }) => (
-              <Link key={to} to={to} aria-current={routes.includes(pathname) ? 'page' : undefined} aria-label={label}>
-                <Icon className="h-5 w-5" aria-hidden="true" /><span>{label}</span>
-              </Link>
-            ))}
+            {mobileDestinations.map(({ to, label, icon: Icon, routes }) => {
+              const shortLabel = to === '/communications' ? 'Comms' : to === '/repositories' ? 'Repos' : label
+              const accessibleLabel = shortLabel === label ? label : shortLabel + ' (' + label + ')'
+              return (
+                <Link key={to} to={to} aria-current={routes.includes(pathname) ? 'page' : undefined} aria-label={accessibleLabel}>
+                  <Icon className="h-5 w-5" aria-hidden="true" />
+                  <span>{shortLabel}</span>
+                </Link>
+              )
+            })}
           </nav>
         )}
       </div>

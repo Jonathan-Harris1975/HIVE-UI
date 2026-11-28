@@ -295,3 +295,19 @@ test('command centre routes to independent read-only evidence and responsive wor
   assert.ok(css.includes('repeat(4, minmax(0,1fr))'))
   assert.doesNotMatch(page, /method:\s*['"](?:POST|DELETE|PATCH|PUT)/)
 })
+
+
+test('ecosystem navigation provides a direct mobile Communications entry and a clear return', () => {
+  const shell = source('src/components/AppShell.tsx')
+  const css = source('src/index.css')
+  const comms = source('src/pages/CommunicationsPage.tsx')
+  const destinations = shell.match(/\.filter\(\(item\)\s*=>\s*\[([^\]]+)\]\.includes\(item\.to\)\)/)?.[1] ?? ''
+  assert.deepEqual([...destinations.matchAll(/'([^']+)'/g)].map(match => match[1]), ['/overview', '/communications', '/chat', '/repositories', '/ops'])
+  assert.ok(shell.includes('aria-label="Return to HIVE overview"'))
+  assert.match(css, /\.hive-mobile-nav\s*\{[^}]*grid-template-columns\s*:\s*repeat\(\s*5\s*,\s*minmax\(\s*0\s*,\s*1fr\s*\)\s*\)/)
+  assert.ok(comms.includes('tabIndex={ready && !error ? 0 : -1}'))
+  assert.ok(comms.includes('signal: controller.signal'))
+  assert.ok(comms.includes('controller.abort()'))
+  assert.ok(comms.includes('event.origin !== AIMS_ORIGIN'))
+  assert.ok(comms.includes('event.source !== frameRef.current?.contentWindow'))
+})

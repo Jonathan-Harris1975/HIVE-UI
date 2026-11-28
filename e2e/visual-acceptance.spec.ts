@@ -97,6 +97,27 @@ test.describe('HIVE-UI safe browser visual baseline', () => {
     await expect(overview.getByText('Example API')).toBeVisible()
   })
 
+  test('mobile Communications opens from HIVE and handles handoff failure without trapping navigation', async ({ page }) => {
+    await page.setViewportSize({ width: 320, height: 700 })
+    await page.route('**/api/auth/session', (route) => route.fulfill({ json: { ok: true, authenticated: true } }))
+    await page.route('**/api/auth/activity', (route) => route.fulfill({ json: { ok: true, authenticated: true } }))
+    await page.route('**/api/health', (route) => route.fulfill({ json: { ok: true, env: 'synthetic' } }))
+    await page.route('**/api/v1/chat/conversations*', (route) => route.fulfill({ json: { ok: true, conversations: [] } }))
+    await page.route('**/api/auth/comms-handoff?*', (route) => route.fulfill({
+      status: 503, json: { detail: 'Synthetic handoff unavailable' },
+    }))
+    await page.goto('/')
+    const navigation = page.getByRole('navigation', { name: 'Quick navigation' })
+    await navigation.getByRole('link', { name: 'Communications' }).click()
+    await expect(page).toHaveURL(/\/communications$/)
+    await expect(page.getByRole('alert').getByText('Synthetic handoff unavailable')).toBeVisible()
+    await expect(page.locator('iframe[title="AIMS Comms Hub"]')).toHaveCount(0)
+    await checkViewport(page, 'Mobile Communications error')
+    await page.getByRole('link', { name: 'Return to HIVE overview' }).click()
+    await expect(page).toHaveURL(/\/overview$/)
+    await expect(navigation.getByRole('link', { name: 'Communications' })).toBeVisible()
+  })
+
   test('public login renders at desktop, tablet and narrow phone widths', async ({ page }) => {
     await page.route('**/api/auth/session', (route) =>
       route.fulfill({ status: 401, json: { detail: 'no session' } }),
@@ -229,6 +250,19 @@ test.describe('HIVE-UI deployed gateway browser acceptance', () => {
       await expect(embedded).toBeVisible({ timeout: 30_000 })
       await expect(embedded.locator('[data-view="inbox"]')).toHaveAttribute('aria-label', 'Unified inbox')
       await checkViewport(page, 'AIMS embedded phone')
+
+      // Exercise the actual integrated navigation, not just a standalone handoff.
+      await page.goto(hiveOrigin + '/overview', { waitUntil: 'domcontentloaded' })
+      await page.getByRole('navigation', { name: 'Quick navigation' }).getByRole('link', { name: /Communications/ }).click()
+      await expect(page).toHaveURL(/\/communications$/)
+      const frame = page.locator('iframe[title="AIMS Comms Hub"]')
+      await expect(frame).toBeVisible({ timeout: 30_000 })
+      const sections = page.frameLocator('iframe[title="AIMS Comms Hub"]').getByRole('navigation', { name: 'Communications sections' })
+      await expect(sections).toBeVisible({ timeout: 30_000 })
+      await expect(sections.locator('[data-view="inbox"] span')).toBeVisible()
+      await checkViewport(page, 'Integrated HIVE to AIMS phone')
+      await page.getByRole('link', { name: 'Return to HIVE overview' }).click()
+      await expect(page).toHaveURL(/\/overview$/)
       console.info('AIMS browser acceptance: live handoff, layout and keyboard checks passed (no private snapshot exported)')
     } finally {
       await page.request.post(hiveOrigin + '/api/auth/logout', { headers: { origin: hiveOrigin } }).catch(() => undefined)
