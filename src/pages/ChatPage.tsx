@@ -558,9 +558,9 @@ export function ChatPage() {
                 <img src="/hive-mark.jpg" alt="" className="relative h-20 w-20 rounded-[24px] border border-cyan-300/15 object-cover opacity-90" />
               </div>
               <p className="mt-2 text-xs font-semibold uppercase tracking-[0.22em] text-cyan-300/80 sm:mt-5">Shared intelligence layer</p>
-              <h2 className="mt-2 text-2xl font-semibold tracking-tight text-white sm:text-3xl">What are we solving?</h2>
+              <h2 className="mt-2 text-2xl font-semibold tracking-tight text-white sm:text-3xl">What would you like to work on?</h2>
               <p className="mt-2 max-w-xl text-sm leading-6 text-slate-400">Ask HIVE anything, or start with a common task.</p>
-              <div className="mt-5 grid w-full max-w-2xl gap-2 sm:grid-cols-3">
+              <div className="mt-6 grid w-full max-w-3xl gap-3 sm:grid-cols-2 xl:grid-cols-3">
                 {starters.map((starter) => (
                   <button
                     key={starter.category}
@@ -572,7 +572,7 @@ export function ChatPage() {
                     title={starter.prompt}
                     aria-label={`${starter.category}: ${starter.description}`}
                     className={
-                      'group flex min-h-24 flex-col items-start rounded-xl border border-white/10 bg-white/[0.025] ' +
+                      'group flex min-h-24 flex-col items-start rounded-xl border border-[#31536b] bg-hive-raised ' +
                       'px-4 py-3 text-left transition hover:border-cyan-300/25 hover:bg-cyan-300/[0.05] ' +
                       'focus-visible:border-cyan-300/35'
                     }
@@ -581,7 +581,7 @@ export function ChatPage() {
                       <Sparkles className="h-3.5 w-3.5 text-cyan-300/70" aria-hidden="true" />
                       {starter.category}
                     </span>
-                    <span className="mt-2 text-[11px] leading-4 text-slate-400 group-hover:text-slate-300">{starter.description}</span>
+                    <span className="mt-2 text-sm leading-5 text-hive-muted group-hover:text-slate-300">{starter.description}</span>
                   </button>
                 ))}
               </div>
@@ -672,7 +672,7 @@ export function ChatPage() {
 
           <div
             className={
-              "rounded-2xl border border-white/10 bg-hive-panel-deep p-2 shadow-2xl shadow-black/20 " +
+              "rounded-2xl border border-[#31536b] bg-hive-raised p-3 shadow-2xl shadow-black/20 " +
               "transition focus-within:border-cyan-300/30 focus-within:ring-4 " +
               "focus-within:ring-cyan-300/[0.04]"
             }

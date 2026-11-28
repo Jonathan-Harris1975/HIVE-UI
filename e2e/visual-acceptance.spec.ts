@@ -63,6 +63,40 @@ async function login(page: Page, baseURL: string) {
 test.describe('HIVE-UI safe browser visual baseline', () => {
   test.skip(live, 'Synthetic screenshots must never contain production operator data.')
 
+  test('synthetic command centre renders evidence, partial failure and responsive screenshots', async ({ page }) => {
+    await page.route('**/api/auth/session', (route) => route.fulfill({ json: { ok: true, authenticated: true } }))
+    await page.route('**/api/auth/activity', (route) => route.fulfill({ json: { ok: true, authenticated: true } }))
+    await page.route('**/api/health', (route) => route.fulfill({ json: { ok: true, env: 'synthetic', build: 'visual-fixture' } }))
+    await page.route('**/api/v1/chat/conversations*', (route) => route.fulfill({ json: { ok: true, conversations: [] } }))
+    await page.route('**/api/v1/system/repo-health?*', (route) => route.fulfill({ json: {
+      ok: true, generated_at: '2026-11-28T09:00:00Z',
+      repos: [{ repo: 'Example API', status: 'healthy' }, { repo: 'Example worker', status: 'standby' }, { repo: 'Example service', status: 'degraded' }],
+    } }))
+    let failAlerts = false
+    await page.route('**/api/v1/system/ops-events?*', (route) => failAlerts
+      ? route.fulfill({ status: 503, json: { error: 'fixture unavailable' } })
+      : route.fulfill({ json: { ok: true, items: [{ event_id: 'fixture-1', severity: 'critical', title: 'Example event', occurred_at: '2026-11-28T09:00:00Z' }] } }))
+    await page.goto('/')
+    const overview = page.getByTestId('command-centre')
+    await expect(overview).toBeVisible()
+    await expect(overview.getByText('Example API')).toBeVisible()
+    await expect(overview.getByText('Example event')).toBeVisible()
+    await expect(overview.getByText('1/3', { exact: true })).toBeVisible()
+    for (const [width, height] of acceptanceViewports) {
+      await page.setViewportSize({ width, height })
+      await checkViewport(page, 'Synthetic command centre ' + width)
+      await checkControlNames(page, 'Synthetic command centre ' + width)
+      await test.info().attach('synthetic-command-centre-' + width + '.png', {
+        body: await page.screenshot({ animations: 'disabled' }), contentType: 'image/png',
+      })
+    }
+    failAlerts = true
+    await overview.getByRole('button', { name: 'Refresh' }).click()
+    await expect(overview.getByText('Some sources are unavailable.', { exact: false })).toBeVisible()
+    await expect(overview.getByText('Alert evidence unavailable.')).toBeVisible()
+    await expect(overview.getByText('Example API')).toBeVisible()
+  })
+
   test('public login renders at desktop, tablet and narrow phone widths', async ({ page }) => {
     await page.route('**/api/auth/session', (route) =>
       route.fulfill({ status: 401, json: { detail: 'no session' } }),
@@ -92,6 +126,17 @@ test.describe('HIVE-UI deployed gateway browser acceptance', () => {
     try {
       await page.setViewportSize({ width: 390, height: 844 })
       await page.emulateMedia({ reducedMotion: 'reduce' })
+      await page.goto('/', { waitUntil: 'domcontentloaded' })
+      await expect(page.getByTestId('command-centre')).toBeVisible({ timeout: 30_000 })
+      await expect(page.getByRole('heading', { name: 'Your ecosystem at a glance' })).toBeVisible()
+      for (const [width, height] of acceptanceViewports) {
+        await page.setViewportSize({ width, height })
+        await checkViewport(page, 'HIVE command centre ' + width)
+        await checkControlNames(page, 'HIVE command centre ' + width)
+      }
+      await page.setViewportSize({ width: 390, height: 844 })
+      await page.getByRole('navigation', { name: 'Quick navigation' }).getByRole('link', { name: 'Operations' }).click()
+      await expect(page).toHaveURL(/\/ops$/)
       await page.goto('/ops', { waitUntil: 'domcontentloaded' })
       await expect(page.locator('#hive-main-content')).toBeVisible()
       await expect(page.getByTestId('ops-snapshot-time')).toBeVisible({ timeout: 30_000 })

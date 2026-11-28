@@ -590,10 +590,10 @@ export function OpsPage() {
   return (
     <div className="h-full overflow-y-auto p-4 sm:p-6 lg:p-8">
       <div className="mx-auto max-w-7xl">
-        <section className="flex items-center justify-between gap-3 rounded-2xl border border-white/8 bg-hive-panel/65 px-4 py-3">
+        <section className="flex items-start justify-between gap-3 rounded-2xl border border-[#31536b] bg-gradient-to-r from-[#102b43] to-hive-panel px-4 py-5 sm:px-6">
           <div className="min-w-0">
             <div className="flex items-center gap-2">
-              <p className="text-sm font-semibold text-white">Runtime status</p>
+              <p className="text-lg font-semibold text-white">Runtime status</p>
               <StatusBadge status={health?.ok ? 'healthy' : health ? 'down' : loading ? 'checking' : 'unknown'} variant="operational" compact />
             </div>
             <p className="mt-0.5 text-xs text-slate-400 break-words">{health?.build ?? (loading ? 'checking…' : 'unavailable')} · {health?.env ?? 'environment unavailable'}</p>
@@ -616,14 +616,14 @@ export function OpsPage() {
           </button>
         </section>
 
-        <div className="mt-3 grid grid-cols-2 gap-1 rounded-xl border border-white/8 bg-hive-surface p-1">
+        <div className="mt-4 grid grid-cols-2 gap-2 rounded-xl border border-[#25415b] bg-hive-surface p-2">
           {tabs.map((item) => (
             <button
               key={item.id}
               type="button"
               onClick={() => setTab(item.id)}
               className={[
-                'rounded-lg px-3 py-2 text-xs font-medium transition',
+                'min-h-11 rounded-lg px-3 py-2 text-sm font-medium transition',
                 tab === item.id ? 'bg-cyan-300/10 text-cyan-100' : 'text-slate-400 hover:bg-white/[0.04] hover:text-slate-300',
               ].join(' ')}
             >
