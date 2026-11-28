@@ -57,6 +57,15 @@ const navigationGroups = [
 const mobileDestinations = navigationGroups.flatMap((group) => group.items)
   .filter((item) => ['/overview', '/communications', '/chat', '/repositories', '/ops'].includes(item.to))
 
+// The mobile quick-nav shows a compact visible label while the accessible name keeps
+// the full destination name (Label-in-Name). Derive both from one place so the two
+// copies can never drift apart and reintroduce a label mismatch.
+function mobileNavLabels(item: { to: string; label: string }): { short: string; aria: string } {
+  if (item.to === '/communications') return { short: 'Comms', aria: 'Comms (Communications)' }
+  if (item.to === '/repositories') return { short: 'Repos', aria: 'Repos (Repositories)' }
+  return { short: item.label, aria: item.label }
+}
+
 const sectionTabs = [
   {
     routes: ['/execution', '/execution-reviews', '/execution-simulation'],
@@ -621,13 +630,16 @@ export function AppShell() {
         </main>
         {pathname !== '/chat' && pathname !== '/communications' && (
           <nav aria-label="Quick navigation" className="hive-mobile-nav lg:hidden">
-            {mobileDestinations.map(({ to, label, icon: Icon, routes }) => (
-              <Link key={to} to={to} aria-current={routes.includes(pathname) ? 'page' : undefined}
-                aria-label={to === '/communications' ? 'Comms (Communications)' : to === '/repositories' ? 'Repos (Repositories)' : label}>
-                <Icon className="h-5 w-5" aria-hidden="true" />
-                <span>{to === '/communications' ? 'Comms' : to === '/repositories' ? 'Repos' : label}</span>
-              </Link>
-            ))}
+            {mobileDestinations.map(({ to, label, icon: Icon, routes }) => {
+              const { short, aria } = mobileNavLabels({ to, label })
+              return (
+                <Link key={to} to={to} aria-current={routes.includes(pathname) ? 'page' : undefined}
+                  aria-label={aria}>
+                  <Icon className="h-5 w-5" aria-hidden="true" />
+                  <span>{short}</span>
+                </Link>
+              )
+            })}
           </nav>
         )}
       </div>

@@ -7,6 +7,13 @@ function source(path) {
   return readFileSync(new URL(`../${path}`, import.meta.url), 'utf8')
 }
 
+// Collapse all whitespace and drop trailing commas before a closing bracket/brace so
+// assertions match on behaviour, not on Prettier or manual formatting choices. A pure
+// formatting change must not turn CI red.
+function squash(value) {
+  return value.replace(/\s+/g, '').replace(/,(?=[\]}])/g, '')
+}
+
 function walk(directory) {
   return readdirSync(directory).flatMap((name) => {
     const path = join(directory, name)
@@ -301,9 +308,9 @@ test('ecosystem navigation provides a direct mobile Communications entry and a c
   const shell = source('src/components/AppShell.tsx')
   const css = source('src/index.css')
   const comms = source('src/pages/CommunicationsPage.tsx')
-  assert.ok(shell.includes("['/overview', '/communications', '/chat', '/repositories', '/ops']"))
+  assert.ok(squash(shell).includes(squash("['/overview', '/communications', '/chat', '/repositories', '/ops']")))
   assert.ok(shell.includes('aria-label="Return to HIVE overview"'))
-  assert.ok(css.includes('grid-template-columns: repeat(5, minmax(0, 1fr))'))
+  assert.ok(squash(css).includes(squash('grid-template-columns: repeat(5, minmax(0, 1fr))')))
   assert.ok(comms.includes('tabIndex={ready && !error ? 0 : -1}'))
   assert.ok(comms.includes('signal: controller.signal'))
   assert.ok(comms.includes('controller.abort()'))
