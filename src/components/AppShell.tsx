@@ -287,7 +287,7 @@ function SidebarContent({ closeMobile, compact = false }: { closeMobile?: () => 
   const { pathname } = useLocation()
 
   return (
-    <div className="flex h-full flex-col p-3">
+    <div className="flex h-full flex-col overflow-y-auto overscroll-contain p-3">
       <div className={`flex items-center ${compact ? 'justify-center' : 'justify-between'} px-1`}>
         <HiveLogo size="sm" showWordmark={!compact} />
         {closeMobile && (
@@ -301,11 +301,11 @@ function SidebarContent({ closeMobile, compact = false }: { closeMobile?: () => 
         {navigation.map(({ to, label, icon: Icon, routes }) => {
           const active = routes.includes(pathname)
           return (
-            <Link key={to} to={to} onClick={closeMobile} aria-current={active ? 'page' : undefined} title={compact ? label : undefined}
+            <Link key={to} to={to} onClick={closeMobile} aria-current={active ? 'page' : undefined} aria-label={label} title={compact ? label : undefined}
               className={[
                 'flex min-h-11 items-center rounded-hive text-sm font-medium transition',
                 compact ? 'justify-center px-2' : 'gap-3 px-3',
-                active ? 'bg-white/[0.07] text-white' : 'text-hive-muted hover:bg-white/[0.04] hover:text-white',
+                active ? 'bg-hive-accent/10 text-hive-accent' : 'text-hive-muted hover:bg-white/[0.04] hover:text-white',
               ].join(' ')}>
               <Icon className="h-5 w-5 shrink-0" aria-hidden="true" />
               {!compact && <span className="truncate">{label}</span>}
@@ -342,7 +342,7 @@ function InspectorRowView({ row }: { row: InspectorRow }) {
   return (
     <div className="rounded-xl border border-white/8 bg-hive-surface p-3">
       <div className="flex items-center justify-between gap-3">
-        <dt className="text-xs font-semibold uppercase tracking-[0.12em] text-slate-300">{row.label}</dt>
+        <dt className="text-xs font-semibold text-hive-muted">{row.label}</dt>
         <button
           type="button"
           onClick={() => void copyRow()}
@@ -364,7 +364,7 @@ function InspectorRowView({ row }: { row: InspectorRow }) {
 
 function InspectorPanel() {
   const { open, available, payload, setOpen } = useInspector()
-  if (!available) return null
+  if (!available || !open) return null
 
   return (
     <aside
@@ -459,10 +459,10 @@ function ContextTabs({ pathname }: { pathname: string }) {
 function HeaderActions({ health, open, available, toggle }: { health: ReturnType<typeof useAuth>['health']; open: boolean; available: boolean; toggle: () => void }) {
   return (
     <div className="flex shrink-0 items-center gap-2">
-      <div className="hidden items-center gap-2 rounded-full border border-white/8 bg-white/[0.035] px-3 py-1.5 text-xs text-slate-400 sm:flex">
-        <span aria-hidden="true" className={`h-2 w-2 rounded-full ${health?.ok ? 'bg-emerald-300 shadow-[0_0_12px_rgba(110,231,183,.7)]' : 'bg-amber-300'}`} />
-        {health?.build ?? 'HIVE'}
-      </div>
+      <Link to="/ops" title={health?.build ? `HIVE build: ${health.build}` : 'Open Operations'}
+        className="hidden items-center gap-2 rounded-hive px-2 py-1.5 text-xs text-hive-muted hover:text-hive-text sm:flex">
+        {health == null ? 'API status unknown' : health.ok ? 'Last API check: responded' : 'Last API check: failed'}
+      </Link>
       {available && <button
         type="button"
         onClick={toggle}
@@ -549,7 +549,8 @@ export function AppShell() {
       >Skip to main content</a>
       <aside className={`relative hidden shrink-0 border-r border-white/[0.06] bg-hive-panel transition-[width] lg:block ${railCollapsed ? 'w-[76px]' : 'w-[280px]'}`}>
         <SidebarContent compact={railCollapsed} />
-        <button type="button" onClick={() => setRailCollapsed((value) => !value)} aria-label={railCollapsed ? 'Expand navigation' : 'Collapse navigation'}
+        <button type="button" onClick={() => setRailCollapsed((value) => !value)} aria-expanded={!railCollapsed}
+          aria-label={railCollapsed ? 'Expand navigation' : 'Collapse navigation'}
           className="absolute -right-5 top-5 z-10 grid h-10 w-10 place-items-center rounded-full border border-white/10 bg-hive-raised text-hive-muted shadow-hive hover:text-white">
           {railCollapsed ? <PanelRightOpen className="h-4 w-4" /> : <PanelRightClose className="h-4 w-4" />}
         </button>
@@ -577,7 +578,7 @@ export function AppShell() {
             Browser offline. Stored pages remain visible, but HIVE requests will wait for the connection to return.
           </div>
         )}
-        <header className="flex min-h-[72px] shrink-0 items-center justify-between gap-3 border-b border-white/[0.06] bg-hive-canvas/95 px-4 py-3 backdrop-blur-xl sm:px-6">
+        <header className="flex min-h-[64px] shrink-0 items-center justify-between gap-3 border-b border-white/[0.06] bg-hive-canvas/95 px-4 py-3 backdrop-blur-xl sm:px-6">
           <div className="flex min-w-0 items-center gap-3">
             <button
               type="button"

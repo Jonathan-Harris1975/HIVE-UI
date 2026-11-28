@@ -264,3 +264,17 @@ test('retired monthly review cannot be opened from Operations', () => {
   assert.doesNotMatch(shell, /label: 'Monthly review'/)
   assert.doesNotMatch(app, /MonthlyReviewPage/)
 })
+
+
+test('ecosystem design alignment preserves the AIMS reference palette and accessible shell', () => {
+  const css = source('src/index.css')
+  const shell = source('src/components/AppShell.tsx')
+  assert.ok(css.includes('--color-hive-canvas: #061126;'))
+  assert.ok(css.includes('--color-hive-accent: #24c8f0;'))
+  assert.ok(css.includes('--color-hive-muted: #a9c1d1;'))
+  assert.ok(shell.includes('aria-label={label}'))
+  assert.ok(shell.includes('if (!available || !open) return null'))
+  assert.ok(shell.includes('Last API check: responded'))
+  assert.ok(shell.includes('API status unknown'))
+  assert.ok(css.includes('button.w-7.h-7, button.w-8.h-8 { min-width: 44px; }'))
+})

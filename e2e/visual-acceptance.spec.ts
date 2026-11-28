@@ -1,6 +1,7 @@
 import { expect, test, type Page } from '@playwright/test'
 
 const live = Boolean(process.env.HIVE_UI_E2E_BASE_URL)
+const acceptanceViewports = [[320, 700], [360, 800], [390, 844], [430, 932], [768, 1024], [1024, 768], [1280, 800], [1440, 900], [1920, 1080], [844, 390]]
 
 // Keep automatic failure captures disabled: the same file also exercises private dashboards.
 test.use({ screenshot: 'off', trace: 'off' })
@@ -66,7 +67,7 @@ test.describe('HIVE-UI safe browser visual baseline', () => {
     await page.route('**/api/auth/session', (route) =>
       route.fulfill({ status: 401, json: { detail: 'no session' } }),
     )
-    for (const [width, height] of [[320, 700], [390, 844], [768, 1024], [1440, 900]]) {
+    for (const [width, height] of acceptanceViewports) {
       await page.setViewportSize({ width, height })
       await page.goto('/', { waitUntil: 'domcontentloaded' })
       await expect(page.getByRole('heading', { name: /Enter HIVE/i })).toBeVisible()
@@ -112,11 +113,17 @@ test.describe('HIVE-UI deployed gateway browser acceptance', () => {
       await expect(drawer).toHaveCount(0)
       await expect(menu).toBeFocused()
 
-      for (const [width, height] of [[768, 1024], [1440, 900]]) {
+      for (const [width, height] of acceptanceViewports) {
         await page.setViewportSize({ width, height })
         await checkViewport(page, 'HIVE ops ' + width)
         await checkControlNames(page, 'HIVE ops ' + width)
       }
+      await page.setViewportSize({ width: 1440, height: 900 })
+      const rail = page.getByRole('button', { name: 'Collapse navigation' })
+      await rail.click()
+      await expect(page.getByRole('button', { name: 'Expand navigation' })).toHaveAttribute('aria-expanded', 'false')
+      await expect(page.getByRole('navigation', { name: 'Primary navigation' }).getByRole('link', { name: 'Operations' })).toBeVisible()
+      await page.getByRole('button', { name: 'Expand navigation' }).click()
       console.info('HIVE browser acceptance: responsive and keyboard checks passed (no private snapshot exported)')
     } finally {
       await page.request.post(origin + '/api/auth/logout', { headers: { origin } }).catch(() => undefined)
@@ -165,7 +172,7 @@ test.describe('HIVE-UI deployed gateway browser acceptance', () => {
       await expect(page.locator('#aims-main-content')).not.toHaveAttribute('inert')
       await expect(menu).toBeFocused()
 
-      for (const [width, height] of [[768, 1024], [1440, 900]]) {
+      for (const [width, height] of acceptanceViewports) {
         await page.setViewportSize({ width, height })
         await checkViewport(page, 'AIMS dashboard ' + width)
         await checkControlNames(page, 'AIMS dashboard ' + width)
