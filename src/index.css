@@ -407,11 +407,11 @@ input::placeholder, textarea::placeholder { opacity: 1; }
 .hive-gate-grid > div { display: grid; justify-items: center; gap: 3px; padding: 4px; border: 1px solid #304056; border-radius: 2px; }
 .hive-lamp-legend { border: 1px solid #38526a; border-radius: 6px; padding: 4px 12px; font-size: .8rem; }
 .hive-lamp-legend summary { cursor: pointer; min-height: 44px; display: flex; align-items: center; }
-.hive-legend-items { display: flex; flex-wrap: wrap; gap: 10px; padding-bottom: 8px; }
-.hive-legend-items > span { display: inline-flex; align-items: center; gap: 6px; }
+.hive-legend-items { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 20rem), 1fr)); gap: 8px 16px; padding-bottom: 8px; }
+.hive-legend-items > span { display: flex; align-items: flex-start; gap: 8px; min-width: 0; }
+.hive-legend-items .signal-lamp { flex-shrink: 0; }
 .hive-legend-heading { font-size: .8rem; font-weight: 600; margin-block: 4px 8px; }
-.hive-aims-indicator-key { padding-top: 8px; }
-.hive-aims-indicator-key p { margin-bottom: 8px; }
+.hive-lamp-legend p { margin-bottom: 8px; }
 .hive-legend-items > span { max-width: 100%; overflow-wrap: anywhere; }
 .hive-mobile-nav a { border-radius: 5px; }
 .hive-mobile-nav a:focus-visible, .hive-lamp-legend summary:focus-visible { outline: 2px solid #23eaff; outline-offset: -2px; }
