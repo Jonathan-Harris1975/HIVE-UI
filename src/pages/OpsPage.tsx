@@ -188,7 +188,8 @@ export function OpsPage() {
   const observedEventIds = useRef<Set<string> | null>(null)
   const observedReviewIds = useRef<Set<string> | null>(null)
   useEffect(() => {
-    const items = opsEvents?.items || []
+    if (opsEvents?.ok !== true || !Array.isArray(opsEvents.items)) return
+    const items = opsEvents.items
     if (!observedEventIds.current) {
       observedEventIds.current = new Set(items.map((item) => item.event_id))
       return
@@ -395,7 +396,8 @@ export function OpsPage() {
     const refreshVisible = () => {
       if (document.visibilityState === 'visible') void loadOps(true)
     }
-    const timer = window.setInterval(refreshVisible, 60_000)
+    // Continue the existing bounded refresh when the tab is hidden. Browsers may throttle it.
+    const timer = window.setInterval(() => void loadOps(true), 60_000)
     document.addEventListener('visibilitychange', refreshVisible)
     return () => {
       window.clearInterval(timer)

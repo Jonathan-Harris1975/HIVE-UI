@@ -58,6 +58,19 @@ function loadPreferences(): Preferences {
   }
 }
 
+// Register a notification-only service worker when the operator grants permission.
+// No service-worker fetch handler or session credentials are involved.
+async function notificationRegistration(): Promise<ServiceWorkerRegistration | null> {
+  if (!('serviceWorker' in navigator)) return null
+  try {
+    const registration = await navigator.serviceWorker.register('/notification-worker.js')
+    if (registration.active) return registration
+    return null
+  } catch {
+    return null
+  }
+}
+
 export function AudioNotificationSettings() {
   const [prefs, setPrefs] = useState<Preferences>(loadPreferences)
   const [message, setMessage] = useState('')
@@ -90,7 +103,8 @@ export function AudioNotificationSettings() {
     }
     try {
       const permission = await Notification.requestPermission()
-      setMessage(`Browser notification permission: ${permission}.`)
+      if (permission === 'granted') void notificationRegistration()
+      setMessage(`Browser notification permission: ${permission}. Alerts require an open authenticated workspace; device settings control system sounds.`)
     } catch {
       setMessage('Browser notification permission is unavailable.')
     }
@@ -272,14 +286,42 @@ export function notifyNewHIVEEvents(items: HIVEOperationalEvent[], options: { pl
       }
     }
     if ('Notification' in window && Notification.permission === 'granted') {
-      try {
-        const notification = new Notification(event.title, { body: event.summary })
-        notification.onclick = () => {
-          acknowledgeHIVENotification(event.notification_id)
-          notification.close()
+      const notificationTitle = event.source === 'AIMS Comms Hub' ? 'AIMS Comms Hub' : 'HIVE'
+      const notificationBody = 'An update is available. Open the workspace to review it.'
+      const showDesktopFallback = () => {
+        try {
+          const notification = new Notification(notificationTitle, { body: notificationBody, silent: !enabled })
+          notification.onclick = () => {
+            acknowledgeHIVENotification(event.notification_id)
+            notification.close()
+          }
+        } catch {
+          // The dashboard card remains the visible fallback.
         }
-      } catch {
-        // The dashboard card remains the visible fallback.
+      }
+      if (!('serviceWorker' in navigator)) {
+        showDesktopFallback()
+      } else {
+        void notificationRegistration().then(async (registration) => {
+          if (!registration) {
+            showDesktopFallback()
+            return
+          }
+          try {
+            // Lock-screen notifications must not disclose operational or message details.
+            await registration.showNotification(
+              notificationTitle,
+              {
+                body: notificationBody,
+                tag: event.notification_id,
+                data: { workspace: event.source === 'AIMS Comms Hub' ? 'communications' : 'operations' },
+                silent: !enabled,
+              },
+            )
+          } catch {
+            showDesktopFallback()
+          }
+        })
       }
     }
   }

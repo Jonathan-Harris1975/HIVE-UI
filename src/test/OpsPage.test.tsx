@@ -74,10 +74,20 @@ describe('Operations snapshot refresh', () => {
     expect(screen.queryByText(/Operational data is stale/)).not.toBeInTheDocument()
   })
 
-  it('refreshes the full snapshot immediately after returning to a suspended tab', async () => {
+  it('continues bounded refreshes when the hidden tab is allowed to run', async () => {
     await mount()
     visibility = 'hidden'
     await act(async () => { await vi.advanceTimersByTimeAsync(180_000) })
+    expect(fetchApi.mock.calls.filter(([p]) => p === '/v1/system/lifecycle-reports/current')).toHaveLength(4)
+    expect(screen.queryByText(/Operational data is stale/)).not.toBeInTheDocument()
+  })
+
+  it('refreshes the full snapshot immediately after returning to a suspended tab', async () => {
+    await mount()
+    visibility = 'hidden'
+    // A suspended browser advances wall time without running interval callbacks.
+    vi.setSystemTime(Date.now() + 180_000)
+    await act(async () => { await vi.advanceTimersByTimeAsync(15_000) })
     expect(screen.getAllByText(/Operational data is stale/).length).toBeGreaterThan(0)
     visibility = 'visible'
     await act(async () => { fireEvent(document, new Event('visibilitychange')) })

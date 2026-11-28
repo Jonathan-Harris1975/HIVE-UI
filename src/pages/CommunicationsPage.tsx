@@ -50,6 +50,7 @@ export function CommunicationsPage() {
   useEffect(() => {
     let cancelled = false
     const controller = new AbortController()
+    const requestTimeout = window.setTimeout(() => controller.abort(), 15000)
     setFrameUrl(null)
     setReady(false)
     setError(null)
@@ -68,12 +69,19 @@ export function CommunicationsPage() {
         if (target.origin !== AIMS_ORIGIN || target.pathname !== '/console/') throw new Error('Communications handoff returned an unexpected destination.')
         if (!cancelled) setFrameUrl(target.toString())
       } catch (cause) {
-        if (!cancelled) setError(cause instanceof Error ? cause.message : 'Communications Interface could not be opened.')
+        if (!cancelled) {
+          const message = controller.signal.aborted
+            ? 'The secure AIMS connection timed out. Retry to reconnect.'
+            : cause instanceof Error ? cause.message : 'Communications Interface could not be opened.'
+          setError(message)
+        }
+      } finally {
+        window.clearTimeout(requestTimeout)
       }
     }
 
     void createHandoff()
-    return () => { cancelled = true; controller.abort() }
+    return () => { cancelled = true; window.clearTimeout(requestTimeout); controller.abort() }
   }, [frameKey])
 
   useEffect(() => {
@@ -109,7 +117,7 @@ export function CommunicationsPage() {
     if (timeoutRef.current) window.clearTimeout(timeoutRef.current)
     timeoutRef.current = window.setTimeout(() => {
       setError('AIMS Comms Hub did not finish loading. Reload the interface to retry the secure handoff.')
-    }, 12000)
+    }, 30000)
     return () => { if (timeoutRef.current) window.clearTimeout(timeoutRef.current) }
   }, [frameUrl, ready])
 
@@ -125,7 +133,11 @@ export function CommunicationsPage() {
     <section className="relative h-full min-h-0 bg-hive-canvas" aria-label="AIMS Communications Interface" aria-busy={!ready && !error}>
       {!ready && !error && (
         <div role="status" aria-live="polite" className="absolute inset-0 z-10 flex items-center justify-center bg-hive-canvas text-sm text-slate-400">
-          <LoaderCircle className="mr-2 h-5 w-5 animate-spin text-cyan-300" aria-hidden="true" /> Opening AIMS Comms Hub
+          <div className="flex max-w-sm flex-col items-center gap-3 px-6 text-center">
+            <LoaderCircle className="h-6 w-6 motion-safe:animate-spin text-hive-accent" aria-hidden="true" />
+            <h2 className="text-base font-semibold text-hive-text">Opening AIMS Comms Hub</h2>
+            <p className="text-sm leading-6 text-hive-muted">{frameUrl ? 'Preparing your communications workspace.' : 'Establishing a secure connection with your HIVE session.'}</p>
+          </div>
         </div>
       )}
 
@@ -152,7 +164,7 @@ export function CommunicationsPage() {
           tabIndex={ready && !error ? 0 : -1}
           aria-hidden={!ready || Boolean(error)}
           referrerPolicy="no-referrer"
-          allow="clipboard-read; clipboard-write"
+          allow="autoplay https://chat.jonathan-harris.online; clipboard-read; clipboard-write"
         />
       )}
 
