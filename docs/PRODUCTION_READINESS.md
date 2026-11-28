@@ -70,7 +70,7 @@ Operationally, a limiter outage blocks new login completion rather than reducing
 
 The application uses React Router in declarative mode through `BrowserRouter`, `Routes`, `Route`, `Navigate` and `useLocation`. It does not currently use data-router loaders/actions or the unstable route-pattern-matching feature introduced upstream. Legacy redirects and browser-history replacement semantics are implemented with `<Navigate replace>`.
 
-React Router is deliberately pinned to `8.4.0` in the manifest so release adoption is explicit. That release's internal context changes do not require application route changes for the current declarative routing model.
+React Router is deliberately pinned to `8.5.3` in the manifest and source-verification gate so release adoption remains explicit. The 8.5.x update includes routing and browser-history fixes; the existing declarative routing model is retained. Adoption requires the normal exact-head CI, security, routing regression and owner-approval gates.
 
 ## Operational behaviour
 
