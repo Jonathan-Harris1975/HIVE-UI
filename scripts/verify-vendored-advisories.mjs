@@ -6,7 +6,6 @@ const upstreamVersion = '4.0.7'
 const reviewedAdvisories = new Set(['GHSA-FC5Q-39XC-VJPF'])
 const bulkEndpoint = 'https://registry.npmjs.org/-/npm/v1/security/advisories/bulk'
 const githubEndpoint = `https://api.github.com/advisories?ecosystem=npm&affects=${encodeURIComponent(packageName + '@' + upstreamVersion)}&per_page=100`
-const vendorPkgPath = `vendor/${packageName}-4.0.8-hive.1.tgz`
 
 async function query(url, body) {
   const response = await fetch(url, {
@@ -68,6 +67,9 @@ try {
       // If GitHub API returns 403 (forbidden) or 429 (rate limited), fall back to local verification
       if (response.status === 403 || response.status === 429) {
         console.warn(`GitHub advisory API returned ${response.status}; falling back to local patch verification`)
+        // Clear the stale HTTP error so a local verification failure propagates
+        // instead of being masked by the earlier 403/429 error.
+        githubError = null
         advisories = await verifyLocalPatch()
         source = 'local hiveSecurityPatch fallback'
       } else {
