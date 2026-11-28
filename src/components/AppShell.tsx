@@ -284,7 +284,8 @@ function ConversationSection({ closeMobile }: { closeMobile?: () => void }) {
   )
 }
 
-function SidebarContent({ closeMobile, compact = false }: { closeMobile?: () => void; compact?: boolean }) {
+type DisplayOptions = { comfortable: boolean; describeLamps: boolean; onDisplayChange: (key: 'comfortable' | 'describeLamps') => void }
+function SidebarContent({ closeMobile, compact = false, comfortable, describeLamps, onDisplayChange }: DisplayOptions & { closeMobile?: () => void; compact?: boolean }) {
   const { logout } = useAuth()
   const { pathname } = useLocation()
 
@@ -322,6 +323,11 @@ function SidebarContent({ closeMobile, compact = false }: { closeMobile?: () => 
       {pathname === '/chat' && !compact ? <ConversationSection closeMobile={closeMobile} /> : <div className="flex-1" />}
 
       <div className="mt-4 border-t border-white/[0.06] pt-3">
+        {!compact && <details className="hive-display-settings px-3 pb-2">
+          <summary>Display preferences</summary>
+          <label><input type="checkbox" checked={comfortable} onChange={() => onDisplayChange('comfortable')} /> Comfortable layout</label>
+          <label><input type="checkbox" checked={describeLamps} onChange={() => onDisplayChange('describeLamps')} /> Show indicator descriptions</label>
+        </details>}
         {!compact && <p className="mb-1 px-3 text-xs text-slate-400" title={HIVE_UI_BUILD}>UI {HIVE_UI_VERSION}</p>}
         <button type="button" onClick={logout} title={compact ? 'Sign out' : undefined}
           className={`flex w-full items-center ${compact ? 'justify-center' : 'gap-3'} rounded-hive px-3 py-2.5 text-sm text-hive-muted transition hover:bg-white/[0.04] hover:text-white`}>
@@ -543,6 +549,18 @@ export function AppShell() {
   const { open, available, toggle } = useInspector()
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
   const [railCollapsed, setRailCollapsed] = useState(false)
+  const [display, setDisplay] = useState(() => {
+    try {
+      return { comfortable: localStorage.getItem('hive-comfortable') === 'true', describeLamps: localStorage.getItem('hive-describe-lamps') === 'true' }
+    } catch { return { comfortable: false, describeLamps: false } }
+  })
+  const changeDisplay = (key: 'comfortable' | 'describeLamps') => setDisplay((prior) => ({ ...prior, [key]: !prior[key] }))
+  useEffect(() => {
+    try {
+      localStorage.setItem('hive-comfortable', String(display.comfortable))
+      localStorage.setItem('hive-describe-lamps', String(display.describeLamps))
+    } catch { /* Preferences are optional. */ }
+  }, [display])
   const closeMobileMenu = useCallback(() => setMobileMenuOpen(false), [])
   const mobileDrawerRef = useMobileDrawer(mobileMenuOpen, closeMobileMenu)
   useEffect(() => {
@@ -559,13 +577,13 @@ export function AppShell() {
   }, [pathname, meta.title])
 
   return (
-    <div className="flex h-dvh min-h-[320px] overflow-hidden bg-hive-canvas text-slate-100">
+    <div className="flex h-dvh min-h-[320px] overflow-hidden bg-hive-canvas text-slate-100" data-density={display.comfortable ? "comfortable" : "compact"} data-describe-lamps={display.describeLamps}>
       <a
         href="#hive-main-content"
         className="sr-only z-[100] rounded-lg bg-cyan-300 px-3 py-2 font-semibold text-hive-accent-deep focus:not-sr-only focus:fixed focus:left-3 focus:top-3"
       >Skip to main content</a>
       <aside className={`relative hidden shrink-0 border-r border-white/[0.06] bg-hive-panel transition-[width] lg:block ${railCollapsed ? 'w-[76px]' : 'w-[280px]'}`}>
-        <SidebarContent compact={railCollapsed} />
+        <SidebarContent compact={railCollapsed} {...display} onDisplayChange={changeDisplay} />
         <button type="button" onClick={() => setRailCollapsed((value) => !value)} aria-expanded={!railCollapsed}
           aria-label={railCollapsed ? 'Expand navigation' : 'Collapse navigation'}
           className="absolute -right-5 top-5 z-10 grid h-10 w-10 place-items-center rounded-full border border-white/10 bg-hive-raised text-hive-muted shadow-hive hover:text-white">
@@ -584,7 +602,7 @@ export function AppShell() {
             aria-label="Navigation"
             className="absolute inset-y-0 left-0 w-[min(320px,90vw)] border-r border-white/10 bg-hive-panel shadow-2xl"
           >
-            <SidebarContent closeMobile={closeMobileMenu} />
+            <SidebarContent closeMobile={closeMobileMenu} {...display} onDisplayChange={changeDisplay} />
           </aside>
         </div>
       )}

@@ -25,9 +25,14 @@ export function OverviewPage() {
   const [loading, setLoading] = useState(true)
   const [now, setNow] = useState(Date.now)
   const controller = useRef<AbortController | null>(null)
+  const lastAttempt = useRef(0)
+  const [refreshSeconds, setRefreshSeconds] = useState(() => {
+    try { const value = localStorage.getItem('hive-overview-refresh'); return value === '0' || value === '120' ? Number(value) : 60 } catch { return 60 }
+  })
 
   const refresh = useCallback(async () => {
-    controller.current?.abort()
+    if (controller.current && !controller.current.signal.aborted) return
+    lastAttempt.current = Date.now()
     const request = new AbortController()
     controller.current = request
     setLoading(true)
@@ -38,6 +43,8 @@ export function OverviewPage() {
       apiFetch<OpsEventsResponse>('/v1/system/ops-events?limit=6', { signal }),
     ])
     if (request.signal.aborted) return
+    controller.current = null
+    setNow(Date.now())
     setSnapshot({
       health: health.status === 'fulfilled' ? health.value : null,
       repositories: repositories.status === 'fulfilled' && repositories.value.ok ? repositories.value : null,
@@ -56,11 +63,27 @@ export function OverviewPage() {
     const timer = window.setInterval(() => setNow(Date.now()), 15_000)
     return () => window.clearInterval(timer)
   }, [])
+  useEffect(() => {
+    try { localStorage.setItem('hive-overview-refresh', String(refreshSeconds)) } catch { /* Preferences are optional. */ }
+    if (!refreshSeconds) return
+    const check = () => {
+      if (document.visibilityState === 'visible' && navigator.onLine && Date.now() - lastAttempt.current >= refreshSeconds * 1000) void refresh()
+    }
+    const timer = window.setInterval(check, 15_000)
+    document.addEventListener('visibilitychange', check)
+    window.addEventListener('online', check)
+    return () => {
+      window.clearInterval(timer)
+      document.removeEventListener('visibilitychange', check)
+      window.removeEventListener('online', check)
+    }
+  }, [refresh, refreshSeconds])
   const repos = snapshot.repositories?.repos
   const currentHealth = !loading && Boolean(repos?.length) && healthEvidenceFresh(snapshot.repositories?.generated_at, now)
   const orderedRepos = [...(repos || [])].sort((a, b) => serviceAttentionRank(a.status) - serviceAttentionRank(b.status) || a.repo.localeCompare(b.repo))
-  const attention = repos?.filter((repo) => serviceAttentionRank(repo.status) < 3)
-  const orderedAlerts = [...(snapshot.alerts?.items || [])].sort((a, b) => serviceAttentionRank(a.severity) - serviceAttentionRank(b.severity))
+  const attention = orderedRepos.filter((repo) => serviceAttentionRank(repo.status) < 3)
+  const orderedAlerts = [...(snapshot.alerts?.items || [])].sort((a, b) =>
+    (Date.parse(b.occurred_at || b.received_at || '') || 0) - (Date.parse(a.occurred_at || a.received_at || '') || 0))
   const alerts = snapshot.alerts?.items
   const critical = alerts?.filter((item) => item.severity === 'critical').length
   const unavailable = !loading && (!snapshot.health || !repos || !alerts)
@@ -84,6 +107,9 @@ export function OverviewPage() {
             <RefreshCcw className={loading ? 'h-4 w-4 animate-spin' : 'h-4 w-4'} aria-hidden="true" /> Refresh
           </button>
         </div>
+        <label className="hive-refresh-option">Auto-refresh <select value={refreshSeconds} onChange={(event) => setRefreshSeconds(Number(event.target.value))}>
+          <option value={0}>Off</option><option value={60}>60 seconds</option><option value={120}>2 minutes</option>
+        </select></label>
         {unavailable && <p role="status" className="hive-snapshot-notice">Some sources are unavailable. Unknown values are not treated as healthy or zero.</p>}
         <div className="hive-metric-grid" aria-busy={loading}>
           <Link to="/ops" className="hive-metric-card">
@@ -110,7 +136,7 @@ export function OverviewPage() {
           <div className="hive-section-heading"><h2 id="exception-title">Requires attention</h2><Link to="/ops">Operations →</Link></div>
           {!currentHealth ? <p className="hive-evidence-caption">Current service evidence unavailable or stale. No healthy state is inferred.</p>
             : attention?.length ? <ul className="hive-evidence-list">
-              {attention.map((repo) => <li key={repo.repo}><Link to="/repositories">{repo.label ?? repo.repo}</Link>
+              {attention.map((repo) => <li key={repo.repo}><Link to={`/repositories?repo=${encodeURIComponent(repo.repo)}`}>{repo.label ?? repo.repo}</Link>
                 <StatusBadge status={repo.status} variant="operational" /></li>)}
             </ul> : <p className="hive-evidence-caption">No service exceptions in the current probe.</p>}
           {critical ? <p className="hive-evidence-caption text-rose-200">{critical} critical event(s) in recent stored alerts; check Operations for context.</p> : null}
@@ -128,19 +154,20 @@ export function OverviewPage() {
             <div className="hive-section-heading"><h2 id="service-title">Service health</h2><Link to="/repositories">View estate →</Link></div>
             <p className="hive-evidence-caption">{snapshot.repositories?.generated_at ? 'Probe generated ' + formatDate(snapshot.repositories.generated_at) : 'Probe timestamp not reported'}</p>
             {repos?.length ? <ul className="hive-evidence-list">
-              {orderedRepos.map((repo) => <li key={repo.repo}><span>{repo.label ?? repo.repo}</span>
+              {orderedRepos.map((repo) => <li key={repo.repo}><Link to={`/repositories?repo=${encodeURIComponent(repo.repo)}`}>{repo.label ?? repo.repo}</Link>
                 <StatusBadge status={currentHealth ? repo.status : 'unknown'} variant="operational" /></li>)}
             </ul> : <p className="hive-evidence-caption">{loading ? 'Loading service evidence…' : repos ? 'No services reported.' : 'Service health unavailable.'}</p>}
           </section>
           <section className="hive-evidence-card" aria-labelledby="alert-title">
             <div className="hive-section-heading"><h2 id="alert-title">Recent alerts</h2><Link to="/ops">View alerts →</Link></div>
-            <p className="hive-evidence-caption">Historical events, not proof of current incidents.</p>
+            <p className="hive-evidence-caption">Operational timeline · historical events, not proof of current incidents.</p>
             {alerts?.length ? <ul className="hive-alert-list">
               {orderedAlerts.map((item) => (
                 <li key={item.event_id}>
                   <div>
                     <p>{item.title ?? item.event_type ?? 'Operational event'}</p>
-                    <small>{item.occurred_at ? formatDate(item.occurred_at) : 'Time not reported'}</small>
+                    <small>{item.occurred_at ? formatDate(item.occurred_at) : item.received_at ? 'Received ' + formatDate(item.received_at) : 'Time not reported'}</small>
+                    {item.summary && <small>{item.summary}</small>}
                   </div>
                   <StatusBadge status={item.severity ?? 'unknown'} dotOnly={['critical', 'warning', 'info'].includes(item.severity ?? '')} />
                 </li>

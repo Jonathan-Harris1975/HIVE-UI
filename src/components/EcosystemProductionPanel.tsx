@@ -85,12 +85,12 @@ function gateTone(gates: Gate[]): string {
 }
 const decisionLabel = (decision?: string) => decision === 'ALLOW' ? 'Allowed' : decision === 'BLOCK' ? 'Blocked' : decision || 'Unknown'
 
-export function EcosystemProductionPanel({ renderRepositoryDetails }: { renderRepositoryDetails?: (id: string) => ReactNode }) {
+export function EcosystemProductionPanel({ renderRepositoryDetails, initialQuery = '' }: { renderRepositoryDetails?: (id: string) => ReactNode; initialQuery?: string }) {
   const [report, setReport] = useState<ProductionReport | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [now, setNow] = useState(Date.now)
-  const [query, setQuery] = useState('')
+  const [query, setQuery] = useState(initialQuery)
   const [filter, setFilter] = useState<'all' | 'attention' | 'ready' | 'unknown'>('all')
   const [sortBy, setSortBy] = useState<'attention' | 'name'>('attention')
   const [expanded, setExpanded] = useState<Record<string, boolean>>({})
@@ -256,7 +256,7 @@ export function EcosystemProductionPanel({ renderRepositoryDetails }: { renderRe
                   <div key={label}><span>{label}</span><StatusBadge status={status} label={label + ' evidence: ' + status} /></div>
                 ))}
               </div>
-              <details className="mt-2" open={expanded[id] ?? (current && item?.state !== 'GREEN')}
+              <details className="mt-2" open={expanded[id] ?? (id === initialQuery || (current && item?.state !== 'GREEN'))}
                 onToggle={(event) => {
                   const open = event.currentTarget.open
                   setExpanded((prior) => prior[id] === open ? prior : { ...prior, [id]: open })

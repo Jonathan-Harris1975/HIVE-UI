@@ -411,3 +411,20 @@ input::placeholder, textarea::placeholder { opacity: 1; }
 .hive-mobile-nav a { border-radius: 5px; }
 .hive-mobile-nav a:focus-visible, .hive-lamp-legend summary:focus-visible { outline: 2px solid #23eaff; outline-offset: -2px; }
 @media (max-width: 479px) { .hive-overview-inner { gap: 10px; } .hive-command-hero h2 { font-size: 1.5rem; } .hive-workspace-card { min-height: 64px; padding: 12px; } }
+
+/* Operator display preferences: compact by default, readable on demand. */
+.hive-display-settings summary { cursor: pointer; min-height: 44px; display: flex; align-items: center; font-size: .8rem; }
+.hive-display-settings label { display: flex; align-items: center; gap: 7px; min-height: 44px; font-size: .8rem; }
+.hive-display-settings input { accent-color: #23eaff; width: 18px; height: 18px; }
+.hive-refresh-option { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; font-size: .8rem; }
+.hive-refresh-option select { min-height: 44px; padding: 6px 10px; border: 1px solid #38526a; border-radius: 5px; background: var(--color-hive-surface); }
+.hive-evidence-list li > a { min-width: 0; overflow-wrap: anywhere; color: var(--color-hive-text); padding-block: 5px; }
+.hive-evidence-list li > a:hover { color: var(--color-hive-accent-strong); text-decoration: underline; }
+.hive-alert-list { border-inline-start: 1px solid #38526a; padding-inline-start: 10px; }
+[data-density="comfortable"] .hive-overview-inner { gap: 20px; }
+[data-density="comfortable"] .hive-metric-card, [data-density="comfortable"] .hive-repository-card { padding: 18px; }
+[data-density="comfortable"] .hive-evidence-list li, [data-density="comfortable"] .hive-alert-list li { padding-block: 15px; }
+[data-describe-lamps="true"] .hive-signal-description { position: static; width: auto; height: auto; overflow: visible; clip: auto; white-space: normal; margin: 0 0 0 5px; max-width: 10rem; overflow-wrap: anywhere; }
+[data-describe-lamps="true"] .hive-legend-items .hive-signal-description { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0,0,0,0); white-space: nowrap; }
+[data-describe-lamps="true"] .hive-gate-grid { grid-template-columns: minmax(0,1fr); }
+[data-describe-lamps="true"] .hive-gate-grid > div { display: flex; justify-content: space-between; align-items: center; }
