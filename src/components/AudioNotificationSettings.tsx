@@ -1,4 +1,5 @@
 import { useState, type ReactNode } from 'react'
+import { BackgroundNotificationSettings } from './BackgroundNotificationSettings'
 
 type Preferences = {
   enabled: boolean
@@ -174,6 +175,7 @@ export function AudioNotificationSettings() {
         Enable browser notifications
       </button>
       {message && <p role="status" className="mt-2 text-xs text-slate-400">{message}</p>}
+      <BackgroundNotificationSettings />
     </section>
   )
 }
