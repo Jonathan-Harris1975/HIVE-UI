@@ -253,8 +253,9 @@ test('navigation focus remains stable across rerenders and route transitions', (
 // Screenshot acceptance: operator data must never be hidden by HIVE's reload affordance.
 test('mobile Communications keeps the iframe unobscured after secure handoff', async () => {
   const file = source('src/pages/CommunicationsPage.tsx')
-  assert.match(file, /\{!ready && !error && <button/)
-  assert.match(file, /aria-label="Reload Communications Interface"/)
+  assert.match(file, /Loading communications…/)
+  assert.doesNotMatch(file, /Opening AIMS Comms Hub|Reload Communications Interface/)
+  assert.match(file, /onClick=\{reload\}/)
 })
 
 test('retired monthly review cannot be opened from Operations', () => {
@@ -303,7 +304,7 @@ test('ecosystem navigation provides a direct mobile Communications entry and a c
   const comms = source('src/pages/CommunicationsPage.tsx')
   const destinations = shell.match(/\.filter\(\(item\)\s*=>\s*\[([^\]]+)\]\.includes\(item\.to\)\)/)?.[1] ?? ''
   assert.deepEqual([...destinations.matchAll(/'([^']+)'/g)].map(match => match[1]), ['/overview', '/communications', '/chat', '/repositories', '/ops'])
-  assert.ok(shell.includes('aria-label="Return to HIVE overview"'))
+  assert.doesNotMatch(shell, /aria-label="Return to HIVE overview"/)
   assert.match(css, /\.hive-mobile-nav\s*\{[^}]*grid-template-columns\s*:\s*repeat\(\s*5\s*,\s*minmax\(\s*0\s*,\s*1fr\s*\)\s*\)/)
   assert.ok(comms.includes('tabIndex={ready && !error ? 0 : -1}'))
   assert.ok(comms.includes('signal: controller.signal'))
@@ -319,4 +320,13 @@ test('Communications remains within the same HIVE global shell and mobile naviga
   assert.ok(shell.includes("{pathname !== '/chat' && ("))
   assert.ok(shell.includes('<HeaderActions health={health}'))
   assert.doesNotMatch(shell, /pathname !== '\/chat' && pathname !== '\/communications'/)
+})
+
+
+test('global navigation uses one distinct icon per destination', () => {
+  const shell = source('src/components/AppShell.tsx')
+  const groups = shell.slice(shell.indexOf('const navigationGroups'), shell.indexOf('const mobileDestinations'))
+  const icons = [...groups.matchAll(/icon: (\w+)/g)].map(match => match[1])
+  assert.equal(icons.length, 7)
+  assert.equal(new Set(icons).size, icons.length)
 })
