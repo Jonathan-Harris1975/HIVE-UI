@@ -1,6 +1,6 @@
 import {
   Activity,
-  ArrowLeft,
+  LayoutDashboard,
   Check,
   Copy,
   Files,
@@ -37,7 +37,7 @@ const navigationGroups = [
     id: 'workspace',
     label: 'Workspace',
     items: [
-      { to: '/overview', label: 'Overview', icon: Activity, routes: ['/overview'] },
+      { to: '/overview', label: 'Overview', icon: LayoutDashboard, routes: ['/overview'] },
       { to: '/communications', label: 'Communications', icon: RadioTower, routes: ['/communications'] },
       { to: '/chat', label: 'Chat', icon: Bot, routes: ['/chat'] },
       { to: '/files', label: 'Files', icon: Files, routes: ['/files'] },
@@ -88,7 +88,7 @@ const pageMeta: Record<string, { title: string; subtitle: string }> = {
   '/llm-spend': { title: 'Operations', subtitle: 'Daily LLM spend and evidence coverage' },
   '/ops': { title: 'Operations', subtitle: 'Live runtime health, infrastructure and integrations' },
   '/integrations': { title: 'Operations', subtitle: 'Live runtime health, infrastructure and integrations' },
-  '/communications': { title: 'Communications', subtitle: 'AIMS workspace · Inbox, mail and outreach' },
+  '/communications': { title: 'Communications', subtitle: 'Inbox, mail and outreach' },
 }
 
 interface PendingConversationDialog {
@@ -607,11 +607,6 @@ export function AppShell() {
             </div>
           </div>
           <div className="flex shrink-0 items-center gap-1 sm:gap-2">
-            {pathname === '/communications' && <Link to="/overview" aria-label="Return to HIVE overview"
-              className="flex min-h-11 shrink-0 items-center gap-1 rounded-hive px-2 text-sm text-hive-muted hover:bg-white/5 hover:text-hive-text">
-              <ArrowLeft className="h-4 w-4" aria-hidden="true" />
-              <span className="hidden sm:inline">Overview</span>
-            </Link>}
             <HeaderActions health={health} open={open} available={available && pathname !== '/communications'} toggle={toggle} />
           </div>
         </header>
