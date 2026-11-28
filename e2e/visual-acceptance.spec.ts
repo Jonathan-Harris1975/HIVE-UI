@@ -113,6 +113,8 @@ test.describe('HIVE-UI safe browser visual baseline', () => {
     await expect(page.getByRole('alert').getByText('Synthetic handoff unavailable')).toBeVisible()
     await expect(page.locator('iframe[title="AIMS Comms Hub"]')).toHaveCount(0)
     await checkViewport(page, 'Mobile Communications error')
+    await expect(navigation.getByRole('link', { name: 'Communications' })).toHaveAttribute('aria-current', 'page')
+    await expect(navigation.getByRole('link', { name: 'Operations' })).toBeVisible()
     await page.getByRole('link', { name: 'Return to HIVE overview' }).click()
     await expect(page).toHaveURL(/\/overview$/)
     await expect(navigation.getByRole('link', { name: 'Communications' })).toBeVisible()
@@ -261,6 +263,14 @@ test.describe('HIVE-UI deployed gateway browser acceptance', () => {
       await expect(sections).toBeVisible({ timeout: 30_000 })
       await expect(sections.locator('[data-view="inbox"] span')).toBeVisible()
       await checkViewport(page, 'Integrated HIVE to AIMS phone')
+      await expect(page.getByRole('navigation', { name: 'Quick navigation' })).toBeVisible()
+      for (const [width, height] of acceptanceViewports) {
+        await page.setViewportSize({ width, height })
+        await checkViewport(page, 'Integrated HIVE to AIMS ' + width)
+        await expect(frame).toBeVisible()
+        await expect(page.frameLocator('iframe[title="AIMS Comms Hub"]').locator('#aims-sidebar')).toBeHidden()
+      }
+      await page.setViewportSize({ width: 390, height: 844 })
       await page.getByRole('link', { name: 'Return to HIVE overview' }).click()
       await expect(page).toHaveURL(/\/overview$/)
       console.info('AIMS browser acceptance: live handoff, layout and keyboard checks passed (no private snapshot exported)')
