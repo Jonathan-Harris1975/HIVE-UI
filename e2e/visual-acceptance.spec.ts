@@ -86,6 +86,13 @@ test.describe('HIVE-UI safe browser visual baseline', () => {
       await page.setViewportSize({ width, height })
       await checkViewport(page, 'Synthetic command centre ' + width)
       await checkControlNames(page, 'Synthetic command centre ' + width)
+      const healthyLamp = overview.locator('[title="Healthy"]')
+      await expect(healthyLamp).toHaveCount(1)
+      await expect(healthyLamp.locator('.signal-lamp')).toHaveCSS('border-top-color', 'rgb(165, 181, 201)')
+      await expect(healthyLamp.locator('.signal-lamp')).toHaveCSS('border-top-left-radius', '2px')
+      await expect(healthyLamp.locator('[data-active="true"]')).toHaveCSS('background-color', 'rgb(53, 255, 136)')
+      await expect(healthyLamp.getByText('Healthy', { exact: true })).toHaveCSS('position', 'absolute')
+      await expect(healthyLamp.getByText('Healthy', { exact: true })).toHaveCSS('width', '1px')
       await test.info().attach('synthetic-command-centre-' + width + '.png', {
         body: await page.screenshot({ animations: 'disabled' }), contentType: 'image/png',
       })
