@@ -105,16 +105,45 @@ export function OverviewPage() {
           <section className="hive-evidence-card" aria-labelledby="alert-title">
             <div className="hive-section-heading"><h2 id="alert-title">Recent alerts</h2><Link to="/ops">View alerts →</Link></div>
             <p className="hive-evidence-caption">Historical events, not proof of current incidents.</p>
-            {alerts?.length ? <ul className="hive-alert-list">
-              {alerts.map((item) => <li key={item.event_id}><div><p>{item.title ?? item.event_type ?? 'Operational event'}</p><small>{item.occurred_at ? formatDate(item.occurred_at) : 'Time not reported'}</small></div><StatusBadge status={item.severity ?? 'unknown'} /></li>)}
-            </ul> : <p className="hive-evidence-caption">{loading ? 'Loading alert evidence…' : alerts ? 'No recent events returned.' : 'Alert evidence unavailable.'}</p>}
+            {alerts?.length ? (
+              <ul className="hive-alert-list">
+                {alerts.map((item) => (
+                  <li key={item.event_id}>
+                    <div>
+                      <p>{item.title ?? item.event_type ?? 'Operational event'}</p>
+                      <small>
+                        {item.occurred_at ? formatDate(item.occurred_at) : 'Time not reported'}
+                      </small>
+                    </div>
+                    <StatusBadge status={item.severity ?? 'unknown'} />
+                  </li>
+                ))}
+              </ul>
+            ) : (
+              <p className="hive-evidence-caption">
+                {loading
+                  ? 'Loading alert evidence…'
+                  : alerts
+                  ? 'No recent events returned.'
+                  : 'Alert evidence unavailable.'}
+              </p>
+            )}
           </section>
         </div>
 
         <section aria-labelledby="workspace-title">
           <div className="hive-section-heading"><div><h2 id="workspace-title">Your workspaces</h2><p>Go directly to the tools you need.</p></div></div>
           <div className="hive-workspace-grid">
-            {destinations.map(({ to, title, description, icon: Icon }) => <Link to={to} key={to} className="hive-workspace-card"><Icon className="h-5 w-5" aria-hidden="true" /><div><h3>{title}</h3><p>{description}</p></div><span aria-hidden="true">→</span></Link>)}
+            {destinations.map(({ to, title, description, icon: Icon }) => (
+              <Link to={to} key={to} className="hive-workspace-card">
+                <Icon className="h-5 w-5" aria-hidden="true" />
+                <div>
+                  <h3>{title}</h3>
+                  <p>{description}</p>
+                </div>
+                <span aria-hidden="true">→</span>
+              </Link>
+            ))}
           </div>
         </section>
       </div>

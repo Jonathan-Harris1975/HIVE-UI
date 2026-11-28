@@ -18,6 +18,7 @@ jobs:
     permissions:
       contents: read
       id-token: write
+      security_events: read
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
