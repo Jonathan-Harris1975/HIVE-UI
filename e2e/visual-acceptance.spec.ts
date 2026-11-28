@@ -69,7 +69,7 @@ test.describe('HIVE-UI safe browser visual baseline', () => {
     await page.route('**/api/health', (route) => route.fulfill({ json: { ok: true, env: 'synthetic', build: 'visual-fixture' } }))
     await page.route('**/api/v1/chat/conversations*', (route) => route.fulfill({ json: { ok: true, conversations: [] } }))
     await page.route('**/api/v1/system/repo-health?*', (route) => route.fulfill({ json: {
-      ok: true, generated_at: '2026-11-28T09:00:00Z',
+      ok: true, generated_at: new Date().toISOString(),
       repos: [{ repo: 'Example API', status: 'healthy' }, { repo: 'Example worker', status: 'standby' }, { repo: 'Example service', status: 'degraded' }],
     } }))
     let failAlerts = false
@@ -86,7 +86,7 @@ test.describe('HIVE-UI safe browser visual baseline', () => {
       await page.setViewportSize({ width, height })
       await checkViewport(page, 'Synthetic command centre ' + width)
       await checkControlNames(page, 'Synthetic command centre ' + width)
-      const healthyLamp = overview.locator('[title="Healthy"]')
+      const healthyLamp = overview.locator('.hive-evidence-list [title="Healthy"]')
       await expect(healthyLamp).toHaveCount(1)
       await expect(healthyLamp.locator('.signal-lamp')).toHaveCSS('border-top-color', 'rgb(165, 181, 201)')
       await expect(healthyLamp.locator('.signal-lamp')).toHaveCSS('border-top-left-radius', '2px')
