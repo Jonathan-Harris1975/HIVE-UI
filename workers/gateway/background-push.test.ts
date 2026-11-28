@@ -1,4 +1,6 @@
-import { describe, expect, it } from 'vitest'
+import { describe, expect, it, vi } from 'vitest'
+import gateway from './index'
+import { createSessionToken, sessionCookie } from './security'
 import { allowedPushEndpoint, generatePushKeys, vapidAuthorization, readAlertSource } from './background-push'
 
 describe('background push', () => {
@@ -44,5 +46,49 @@ describe('background push', () => {
     expect(sql).toContain("actor = ? AND status = 'unread'")
     expect(params[0]).toBe('owner-test')
     expect(result.ids).toEqual(['communications:alert-1'])
+  })
+})
+
+describe('background push gateway boundary', () => {
+  const secret = 'test-only-session-signing-secret'
+  const url = 'https://hive.example/api/v1/system/background-push/register'
+  it('rejects an unauthenticated or cross-origin device enrollment', async () => {
+    const stub = vi.fn()
+    const env = {
+      HIVE_UI_SESSION_SECRET: secret,
+      NOTIFICATION_PUSH_HUB: { get: stub, idFromName: vi.fn() },
+    } as unknown as Parameters<typeof gateway.fetch>[1]
+    const body = JSON.stringify({ endpoint: 'https://fcm.googleapis.com/send/example' })
+    const unauth = await gateway.fetch(new Request(url, {
+      method: 'POST', headers: { origin: 'https://hive.example' }, body,
+    }), env)
+    expect(unauth.status).toBe(401)
+    const { token } = await createSessionToken(secret, 3600, 1800, true, true)
+    const cross = await gateway.fetch(new Request(url, {
+      method: 'POST', headers: { origin: 'https://other.example', cookie: sessionCookie(token, 3600) }, body,
+    }), env)
+    expect(cross.status).toBe(403)
+    expect(stub).not.toHaveBeenCalled()
+  })
+
+  it('forwards only the allowlisted device operation without credentials or backend access', async () => {
+    const { token } = await createSessionToken(secret, 3600, 1800, true, true)
+    const dispatch = vi.fn(async (_url: string, init: RequestInit) => {
+      const headers = new Headers(init.headers)
+      expect(headers.has('cookie')).toBe(false)
+      expect(headers.has('authorization')).toBe(false)
+      return Response.json({ ok: true, registered: true })
+    })
+    const env = {
+      HIVE_UI_SESSION_SECRET: secret,
+      NOTIFICATION_PUSH_HUB: { get: () => ({ fetch: dispatch }), idFromName: () => 'test' },
+    } as unknown as Parameters<typeof gateway.fetch>[1]
+    const response = await gateway.fetch(new Request(url, {
+      method: 'POST',
+      headers: { origin: 'https://hive.example', cookie: sessionCookie(token, 3600), 'content-type': 'application/json' },
+      body: JSON.stringify({ endpoint: 'https://fcm.googleapis.com/send/example' }),
+    }), env)
+    expect(response.status).toBe(200)
+    expect(dispatch).toHaveBeenCalledTimes(1)
   })
 })
