@@ -77,6 +77,25 @@ describe('HIVE Elements audio notifications', () => {
     }
   })
 
+  it('redacts private operational details and respects mute on the desktop fallback', () => {
+    const shown = vi.fn()
+    class DesktopNotification {
+      static permission = 'granted'
+      constructor(title: string, options?: NotificationOptions) { shown(title, options) }
+    }
+    vi.stubGlobal('Notification', DesktopNotification)
+    vi.stubGlobal('Audio', FakeAudio)
+    localStorage.setItem('hive-audio-notification-preferences-v1', JSON.stringify({ enabled: false }))
+    notifyNewHIVEEvents([{
+      event_id: 'private-review', event_type: 'review_required',
+      title: 'Private operational details', summary: 'Private summary',
+    }])
+    expect(shown).toHaveBeenCalledWith('HIVE', {
+      body: 'An update is available. Open the workspace to review it.', silent: true,
+    })
+    expect(play).not.toHaveBeenCalled()
+  })
+
   it('routes only validated, actionable AIMS alerts to HIVE browser notifications', () => {
     vi.stubGlobal('Audio', FakeAudio)
     const shown: Array<{ title: string; options?: NotificationOptions }> = []
@@ -108,7 +127,7 @@ describe('HIVE Elements audio notifications', () => {
       summary: 'An AIMS communication needs your review.',
     })
     notifyNewHIVEEvents(event ? [event] : [], { playAudio: false })
-    expect(shown).toEqual([{ title: 'AIMS Comms Hub', options: { body: 'An AIMS communication needs your review.' } }])
+    expect(shown).toEqual([{ title: 'AIMS Comms Hub', options: { body: 'An update is available. Open the workspace to review it.', silent: false } }])
     expect(play).not.toHaveBeenCalled()
     expect(toAIMSOperationalEvent({ type: 'aims-comms-notification', id: 'routine', category: 'info' })).toBeNull()
   })
