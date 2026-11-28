@@ -105,15 +105,16 @@ function display(status: string, variant?: StatusBadgeProps['variant']): string 
 export function StatusBadge({ status, label, compact = false, dotOnly = false, variant }: StatusBadgeProps) {
   const value = status?.trim() || 'unknown'
   const tone = dotTone(value, variant)
+  const statusLabel = label || display(value, variant)
   const activeLens = tone === 'bg-rose-300' ? 'red' : tone === 'bg-emerald-300' ? 'green' : 'amber'
   return (
-    <span className={`inline-flex items-center gap-1.5 font-medium ${compact ? 'text-xs' : 'text-xs'} ${textTone(value, variant)}`}>
+    <span title={statusLabel} className={`inline-flex items-center gap-1.5 font-medium ${compact ? 'text-xs' : 'text-xs'} ${textTone(value, variant)}`}>
       <span className="signal-lamp" aria-hidden="true" data-tone={tone}>
         {(['red', 'amber', 'green'] as const).map((lens) => (
           <span key={lens} data-lens={lens} data-active={lens === activeLens} />
         ))}
       </span>
-      <span className={dotOnly ? 'sr-only' : undefined}>{label || display(value, variant)}</span>
+      <span className={dotOnly ? 'sr-only' : undefined}>{statusLabel}</span>
     </span>
   )
 }

@@ -16,6 +16,7 @@ test('dot-only badge preserves the accessible status without duplicate visible w
   render(<StatusBadge status="ready" label="GREEN" dotOnly />)
   const label = screen.getByText('GREEN')
   expect(label).toHaveClass('sr-only')
+  expect(label.parentElement).toHaveAttribute('title', 'GREEN')
   expect(label.parentElement?.querySelector('[aria-hidden="true"]')).toBeInTheDocument()
 })
 

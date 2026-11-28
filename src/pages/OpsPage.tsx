@@ -136,7 +136,7 @@ function OpsEventCard({ item, onInspect, onDelete }: { item: OpsEventItem; onIns
             <div className="min-w-0 flex-1">
               <div className="flex flex-wrap items-center gap-2">
                 <h4 className="truncate text-xs font-semibold text-white">{item.title || item.event_type || 'Operational event'}</h4>
-                <StatusBadge status={severity} compact />
+                <StatusBadge status={severity} compact dotOnly={['critical', 'warning', 'info'].includes(severity)} />
               </div>
               <p className="mt-1 line-clamp-2 text-xs leading-5 text-slate-400">{item.summary || 'No event summary returned.'}</p>
               <p className="mt-2 text-xs uppercase tracking-[0.12em] text-slate-400">{item.service || 'unknown service'} · {formatDate(item.occurred_at || item.received_at)}</p>

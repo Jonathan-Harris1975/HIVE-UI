@@ -112,7 +112,7 @@ export function OverviewPage() {
                     <p>{item.title ?? item.event_type ?? 'Operational event'}</p>
                     <small>{item.occurred_at ? formatDate(item.occurred_at) : 'Time not reported'}</small>
                   </div>
-                  <StatusBadge status={item.severity ?? 'unknown'} />
+                  <StatusBadge status={item.severity ?? 'unknown'} dotOnly={['critical', 'warning', 'info'].includes(item.severity ?? '')} />
                 </li>
               ))}
             </ul> : <p className="hive-evidence-caption">{loading ? 'Loading alert evidence…' : alerts ? 'No recent events returned.' : 'Alert evidence unavailable.'}</p>}
