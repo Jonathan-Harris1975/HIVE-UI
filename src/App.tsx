@@ -7,6 +7,7 @@ import { useAuth } from './context/AuthContext'
 import { ChatProvider } from './context/ChatContext'
 import { InspectorProvider } from './context/InspectorContext'
 
+const OverviewPage = lazy(() => import('./pages/OverviewPage').then((module) => ({ default: module.OverviewPage })))
 const ChatPage = lazy(() => import('./pages/ChatPage').then((module) => ({ default: module.ChatPage })))
 const FilesPage = lazy(() => import('./pages/FilesPage').then((module) => ({ default: module.FilesPage })))
 const LlmSpendPage = lazy(() => import('./pages/LlmSpendPage').then((module) => ({ default: module.LlmSpendPage })))
@@ -54,7 +55,8 @@ export default function App() {
         <Suspense fallback={<LoadingScreen compact />}>
           <Routes>
             <Route element={<AppShell />}>
-              <Route index element={<Navigate to="/chat" replace />} />
+              <Route index element={<Navigate to="/overview" replace />} />
+              <Route path="overview" element={<OverviewPage />} />
               <Route path="chat" element={<ChatPage />} />
               <Route path="files" element={<FilesPage />} />
               <Route path="memory" element={<LegacyRepositoriesRedirect />} />

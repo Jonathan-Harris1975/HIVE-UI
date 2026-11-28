@@ -36,6 +36,7 @@ const navigationGroups = [
     id: 'workspace',
     label: 'Workspace',
     items: [
+      { to: '/overview', label: 'Overview', icon: Activity, routes: ['/overview'] },
       { to: '/communications', label: 'Communications', icon: RadioTower, routes: ['/communications'] },
       { to: '/chat', label: 'Chat', icon: Bot, routes: ['/chat'] },
       { to: '/files', label: 'Files', icon: Files, routes: ['/files'] },
@@ -52,9 +53,8 @@ const navigationGroups = [
   },
 ]
 
-const navigation = navigationGroups
-  .flatMap((group) => group.items)
-  .sort((a, b) => a.label.localeCompare(b.label, 'en-GB'))
+const mobileDestinations = navigationGroups.flatMap((group) => group.items)
+  .filter((item) => ['/overview', '/chat', '/repositories', '/ops'].includes(item.to))
 
 const sectionTabs = [
   {
@@ -75,6 +75,7 @@ const sectionTabs = [
 ]
 
 const pageMeta: Record<string, { title: string; subtitle: string }> = {
+  '/overview': { title: 'Overview', subtitle: 'Ecosystem command centre' },
   '/chat': { title: 'Chat', subtitle: 'Private model routing and persistent conversations' },
   '/files': { title: 'Files', subtitle: 'Authenticated files and storage' },
   '/repositories': { title: 'Repositories', subtitle: 'Automated repository estate overview' },
@@ -297,13 +298,15 @@ function SidebarContent({ closeMobile, compact = false }: { closeMobile?: () => 
         )}
       </div>
 
-      <nav className="mt-6 space-y-1" aria-label="Primary navigation">
-        {navigation.map(({ to, label, icon: Icon, routes }) => {
+      <nav className="mt-6 space-y-5" aria-label="Primary navigation">
+        {navigationGroups.map((group) => <div key={group.id} className="space-y-1">
+          {!compact && <p className="px-3 pb-1 text-xs font-semibold tracking-wide text-hive-muted">{group.label}</p>}
+          {group.items.map(({ to, label, icon: Icon, routes }) => {
           const active = routes.includes(pathname)
           return (
             <Link key={to} to={to} onClick={closeMobile} aria-current={active ? 'page' : undefined} aria-label={label} title={compact ? label : undefined}
               className={[
-                'flex min-h-11 items-center rounded-hive text-sm font-medium transition',
+                'hive-nav-link flex min-h-11 items-center rounded-hive text-sm font-medium transition',
                 compact ? 'justify-center px-2' : 'gap-3 px-3',
                 active ? 'bg-hive-accent/10 text-hive-accent' : 'text-hive-muted hover:bg-white/[0.04] hover:text-white',
               ].join(' ')}>
@@ -311,7 +314,8 @@ function SidebarContent({ closeMobile, compact = false }: { closeMobile?: () => 
               {!compact && <span className="truncate">{label}</span>}
             </Link>
           )
-        })}
+          })}
+        </div>)}
       </nav>
 
       {pathname === '/chat' && !compact ? <ConversationSection closeMobile={closeMobile} /> : <div className="flex-1" />}
@@ -534,6 +538,12 @@ export function AppShell() {
   const [railCollapsed, setRailCollapsed] = useState(false)
   const closeMobileMenu = useCallback(() => setMobileMenuOpen(false), [])
   const mobileDrawerRef = useMobileDrawer(mobileMenuOpen, closeMobileMenu)
+  useEffect(() => {
+    const desktop = window.matchMedia('(min-width: 1024px)')
+    const closeOnDesktop = () => { if (desktop.matches) closeMobileMenu() }
+    desktop.addEventListener('change', closeOnDesktop)
+    return () => desktop.removeEventListener('change', closeOnDesktop)
+  }, [closeMobileMenu])
   const meta = pageMeta[pathname] ?? { title: 'HIVE', subtitle: 'Private operations console' }
 
   useEffect(() => {
@@ -572,7 +582,7 @@ export function AppShell() {
         </div>
       )}
 
-      <div className="flex min-w-0 flex-1 flex-col">
+      <div className="flex min-w-0 flex-1 flex-col" inert={mobileMenuOpen}>
         {!online && (
           <div role="status" className="shrink-0 border-b border-amber-300/20 bg-amber-300/8 px-4 py-2 text-center text-xs text-amber-100">
             Browser offline. Stored pages remain visible, but HIVE requests will wait for the connection to return.
@@ -591,7 +601,7 @@ export function AppShell() {
               <Menu className="h-5 w-5" />
             </button>
             <div className="min-w-0">
-              <h1 className="truncate text-base font-semibold text-white">{meta.title}</h1>
+              <h1 className="truncate text-lg font-semibold tracking-tight text-white sm:text-xl">{meta.title}</h1>
               <p className="hidden truncate text-xs text-slate-400 sm:block">{meta.subtitle}</p>
             </div>
           </div>
@@ -602,6 +612,15 @@ export function AppShell() {
         <main id="hive-main-content" className="min-h-0 min-w-0 flex-1 overflow-hidden" tabIndex={-1}>
           <Outlet />
         </main>
+        {pathname !== '/chat' && pathname !== '/communications' && (
+          <nav aria-label="Quick navigation" className="hive-mobile-nav lg:hidden">
+            {mobileDestinations.map(({ to, label, icon: Icon, routes }) => (
+              <Link key={to} to={to} aria-current={routes.includes(pathname) ? 'page' : undefined} aria-label={label}>
+                <Icon className="h-5 w-5" aria-hidden="true" /><span>{label}</span>
+              </Link>
+            ))}
+          </nav>
+        )}
       </div>
 
       <InspectorPanel />

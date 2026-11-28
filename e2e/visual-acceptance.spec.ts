@@ -92,6 +92,17 @@ test.describe('HIVE-UI deployed gateway browser acceptance', () => {
     try {
       await page.setViewportSize({ width: 390, height: 844 })
       await page.emulateMedia({ reducedMotion: 'reduce' })
+      await page.goto('/', { waitUntil: 'domcontentloaded' })
+      await expect(page.getByTestId('command-centre')).toBeVisible({ timeout: 30_000 })
+      await expect(page.getByRole('heading', { name: 'Your ecosystem at a glance' })).toBeVisible()
+      for (const [width, height] of acceptanceViewports) {
+        await page.setViewportSize({ width, height })
+        await checkViewport(page, 'HIVE command centre ' + width)
+        await checkControlNames(page, 'HIVE command centre ' + width)
+      }
+      await page.setViewportSize({ width: 390, height: 844 })
+      await page.getByRole('navigation', { name: 'Quick navigation' }).getByRole('link', { name: 'Operations' }).click()
+      await expect(page).toHaveURL(/\/ops$/)
       await page.goto('/ops', { waitUntil: 'domcontentloaded' })
       await expect(page.locator('#hive-main-content')).toBeVisible()
       await expect(page.getByTestId('ops-snapshot-time')).toBeVisible({ timeout: 30_000 })

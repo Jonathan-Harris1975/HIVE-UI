@@ -177,28 +177,28 @@ export function RepositoriesPage() {
             </button>
           </div>
 
-          <div className="mt-6 grid gap-2 border-t border-white/8 pt-5 sm:grid-cols-2 lg:grid-cols-5">
-            <div className="rounded-xl border border-white/8 bg-white/[0.025] p-3">
-              <p className="text-[10px] uppercase tracking-wider text-slate-500">Registered</p>
-              <p className="mt-1 text-xl font-semibold text-white">{loading ? 'Loading…' : error ? 'Unavailable' : `${registeredCount}/${GOVERNED_REPOSITORIES.length}`}</p>
+          <div className="mt-6 grid grid-cols-2 gap-3 border-t border-white/8 pt-5 xl:grid-cols-5">
+            <div className="min-w-0 rounded-xl border border-[#25415b] bg-hive-raised p-3">
+              <p className="text-xs font-medium text-hive-muted">Registered</p>
+              <p className="mt-2 break-words text-xl font-semibold tabular-nums text-white">{loading ? 'Loading…' : error ? 'Unavailable' : `${registeredCount}/${GOVERNED_REPOSITORIES.length}`}</p>
             </div>
-            <div className="rounded-xl border border-white/8 bg-white/[0.025] p-3">
-              <p className="text-[10px] uppercase tracking-wider text-slate-500">Fully current</p>
-              <p className="mt-1 text-xl font-semibold text-white">{loading ? 'Loading…' : error ? 'Unavailable' : `${fullyCurrentCount}/${GOVERNED_REPOSITORIES.length}`}</p>
+            <div className="min-w-0 rounded-xl border border-[#25415b] bg-hive-raised p-3">
+              <p className="text-xs font-medium text-hive-muted">Fully current</p>
+              <p className="mt-2 break-words text-xl font-semibold tabular-nums text-white">{loading ? 'Loading…' : error ? 'Unavailable' : `${fullyCurrentCount}/${GOVERNED_REPOSITORIES.length}`}</p>
             </div>
-            <div className="rounded-xl border border-white/8 bg-white/[0.025] p-3">
-              <p className="text-[10px] uppercase tracking-wider text-slate-500">Services healthy</p>
-              <p className="mt-1 text-xl font-semibold text-white">
+            <div className="min-w-0 rounded-xl border border-[#25415b] bg-hive-raised p-3">
+              <p className="text-xs font-medium text-hive-muted">Services healthy</p>
+              <p className="mt-2 break-words text-xl font-semibold tabular-nums text-white">
                 {loading ? 'Loading…' : error ? 'Unavailable' : state.repoHealth?.ok ? `${serviceHealthyCount}/${GOVERNED_REPOSITORIES.length}` : 'Unknown'}
               </p>
             </div>
-            <div className="rounded-xl border border-white/8 bg-white/[0.025] p-3">
-              <p className="text-[10px] uppercase tracking-wider text-slate-500">Indexed files</p>
-              <p className="mt-1 text-xl font-semibold text-white">{loading ? 'Loading…' : error ? 'Unavailable' : totalFiles.toLocaleString()}</p>
+            <div className="min-w-0 rounded-xl border border-[#25415b] bg-hive-raised p-3">
+              <p className="text-xs font-medium text-hive-muted">Indexed files</p>
+              <p className="mt-2 break-words text-xl font-semibold tabular-nums text-white">{loading ? 'Loading…' : error ? 'Unavailable' : totalFiles.toLocaleString()}</p>
             </div>
-            <div className="rounded-xl border border-white/8 bg-white/[0.025] p-3">
-              <p className="text-[10px] uppercase tracking-wider text-slate-500">Snapshot size</p>
-              <p className="mt-1 text-xl font-semibold text-white">{loading ? 'Loading…' : error ? 'Unavailable' : formatBytes(totalBytes)}</p>
+            <div className="min-w-0 rounded-xl border border-[#25415b] bg-hive-raised p-3">
+              <p className="text-xs font-medium text-hive-muted">Snapshot size</p>
+              <p className="mt-2 break-words text-xl font-semibold tabular-nums text-white">{loading ? 'Loading…' : error ? 'Unavailable' : formatBytes(totalBytes)}</p>
             </div>
           </div>
         </section>
