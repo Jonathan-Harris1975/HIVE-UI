@@ -106,8 +106,11 @@ test.describe('HIVE-UI safe browser visual baseline', () => {
     let releaseHandoff!: () => void
     const pending = new Promise<void>((resolve) => { releaseHandoff = resolve })
     await page.route('**/api/auth/comms-handoff?*', async (route) => {
-      await pending
-      await route.fulfill({ status: 503, json: { detail: 'Synthetic handoff unavailable' } })
+      let timer: ReturnType<typeof setTimeout> | undefined
+      try {
+        await Promise.race([pending, new Promise<void>(resolve => { timer = setTimeout(resolve, 10_000) })])
+        await route.fulfill({ status: 503, json: { detail: 'Synthetic handoff unavailable' } })
+      } finally { clearTimeout(timer) }
     })
     await page.goto('/')
     const navigation = page.getByRole('navigation', { name: 'Quick navigation' })
