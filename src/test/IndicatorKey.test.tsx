@@ -34,7 +34,7 @@ test('one collapsible indicator key preserves every distinct lamp without servic
 
 test.each(['healthy', 'warning', 'failed', 'checking', 'maintenance', 'unknown'])(
   'operational lamp %s is represented in the shared key', (status) => {
-    const { container } = render(<><StatusBadge status={status} /><IndicatorKey /></>)
+    const { container } = render(<><StatusBadge status={status} variant="operational" /><IndicatorKey /></>)
     const lamp = container.querySelector('.signal-lamp')
     const tone = lamp?.getAttribute('data-tone')
     const lens = lamp?.querySelector('[data-active="true"]')?.getAttribute('data-lens')
