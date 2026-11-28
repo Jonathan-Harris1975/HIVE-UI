@@ -621,13 +621,16 @@ export function AppShell() {
         </main>
         {pathname !== '/chat' && pathname !== '/communications' && (
           <nav aria-label="Quick navigation" className="hive-mobile-nav lg:hidden">
-            {mobileDestinations.map(({ to, label, icon: Icon, routes }) => (
-              <Link key={to} to={to} aria-current={routes.includes(pathname) ? 'page' : undefined}
-                aria-label={to === '/communications' ? 'Comms (Communications)' : to === '/repositories' ? 'Repos (Repositories)' : label}>
-                <Icon className="h-5 w-5" aria-hidden="true" />
-                <span>{to === '/communications' ? 'Comms' : to === '/repositories' ? 'Repos' : label}</span>
-              </Link>
-            ))}
+            {mobileDestinations.map(({ to, label, icon: Icon, routes }) => {
+              const shortLabel = to === '/communications' ? 'Comms' : to === '/repositories' ? 'Repos' : label
+              const accessibleLabel = shortLabel === label ? label : shortLabel + ' (' + label + ')'
+              return (
+                <Link key={to} to={to} aria-current={routes.includes(pathname) ? 'page' : undefined} aria-label={accessibleLabel}>
+                  <Icon className="h-5 w-5" aria-hidden="true" />
+                  <span>{shortLabel}</span>
+                </Link>
+              )
+            })}
           </nav>
         )}
       </div>
