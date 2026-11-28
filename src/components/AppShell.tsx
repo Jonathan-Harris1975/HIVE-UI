@@ -383,7 +383,7 @@ function InspectorPanel() {
       className={
         [
           "fixed inset-y-0 right-0 z-40 w-[min(360px,92vw)] border-l border-white/8 ",
-          "bg-hive-panel/98 shadow-2xl shadow-black/40 backdrop-blur-xl ",
+          "bg-hive-panel shadow-2xl shadow-black/40 ",
           "transition-transform lg:static lg:z-auto lg:shadow-none ",
           String(
             open
@@ -621,7 +621,7 @@ export function AppShell() {
               aria-label="Open navigation"
               aria-expanded={mobileMenuOpen}
               aria-controls="hive-mobile-navigation"
-              className="rounded-lg p-2 text-slate-400 hover:bg-white/5 hover:text-white lg:hidden"
+              className="flex min-h-11 min-w-11 items-center justify-center rounded-hive text-slate-400 hover:bg-white/5 hover:text-white lg:hidden"
             >
               <Menu className="h-5 w-5" />
             </button>
