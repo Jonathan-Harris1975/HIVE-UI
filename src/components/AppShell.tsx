@@ -574,6 +574,14 @@ export function AppShell() {
     try { return localStorage.getItem('hive-rail-collapsed') === 'true' } catch { return false }
   })
   const [paletteOpen, setPaletteOpen] = useState(false)
+  const [mobile, setMobile] = useState(() => window.matchMedia('(max-width: 1023px)').matches)
+  useEffect(() => {
+    const media = window.matchMedia('(max-width: 1023px)')
+    const update = () => setMobile(media.matches)
+    media.addEventListener('change', update)
+    return () => media.removeEventListener('change', update)
+  }, [])
+  const mobileInspectorOpen = mobile && open && available
   const navigate = useNavigate()
   useEffect(() => {
     try { localStorage.setItem('hive-rail-collapsed', String(railCollapsed)) } catch { /* optional preference */ }
@@ -648,7 +656,7 @@ export function AppShell() {
         </div>
       )}
 
-      <div className="flex min-w-0 flex-1 flex-col" inert={mobileMenuOpen || paletteOpen}>
+      <div className="flex min-w-0 flex-1 flex-col" inert={mobileMenuOpen || paletteOpen || mobileInspectorOpen}>
         {!online && (
           <div role="status" className="shrink-0 border-b border-amber-300/20 bg-amber-300/8 px-4 py-2 text-center text-xs text-amber-100">
             Browser offline. Stored pages remain visible, but HIVE requests will wait for the connection to return.
@@ -674,7 +682,7 @@ export function AppShell() {
           <div className="flex shrink-0 items-center gap-1 sm:gap-2">
             <button type="button" aria-label="Open command palette" title="Find a page (Ctrl+K)"
               className="grid min-h-11 min-w-11 place-items-center rounded-hive text-hive-muted hover:text-white"
-              onClick={() => setPaletteOpen(true)}><Search className="h-5 w-5" aria-hidden="true" /></button>
+              disabled={open} onClick={() => setPaletteOpen(true)}><Search className="h-5 w-5" aria-hidden="true" /></button>
             <HeaderActions health={health} open={open} available={available && pathname !== '/communications'} toggle={toggle} />
           </div>
         </header>
