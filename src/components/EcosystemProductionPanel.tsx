@@ -18,6 +18,7 @@ type RepositoryEvidence = {
   gate_evidence?: {
     sha?: string | null
     reason?: string
+    verification_status?: string
     required_workflows?: Record<string, Gate>
     deployment?: Gate & { workflow?: string }
     additional_workflows_complete?: boolean
@@ -37,6 +38,44 @@ const STALE_AFTER_MS = 120_000
 const tone = (state?: string) => state === 'GREEN' ? 'ready' : state === 'BLOCKED' ? 'error' : state === 'DEGRADED' ? 'warning' : 'unknown'
 const productionLabel = (state?: string) => state === 'GREEN' ? 'Ready' : state === 'BLOCKED' ? 'Blocked' : state === 'DEGRADED' ? 'Degraded' : 'Unknown'
 const runtimeLabel = (state?: string) => state === 'GREEN' ? 'Ok' : productionLabel(state)
+
+// Keep release decisions independent of presentation, including during a rolling backend upgrade.
+function releasePresentation(item?: RepositoryEvidence): { status: string; label: string } {
+  if (!item) return { status: 'unknown', label: 'Unknown' }
+  if (item.runtime_state === 'BLOCKED') return { status: 'error', label: 'Blocked' }
+  const evidence = item.gate_evidence
+  const gates = [...Object.values(evidence?.required_workflows || {}), evidence?.deployment]
+  const observed = gates.map((gate) => gate?.status)
+  const failed = gates.some((gate) => gate?.state === 'BLOCKED')
+    || observed.some((status) => ['failure', 'timed_out', 'startup_failure', 'action_required'].includes(status || ''))
+  if (item.state === 'BLOCKED' || failed || evidence?.verification_status === 'FAILED') {
+    return { status: 'error', label: failed || evidence?.verification_status === 'FAILED' ? 'Release verification failed' : 'Blocked' }
+  }
+  if (item.runtime_state !== 'GREEN') return { status: 'warning', label: 'Runtime not verified' }
+  if (item.state === 'GREEN') return { status: 'ready', label: 'Ready' }
+  if (evidence?.verification_status === 'UNAVAILABLE' || observed.includes('unavailable')) {
+    return { status: 'unknown', label: 'Evidence unavailable' }
+  }
+  if (evidence?.verification_status === 'IN_PROGRESS' || observed.includes('pending')) {
+    return { status: 'checking', label: 'Verification in progress' }
+  }
+  if (evidence?.verification_status === 'AWAITING_EVIDENCE' || observed.includes('missing')) {
+    return { status: 'unknown', label: 'Awaiting verification' }
+  }
+  return { status: 'unknown', label: 'Release unverified' }
+}
+
+function gateSummary(item?: RepositoryEvidence): string {
+  const evidence = item?.gate_evidence
+  if (!evidence) return 'No current gate summary.'
+  if (evidence.verification_status) return evidence.reason || 'No current gate summary.'
+  // Older backends combine missing evidence and failure; display individual receipts instead.
+  const entries = Object.entries(evidence.required_workflows || {})
+  if (evidence.deployment) entries.push([evidence.deployment.workflow || 'Deployment verification', evidence.deployment])
+  const outstanding = entries.filter(([, gate]) => gate.status !== 'success')
+  if (outstanding.length) return outstanding.map(([name, gate]) => name + ': ' + (gate.status || 'unverified')).join('; ')
+  return item?.state === 'GREEN' ? 'Required release evidence verified.' : 'Release evidence not fully verified.'
+}
 const decisionLabel = (decision?: string) => decision === 'ALLOW' ? 'Allowed' : decision === 'BLOCK' ? 'Blocked' : decision || 'Unknown'
 
 export function EcosystemProductionPanel({ renderRepositoryDetails }: { renderRepositoryDetails?: (id: string) => ReactNode }) {
@@ -127,7 +166,12 @@ export function EcosystemProductionPanel({ renderRepositoryDetails }: { renderRe
         </button>
       </div>
       <div role="status" aria-live="polite" className="mt-3 flex flex-wrap items-center gap-3 text-xs text-slate-400">
-        <StatusBadge status={current ? tone(report?.state) : 'unknown'} label={loading ? 'Checking' : current ? productionLabel(report?.state) : 'Unknown'} dotOnly />
+        <StatusBadge
+          status={current ? (report?.state === 'DEGRADED' ? 'unknown' : tone(report?.state)) : 'unknown'}
+          label={loading ? 'Checking' : current
+            ? (report?.state === 'DEGRADED' ? 'Verification or runtime evidence incomplete' : productionLabel(report?.state))
+            : 'Unknown'}
+        />
         <span>Release decision: {current ? decisionLabel(report?.release_decision) : 'Not verified'}</span>
         <span>Runtime health: {current ? `${runtimeHealthy}/${GOVERNED_REPOSITORIES.length} healthy` : 'Not verified'}</span>
         {report?.generated_at && <span>Observed {formatDate(report.generated_at)}</span>}
@@ -190,11 +234,12 @@ export function EcosystemProductionPanel({ renderRepositoryDetails }: { renderRe
         {repositoryIds.map((id) => {
           const item = byId.get(id)
           const gates = item?.gate_evidence
+          const presentation = releasePresentation(item)
           return (
             <article key={id} className="rounded-xl border border-white/8 bg-hive-surface p-3 text-xs text-slate-400">
               <div className="flex items-center justify-between gap-2">
                 <h4 className="font-semibold text-white">{id}</h4>
-                <StatusBadge status={current ? tone(item?.state) : 'unknown'} label={current ? productionLabel(item?.state) : 'Unknown'} compact dotOnly />
+                <StatusBadge status={current ? presentation.status : 'unknown'} label={current ? presentation.label : 'Unknown'} compact />
               </div>
               <p className="mt-2">Runtime: {current ? runtimeLabel(item?.runtime_state) : 'Not verified'}</p>
               <p className="mt-1">Deployment: {current ? gates?.deployment?.status || 'Unknown' : 'Not verified'}</p>
@@ -202,15 +247,15 @@ export function EcosystemProductionPanel({ renderRepositoryDetails }: { renderRe
               {current && item?.runtime_state !== 'GREEN' && (
                 <div className="mt-2 text-amber-200">
                   <p>Health: {item?.health_status || 'Unknown'} · Readiness: {item?.readiness_status || 'Unknown'}</p>
-                  <p className="mt-1 leading-5">{item?.readiness?.detail || item?.detail || 'Runtime verification failed.'}</p>
+                  <p className="mt-1 leading-5">{item?.readiness?.detail || item?.detail || 'Runtime evidence is not healthy or not verified.'}</p>
                   {item?.readiness?.http_status && <p>Readiness HTTP {item.readiness.http_status}</p>}
                 </div>
               )}
-              {current && item?.state !== 'GREEN' && <p className="mt-2 leading-5">CI/deployment: {gates?.reason || 'No current gate summary.'}</p>}
+              {current && item?.state !== 'GREEN' && <p className="mt-2 leading-5">CI/deployment: {gateSummary(item)}</p>}
               <details className="mt-2">
                 <summary className="cursor-pointer text-slate-300">Evidence and workflow warnings</summary>
                 {gates?.sha && <p className="mt-1 font-mono">Commit {gates.sha.slice(0, 12)}</p>}
-                {current && item?.state === 'GREEN' && <p className="mt-1 leading-5">CI/deployment: {gates?.reason || 'No current gate summary.'}</p>}
+                {current && item?.state === 'GREEN' && <p className="mt-1 leading-5">CI/deployment: {gateSummary(item)}</p>}
                 {Object.entries(gates?.required_workflows || {}).map(([name, gate]) => (
                   <p key={name} className="mt-1">{name}: {gate.status || 'Unknown'}</p>
                 ))}

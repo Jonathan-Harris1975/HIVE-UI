@@ -471,7 +471,7 @@ function HeaderActions({ health, open, available, toggle }: { health: ReturnType
           {(['red', 'amber', 'green'] as const).map(lens => <span key={lens} data-lens={lens} data-active={lens === (health?.ok === false ? 'red' : 'amber')} />)}
         </span>
         <span className="hidden sm:inline">{health == null ? 'API status unknown' : health.ok ? 'Last API check: responded' : 'Last API check: failed'}</span>
-        <span className="sm:hidden">{health == null ? 'API ?' : health.ok ? 'API OK' : 'API failed'}</span>
+        <span className="sm:hidden">{health == null ? 'API ?' : health.ok ? 'API replied' : 'API failed'}</span>
       </Link>
       {available && <button
         type="button"

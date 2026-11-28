@@ -119,3 +119,32 @@ it('does not present a partial additional-workflow scan as complete', async () =
   render(<EcosystemProductionPanel />)
   await screen.findByText(/Additional workflow discovery is incomplete for 8 repositories/)
 })
+
+
+it.each([
+  ['pending', 'DEGRADED', 'Verification in progress'],
+  ['missing', 'DEGRADED', 'Awaiting verification'],
+  ['failure', 'BLOCKED', 'Release verification failed'],
+  ['cancelled', 'DEGRADED', 'Release unverified'],
+  ['skipped', 'DEGRADED', 'Release unverified'],
+  ['unavailable', 'DEGRADED', 'Evidence unavailable'],
+])('distinguishes %s release evidence from healthy runtime across all repositories', async (status, state, label) => {
+  const value = report()
+  value.state = state
+  value.release_decision = state === 'BLOCKED' ? 'BLOCK' : 'HOLD'
+  for (const item of value.repositories) {
+    item.state = state
+    item.gate_evidence.required_workflows.CI.status = status
+  }
+  request.mockResolvedValue(value)
+  render(<EcosystemProductionPanel />)
+  await screen.findByText('Runtime health: 8/8 healthy')
+  for (const id of GOVERNED_REPOSITORIES) {
+    const card = screen.getByRole('heading', { name: id }).closest('article')!
+    expect(within(card).getByText(label)).toBeVisible()
+    expect(within(card).getByText('Runtime: Ok')).toBeVisible()
+    expect(within(card).getByText('Deployment: success')).toBeVisible()
+    expect(within(card).getByText('CI/deployment: CI: ' + status)).toBeVisible()
+  }
+  expect(screen.queryByText('Release decision: Allowed')).not.toBeInTheDocument()
+})
