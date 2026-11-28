@@ -103,19 +103,37 @@ test.describe('HIVE-UI safe browser visual baseline', () => {
     await page.route('**/api/auth/activity', (route) => route.fulfill({ json: { ok: true, authenticated: true } }))
     await page.route('**/api/health', (route) => route.fulfill({ json: { ok: true, env: 'synthetic' } }))
     await page.route('**/api/v1/chat/conversations*', (route) => route.fulfill({ json: { ok: true, conversations: [] } }))
-    await page.route('**/api/auth/comms-handoff?*', (route) => route.fulfill({
-      status: 503, json: { detail: 'Synthetic handoff unavailable' },
-    }))
+    let releaseHandoff!: () => void
+    const pending = new Promise<void>((resolve) => { releaseHandoff = resolve })
+    await page.route('**/api/auth/comms-handoff?*', async (route) => {
+      let timer: ReturnType<typeof setTimeout> | undefined
+      try {
+        await Promise.race([pending, new Promise<void>(resolve => { timer = setTimeout(resolve, 10_000) })])
+        await route.fulfill({ status: 503, json: { detail: 'Synthetic handoff unavailable' } })
+      } finally { clearTimeout(timer) }
+    })
     await page.goto('/')
     const navigation = page.getByRole('navigation', { name: 'Quick navigation' })
     await navigation.getByRole('link', { name: 'Communications' }).click()
     await expect(page).toHaveURL(/\/communications$/)
+    try {
+      await expect(page.getByText('Loading communications…')).toBeVisible()
+      await expect(page.getByText('Opening AIMS Comms Hub')).toHaveCount(0)
+      await expect(page.getByRole('button', { name: 'Reload Communications Interface' })).toHaveCount(0)
+      await checkViewport(page, 'Mobile Communications loading')
+      const icons = await navigation.locator('a svg').evaluateAll(nodes => nodes.map(node => node.innerHTML))
+      expect(new Set(icons).size).toBe(icons.length)
+      await test.info().attach('synthetic-communications-loading-320.png', {
+        body: await page.screenshot({ animations: 'disabled' }), contentType: 'image/png',
+      })
+    } finally { releaseHandoff() }
     await expect(page.getByRole('alert').getByText('Synthetic handoff unavailable')).toBeVisible()
+    await expect(page.getByRole('button', { name: 'Retry', exact: true })).toBeVisible()
     await expect(page.locator('iframe[title="AIMS Comms Hub"]')).toHaveCount(0)
     await checkViewport(page, 'Mobile Communications error')
     await expect(navigation.getByRole('link', { name: 'Communications' })).toHaveAttribute('aria-current', 'page')
     await expect(navigation.getByRole('link', { name: 'Operations' })).toBeVisible()
-    await page.getByRole('link', { name: 'Return to HIVE overview' }).click()
+    await page.getByRole('navigation', { name: 'Quick navigation' }).getByRole('link', { name: 'Overview', exact: true }).click()
     await expect(page).toHaveURL(/\/overview$/)
     await expect(navigation.getByRole('link', { name: 'Communications' })).toBeVisible()
   })
@@ -271,7 +289,7 @@ test.describe('HIVE-UI deployed gateway browser acceptance', () => {
         await expect(page.frameLocator('iframe[title="AIMS Comms Hub"]').locator('#aims-sidebar')).toBeHidden()
       }
       await page.setViewportSize({ width: 390, height: 844 })
-      await page.getByRole('link', { name: 'Return to HIVE overview' }).click()
+      await page.getByRole('navigation', { name: 'Quick navigation' }).getByRole('link', { name: 'Overview', exact: true }).click()
       await expect(page).toHaveURL(/\/overview$/)
       console.info('AIMS browser acceptance: live handoff, layout and keyboard checks passed (no private snapshot exported)')
     } finally {
