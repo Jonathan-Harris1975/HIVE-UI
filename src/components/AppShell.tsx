@@ -465,8 +465,13 @@ function HeaderActions({ health, open, available, toggle }: { health: ReturnType
   return (
     <div className="flex shrink-0 items-center gap-2">
       <Link to="/ops" title={health?.build ? `HIVE build: ${health.build}` : 'Open Operations'}
-        className="hidden items-center gap-2 rounded-hive px-2 py-1.5 text-xs text-hive-muted hover:text-hive-text sm:flex">
-        {health == null ? 'API status unknown' : health.ok ? 'Last API check: responded' : 'Last API check: failed'}
+        aria-label={health == null ? 'API status unknown. Open Operations' : health.ok ? 'Last API check: responded. Open Operations' : 'Last API check: failed. Open Operations'}
+        className="flex min-h-11 items-center gap-2 rounded-hive px-2 py-1.5 text-xs text-hive-muted hover:text-hive-text">
+        <span className={`signal-lamp ${health == null ? '' : health.ok ? 'text-cyan-300' : 'text-rose-200'}`} data-tone={health?.ok === false ? 'bg-rose-300' : health?.ok ? 'bg-cyan-300' : 'bg-slate-500'} aria-hidden="true">
+          {(['red', 'amber', 'green'] as const).map(lens => <span key={lens} data-lens={lens} data-active={lens === (health?.ok === false ? 'red' : 'amber')} />)}
+        </span>
+        <span className="hidden sm:inline">{health == null ? 'API status unknown' : health.ok ? 'Last API check: responded' : 'Last API check: failed'}</span>
+        <span className="sm:hidden">{health == null ? 'API ?' : health.ok ? 'API OK' : 'API failed'}</span>
       </Link>
       {available && <button
         type="button"
