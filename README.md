@@ -23,23 +23,24 @@ Primary user flows include:
 - a signed HIVE-to-AIMS Communications hand-off; and
 - model registry and integration views.
 
-The React application uses `BrowserRouter` with declarative `Routes`, nested under `AppShell`. Authentication is resolved before protected routes render. Legacy `/memory` requests redirect to `/intelligence` while preserving the query string, `/execution-simulation` redirects to `/execution`, and unknown application routes redirect to `/chat`.
+The React application uses `BrowserRouter` with declarative `Routes`, nested under `AppShell`. Authentication is resolved before protected routes render. The index redirects to `/overview`; legacy `/memory` and `/intelligence` requests redirect to `/repositories` while preserving the query string, `/execution-simulation` redirects to `/execution`, and unknown application routes redirect to `/chat`.
 
 ## Main routes
 
 | Route | Purpose |
 |---|---|
+| `/overview` | Central operator overview |
 | `/chat` | Conversations and file chat |
 | `/files` | Uploads and configured storage lanes |
 | `/repositories` | Repository catalogue |
-| `/intelligence` | Repository intelligence and memory workspace |
+| `/intelligence`, `/memory` | Legacy links redirect to `/repositories` |
 | `/integrations` | Integration status and configuration views |
-| `/council` | Council workflow |
 | `/execution` | Execution planning |
 | `/execution-reviews` | Execution review and evidence workflow |
 | `/optimisation` | Legacy link redirects to Operations |
 | `/monthly-review` | Legacy link redirects to Operations (retired UI) |
-| `/models` | Legacy link redirects to LLM spend |
+| `/models` | Legacy link redirects to `/llm-spend` |
+| `/llm-spend` | Model usage and spend |
 | `/communications` | Embedded AIMS Comms Hub |
 | `/ops` | Ecosystem health and operations |
 | `/health` | Public Worker health endpoint |
@@ -75,7 +76,13 @@ An outage of this limiter blocks new login completion, including the failure-sta
 
 ## AIMS Communications hand-off
 
-The Communications page requests `/api/auth/comms-handoff`, validates that the returned destination is `https://chat.jonathan-harris.online/console/`, and embeds the operator console only after the signed hand-off succeeds. A dedicated `HIVE_COMMS_HANDOFF_SECRET` is mandatory and is validated through `/api/auth/comms-identity`. HIVE-UI does not derive hand-off signing material from the access credential.
+The Communications page requests `/api/auth/comms-handoff?embed=1&format=json`, validates that the returned destination is `https://chat.jonathan-harris.online/console/`, and embeds the operator console only after the signed hand-off succeeds. A dedicated `HIVE_COMMS_HANDOFF_SECRET` is mandatory and is validated through `/api/auth/comms-identity`. HIVE-UI does not derive hand-off signing material from the access credential.
+
+The signed console is embedded within the HIVE workspace; HIVE owns global navigation and AIMS-UI owns contextual controls. Loading remains visible until a trusted frame readiness message arrives, with explicit timeout and reconnect handling. Frame messages must match both the trusted origin and the embedded window; actionable notifications use generic text, not private message bodies.
+
+## Notifications and trusted devices
+
+Foreground notification settings govern optional sound and browser alerts. A separate opt-in Web Push channel uses the always-on Worker and a SQLite Durable Object; it reads eligible alert IDs/timestamps from existing D1 stores without waking backend services. AIMS alerts are restricted to the delegated actor and explicitly scoped owner system inbox. Register a trusted device from notification settings, send a background test, and verify actual device delivery while signed out. Registrations last 90 days, with up to five devices, revocation, bounded retries and no historical inbox replay. The provider receives no message content or credentials. See [notification sounds and background alerts](docs/NOTIFICATION_SOUNDS.md) for acceptance and operational details.
 
 ## Configuration
 
@@ -135,3 +142,7 @@ After deployment, verify `/health`, signed login, protected routes, logout, a de
 Interactive HIVE/AIMS lifecycle control is session-driven: login can resume required services, user activity refreshes the idle window, and logout/idle handling pauses only services claimed by that UI session. Services already active for MAST governance remain under MAST ownership.
 
 The Ops view displays redacted provider/runtime events supplied by HIVE, including supported GitHub, Koyeb and Cloudflare failures. See `docs/OPERATIONAL_ALERTS.md` and `docs/OPERATIONS.md`.
+
+## Ecosystem integration and evidence
+
+The eight governed repositories are [HIVE](https://github.com/Jonathan-Harris1975/HIVE), [HIVE-UI](https://github.com/Jonathan-Harris1975/HIVE-UI), [AIMS](https://github.com/Jonathan-Harris1975/AIMS), [AIMS-UI](https://github.com/Jonathan-Harris1975/AIMS-UI), [MAST](https://github.com/Jonathan-Harris1975/MAST), [RAMS](https://github.com/Jonathan-Harris1975/RAMS), [IRS](https://github.com/Jonathan-Harris1975/IRS) and the [public website](https://github.com/Jonathan-Harris1975/jonathan-harris-website). MAST owns schedules; AIMS owns content and communications execution; HIVE and HIVE-UI provide governed intelligence and operator visibility; RAMS performs bounded remediation; IRS and the website own public delivery boundaries. Keep this README aligned with changes to those contracts. A merged change, a healthy HTTP process and verified live functional acceptance are separate evidence; preserve exact-SHA CI and deployment receipts and never report unverified provider delivery as success.
