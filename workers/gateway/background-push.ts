@@ -27,6 +27,7 @@ interface PushEnv {
   PUSH_HIVE_DB?: D1Database
   PUSH_AIMS_DB?: D1Database
   HIVE_COMMS_ACTOR?: string
+  HIVE_COMMS_ROLE?: string
 }
 interface SourceRows { source: Source; ids: string[]; cutoff: number }
 
@@ -91,13 +92,20 @@ async function sendPush(keys: KeyPair, endpoint: string, topic: string): Promise
   } catch { return 'failed' }
 }
 
-// Only IDs and timestamps are read. AIMS uses the exact handoff actor, never
-// another actor's notification inbox. Queries cannot accept arbitrary SQL.
+// Only IDs and timestamps are read. Match the AIMS verified owner system inbox
+// while keeping other actors' private notifications excluded.
 export async function readAlertSource(env: PushEnv, source: Source, after: number, cutoff: number): Promise<SourceRows> {
   const db = source === 'operations' ? env.PUSH_HIVE_DB : env.PUSH_AIMS_DB
   if (!db) throw new Error('Alert source unavailable')
   const start = new Date(after).toISOString()
   const end = new Date(cutoff).toISOString()
+  const actor = env.HIVE_COMMS_ACTOR?.trim() || 'hive-owner'
+  const includeOwnerSystem = actor === 'hive-owner' && env.HIVE_COMMS_ROLE?.trim().toLowerCase() === 'admin'
+  const recipient = includeOwnerSystem
+    ? `(actor = ? OR (actor = 'admin' AND type IN (
+        'system','failure','human_handoff_requested','human_callback','content_quality_review','sla_warning','sla_breach','escalation'
+      )))`
+    : 'actor = ?'
   const query = source === 'operations' ? `
     SELECT id, created_at FROM hive_ecosystem_metadata
     WHERE lane = 'ops_events' AND created_at >= ?
@@ -109,14 +117,14 @@ export async function readAlertSource(env: PushEnv, source: Source, after: numbe
     ORDER BY created_at DESC, id DESC LIMIT 100
   ` : `
     SELECT id, created_at FROM comms_hub_notifications
-    WHERE actor = ? AND status = 'unread' AND created_at >= ?
+    WHERE ${recipient} AND status = 'unread' AND created_at >= ?
       AND julianday(created_at) >= julianday(?) AND julianday(created_at) <= julianday(?)
       AND (severity = 'critical' OR instr(lower(type),'urgent') > 0 OR instr(lower(type),'review') > 0
         OR CASE WHEN json_valid(metadata_json) THEN json_extract(metadata_json,'$.requires_action') = 1 ELSE 0 END)
     ORDER BY created_at DESC, id DESC LIMIT 100
   `
   const args = [start.slice(0, 19), start, end]
-  const params = source === 'operations' ? args : [env.HIVE_COMMS_ACTOR?.trim() || 'hive-owner', ...args]
+  const params = source === 'operations' ? args : [actor, ...args]
   const result = await db.prepare(query).bind(...params).all<{ id: string; created_at: string }>()
   if (!result.success) throw new Error('Alert source unavailable')
   return { source, ids: result.results.map(row => source + ':' + row.id), cutoff }
