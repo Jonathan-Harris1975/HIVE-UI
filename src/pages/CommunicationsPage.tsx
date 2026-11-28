@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
-import { AlertTriangle, LoaderCircle, RefreshCw } from 'lucide-react'
+import { AlertTriangle } from 'lucide-react'
 import { notifyNewHIVEEvents } from '../components/AudioNotificationSettings'
 
 interface HandoffResponse {
@@ -71,7 +71,7 @@ export function CommunicationsPage() {
       } catch (cause) {
         if (!cancelled) {
           const message = controller.signal.aborted
-            ? 'The secure AIMS connection timed out. Retry to reconnect.'
+            ? 'Communications took too long to connect. Retry to reconnect.'
             : cause instanceof Error ? cause.message : 'Communications Interface could not be opened.'
           setError(message)
         }
@@ -102,7 +102,7 @@ export function CommunicationsPage() {
       if (event.data?.type === 'aims-comms-error') {
         const detail = typeof event.data?.detail === 'string' && event.data.detail.trim()
           ? event.data.detail.trim()
-          : 'AIMS Comms Hub rejected the secure handoff.'
+          : 'Communications could not establish a secure connection.'
         setReady(false)
         setError(detail)
         if (timeoutRef.current) window.clearTimeout(timeoutRef.current)
@@ -116,7 +116,7 @@ export function CommunicationsPage() {
     if (!frameUrl || ready) return
     if (timeoutRef.current) window.clearTimeout(timeoutRef.current)
     timeoutRef.current = window.setTimeout(() => {
-      setError('AIMS Comms Hub did not finish loading. Reload the interface to retry the secure handoff.')
+      setError('Communications took too long to load. Retry to reconnect.')
     }, 30000)
     return () => { if (timeoutRef.current) window.clearTimeout(timeoutRef.current) }
   }, [frameUrl, ready])
@@ -130,13 +130,26 @@ export function CommunicationsPage() {
   }
 
   return (
-    <section className="relative h-full min-h-0 bg-hive-canvas" aria-label="AIMS Communications Interface" aria-busy={!ready && !error}>
+    <section className="relative h-full min-h-0 bg-hive-canvas" aria-label="Communications workspace" aria-busy={!ready && !error}>
       {!ready && !error && (
-        <div role="status" aria-live="polite" className="absolute inset-0 z-10 flex items-center justify-center bg-hive-canvas text-sm text-slate-400">
-          <div className="flex max-w-sm flex-col items-center gap-3 px-6 text-center">
-            <LoaderCircle className="h-6 w-6 motion-safe:animate-spin text-hive-accent" aria-hidden="true" />
-            <h2 className="text-base font-semibold text-hive-text">Opening AIMS Comms Hub</h2>
-            <p className="text-sm leading-6 text-hive-muted">{frameUrl ? 'Preparing your communications workspace.' : 'Establishing a secure connection with your HIVE session.'}</p>
+        <div role="status" aria-live="polite" className="absolute inset-0 z-10 overflow-hidden bg-hive-canvas">
+          <div className="border-b border-hive-border bg-hive-canvas px-3 sm:px-6">
+            <div aria-hidden="true" className="flex h-12 items-center gap-5 overflow-hidden">
+              {[80, 112, 56, 88, 72].map((width, index) => (
+                <span key={index} style={{ width }} className="h-3 shrink-0 rounded bg-white/[0.08] motion-safe:animate-pulse" />
+              ))}
+            </div>
+          </div>
+          <div className="space-y-4 p-3 sm:p-6">
+            <p className="text-sm font-medium text-hive-muted">Loading communications…</p>
+            <div aria-hidden="true" className="space-y-3">
+              {[0, 1, 2, 3].map((item) => (
+                <div key={item} className="rounded-hive border border-hive-border bg-hive-panel p-4 motion-safe:animate-pulse">
+                  <div className="mb-3 h-3 w-2/5 rounded bg-white/[0.08]" />
+                  <div className="h-3 w-3/4 rounded bg-white/[0.05]" />
+                </div>
+              ))}
+            </div>
           </div>
         </div>
       )}
@@ -145,9 +158,9 @@ export function CommunicationsPage() {
         <div className="absolute inset-0 z-20 flex items-center justify-center bg-hive-canvas p-6">
           <div role="alert" className="max-w-md rounded-2xl border border-amber-300/20 bg-hive-panel p-6 text-center shadow-xl">
             <AlertTriangle className="mx-auto mb-3 h-7 w-7 text-amber-300" />
-            <h2 className="text-base font-semibold text-slate-100">Communications Interface unavailable</h2>
+            <h2 className="text-base font-semibold text-slate-100">Communications unavailable</h2>
             <p className="mt-2 text-sm leading-6 text-slate-400">{error}</p>
-            <button type="button" onClick={reload} className="mt-5 rounded-xl border border-cyan-300/20 bg-cyan-300/10 px-4 py-2 text-sm font-medium text-cyan-100">
+            <button type="button" onClick={reload} className="mt-5 min-h-11 rounded-hive border border-cyan-300/20 bg-cyan-300/10 px-4 py-2 text-sm font-medium text-cyan-100">
               Retry
             </button>
           </div>
@@ -168,19 +181,6 @@ export function CommunicationsPage() {
         />
       )}
 
-      {!ready && !error && <button
-        type="button"
-        onClick={reload}
-        className={
-          "absolute bottom-4 right-4 z-30 rounded-xl border border-white/10 bg-hive-panel/95 p-2.5 " +
-          "text-slate-300 shadow-xl backdrop-blur transition hover:border-cyan-300/30 " +
-          "hover:text-cyan-100"
-        }
-        aria-label="Reload Communications Interface"
-        title="Reload Communications Interface"
-      >
-        <RefreshCw className="h-4 w-4" />
-      </button>}
     </section>
   )
 }
