@@ -88,7 +88,7 @@ const pageMeta: Record<string, { title: string; subtitle: string }> = {
   '/llm-spend': { title: 'Operations', subtitle: 'Daily LLM spend and evidence coverage' },
   '/ops': { title: 'Operations', subtitle: 'Live runtime health, infrastructure and integrations' },
   '/integrations': { title: 'Operations', subtitle: 'Live runtime health, infrastructure and integrations' },
-  '/communications': { title: 'AIMS Comms Hub', subtitle: 'Communications workspace' },
+  '/communications': { title: 'Communications', subtitle: 'AIMS workspace · Inbox, mail and outreach' },
 }
 
 interface PendingConversationDialog {
@@ -589,7 +589,7 @@ export function AppShell() {
             Browser offline. Stored pages remain visible, but HIVE requests will wait for the connection to return.
           </div>
         )}
-        <header className="flex min-h-[64px] shrink-0 items-center justify-between gap-3 border-b border-white/[0.06] bg-hive-canvas/95 px-4 py-3 backdrop-blur-xl sm:px-6">
+        <header className="flex min-h-[64px] shrink-0 items-center justify-between gap-2 border-b border-hive-border bg-hive-canvas px-3 py-3 sm:gap-3 sm:px-6">
           <div className="flex min-w-0 items-center gap-3">
             <button
               type="button"
@@ -606,20 +606,21 @@ export function AppShell() {
               <p className="hidden truncate text-xs text-slate-400 sm:block">{meta.subtitle}</p>
             </div>
           </div>
-          {pathname === '/communications' ? (
-            <Link to="/overview" aria-label="Return to HIVE overview"
-              className="flex min-h-11 shrink-0 items-center gap-2 rounded-hive border border-white/10 px-3 text-sm text-hive-muted hover:text-hive-text">
+          <div className="flex shrink-0 items-center gap-1 sm:gap-2">
+            {pathname === '/communications' && <Link to="/overview" aria-label="Return to HIVE overview"
+              className="flex min-h-11 shrink-0 items-center gap-1 rounded-hive px-2 text-sm text-hive-muted hover:bg-white/5 hover:text-hive-text">
               <ArrowLeft className="h-4 w-4" aria-hidden="true" />
-              <span>HIVE</span>
-            </Link>
-          ) : <HeaderActions health={health} open={open} available={available} toggle={toggle} />}
+              <span className="hidden sm:inline">Overview</span>
+            </Link>}
+            <HeaderActions health={health} open={open} available={available && pathname !== '/communications'} toggle={toggle} />
+          </div>
         </header>
         <ContextTabs pathname={pathname} />
 
         <main id="hive-main-content" className="min-h-0 min-w-0 flex-1 overflow-hidden" tabIndex={-1}>
           <Outlet />
         </main>
-        {pathname !== '/chat' && pathname !== '/communications' && (
+        {pathname !== '/chat' && (
           <nav aria-label="Quick navigation" className="hive-mobile-nav lg:hidden">
             {mobileDestinations.map(({ to, label, icon: Icon, routes }) => {
               const shortLabel = to === '/communications' ? 'Comms' : to === '/repositories' ? 'Repos' : label

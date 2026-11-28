@@ -311,3 +311,12 @@ test('ecosystem navigation provides a direct mobile Communications entry and a c
   assert.ok(comms.includes('event.origin !== AIMS_ORIGIN'))
   assert.ok(comms.includes('event.source !== frameRef.current?.contentWindow'))
 })
+
+
+test('Communications remains within the same HIVE global shell and mobile navigation', () => {
+  const shell = source('src/components/AppShell.tsx')
+  assert.match(shell, /'\/communications': \{ title: 'Communications'/)
+  assert.ok(shell.includes("{pathname !== '/chat' && ("))
+  assert.ok(shell.includes('<HeaderActions health={health}'))
+  assert.doesNotMatch(shell, /pathname !== '\/chat' && pathname !== '\/communications'/)
+})
