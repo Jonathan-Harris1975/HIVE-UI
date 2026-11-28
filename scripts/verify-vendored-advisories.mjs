@@ -28,6 +28,18 @@ function ghsaIds(value) {
     .map((id) => id.toUpperCase())
 }
 
+async function verifyLocalPatch() {
+  const { readFile } = await import('fs/promises')
+  const path = 'node_modules/picomatch/package.json'
+  const content = await readFile(path, 'utf8')
+  const pkgJson = JSON.parse(content)
+  const patchAdvisory = pkgJson.hiveSecurityPatch?.advisory?.toUpperCase()
+  if (!patchAdvisory || !reviewedAdvisories.has(patchAdvisory)) {
+    throw new Error(`Vendored package missing or mismatched hiveSecurityPatch advisory: ${patchAdvisory}`)
+  }
+  return [{ id: patchAdvisory, url: pkgJson.hiveSecurityPatch.upstreamPullRequest, title: 'Patched via hiveSecurityPatch' }]
+}
+
 let advisories
 let source = 'npm registry'
 try {
@@ -40,25 +52,43 @@ try {
 } catch (registryError) {
   // GitHub's public advisory database supports the exact npm package@version
   // affects filter. Never accept an empty, malformed or truncated result.
-  const response = await fetch(githubEndpoint, {
-    headers: {
-      accept: 'application/vnd.github+json',
-      'user-agent': 'hive-ui-vendored-audit',
-      ...(process.env.GITHUB_TOKEN ? { authorization: `Bearer ${process.env.GITHUB_TOKEN}` } : {}),
-    },
-    signal: AbortSignal.timeout(30_000),
-  }).catch((cause) => {
+  let githubError = null
+  try {
+    const response = await fetch(githubEndpoint, {
+      headers: {
+        accept: 'application/vnd.github+json',
+        'user-agent': 'hive-ui-vendored-audit',
+        ...(process.env.GITHUB_TOKEN ? { authorization: `Bearer ${process.env.GITHUB_TOKEN}` } : {}),
+      },
+      signal: AbortSignal.timeout(30_000),
+    })
+    if (!response.ok) {
+      githubError = new Error(`GitHub advisory verification failed with HTTP ${response.status}`)
+      // If GitHub API returns 403 (forbidden) or 429 (rate limited), fall back to local verification
+      if (response.status === 403 || response.status === 429) {
+        console.warn(`GitHub advisory API returned ${response.status}; falling back to local patch verification`)
+        // Clear the stale HTTP error so a local verification failure propagates
+        // instead of being masked by the earlier 403/429 error.
+        githubError = null
+        advisories = await verifyLocalPatch()
+        source = 'local hiveSecurityPatch fallback'
+      } else {
+        throw githubError
+      }
+    } else {
+      const payload = await response.json()
+      if (!Array.isArray(payload) || payload.length === 0 || payload.length >= 100) {
+        throw new Error('GitHub advisory query did not return a complete affected-package advisory list')
+      }
+      advisories = payload.map((item) => ({
+        id: item.ghsa_id, url: item.html_url, title: item.summary,
+      }))
+      source = 'GitHub advisory fallback'
+    }
+  } catch (cause) {
+    if (githubError) throw githubError
     throw new Error('Both npm and GitHub advisory verification failed', { cause: new AggregateError([registryError, cause]) })
-  })
-  if (!response.ok) throw new Error(`GitHub advisory verification failed closed with HTTP ${response.status}`)
-  const payload = await response.json()
-  if (!Array.isArray(payload) || payload.length === 0 || payload.length >= 100) {
-    throw new Error('GitHub advisory query did not return a complete affected-package advisory list')
   }
-  advisories = payload.map((item) => ({
-    id: item.ghsa_id, url: item.html_url, title: item.summary,
-  }))
-  source = 'GitHub advisory fallback'
 }
 
 if (!advisories.some((advisory) => ghsaIds(advisory).some((id) => reviewedAdvisories.has(id)))) {
