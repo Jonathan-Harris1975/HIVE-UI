@@ -367,3 +367,23 @@ input::placeholder, textarea::placeholder { opacity: 1; }
 @media (max-width: 1279px) { .hive-metric-grid, .hive-workspace-grid { grid-template-columns: repeat(2,minmax(0,1fr)); } }
 @media (max-width: 767px) { .hive-command-hero { align-items: start; flex-direction: column; gap: 16px; } .hive-evidence-grid { grid-template-columns: minmax(0,1fr); } }
 @media (max-width: 479px) { .hive-overview-inner { gap: 14px; } .hive-workspace-grid { grid-template-columns: minmax(0,1fr); } .hive-primary-action { width: 100%; } .hive-workspace-card { min-height: 80px; } }
+
+/* Signal lamps: restrained hi-fi / studio-console hardware, not flashing alerts. */
+.signal-lamp {
+  display: inline-flex; align-items: center; gap: 3px; flex: 0 0 auto;
+  padding: 3px; border: 1px solid #526275; border-radius: 5px;
+  background: #0a1322; vertical-align: middle; line-height: 1;
+}
+.signal-lamp > span {
+  display: block; width: 7px; height: 7px; flex: 0 0 7px;
+  border-radius: 2px; background: #29374a; border: 1px solid #46566a;
+}
+.signal-lamp > span[data-active="true"] {
+  background: currentColor; border-color: currentColor;
+  box-shadow: 0 0 5px currentColor, inset 0 1px 0 #ffffff66;
+}
+@media (forced-colors: active) {
+  .signal-lamp { border-color: CanvasText; background: Canvas; }
+  .signal-lamp > span { border-color: GrayText; background: Canvas; }
+  .signal-lamp > span[data-active="true"] { background: CanvasText; border-color: CanvasText; outline: 1px solid CanvasText; }
+}

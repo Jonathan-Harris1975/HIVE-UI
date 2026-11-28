@@ -23,7 +23,9 @@ test('dot-only badge preserves the accessible status without duplicate visible w
 test('renders neutral evidence for unknown, unavailable and disabled statuses', () => {
   for (const status of ['unknown', 'unavailable', 'disabled', 'not_configured']) {
     const { container, unmount } = render(<StatusBadge status={status} variant="readiness" />)
-    expect(container.querySelector('[aria-hidden="true"]')).toHaveClass('bg-slate-500')
+    expect(container.querySelector('.signal-lamp')).toHaveAttribute('data-tone', 'bg-slate-500')
+    expect(container.querySelector('[data-active="true"]')).toHaveAttribute('data-lens', 'amber')
+    expect(container.querySelectorAll('[data-active="true"]')).toHaveLength(1)
     expect(container.firstElementChild).toHaveClass('text-slate-400')
     expect(screen.queryByText('Checking')).not.toBeInTheDocument()
     unmount()
@@ -32,9 +34,19 @@ test('renders neutral evidence for unknown, unavailable and disabled statuses', 
 
 test('keeps failure and successful readiness colour aligned with status text', () => {
   const { container, rerender } = render(<StatusBadge status="ready" variant="readiness" />)
-  expect(container.querySelector('[aria-hidden="true"]')).toHaveClass('bg-emerald-300')
+  expect(container.querySelector('.signal-lamp')).toHaveAttribute('data-tone', 'bg-emerald-300')
+  expect(container.querySelector('[data-active="true"]')).toHaveAttribute('data-lens', 'green')
   expect(container.firstElementChild).toHaveClass('text-emerald-200')
   rerender(<StatusBadge status="error" variant="readiness" />)
-  expect(container.querySelector('[aria-hidden="true"]')).toHaveClass('bg-rose-300')
+  expect(container.querySelector('.signal-lamp')).toHaveAttribute('data-tone', 'bg-rose-300')
+  expect(container.querySelector('[data-active="true"]')).toHaveAttribute('data-lens', 'red')
   expect(container.firstElementChild).toHaveClass('text-rose-200')
+})
+
+test('traffic light retains fixed red amber green order, visible label and exactly one illuminated lens', () => {
+  const { container } = render(<StatusBadge status="degraded" variant="operational" />)
+  expect(screen.getByText('Degraded')).toBeVisible()
+  expect(Array.from(container.querySelectorAll('[data-lens]'), lens => lens.getAttribute('data-lens'))).toEqual(['red', 'amber', 'green'])
+  expect(container.querySelectorAll('[data-active="true"]')).toHaveLength(1)
+  expect(container.querySelector('[data-active="true"]')).toHaveAttribute('data-lens', 'amber')
 })
