@@ -250,6 +250,7 @@ export class NotificationPushHub {
     if (!current || current.generation !== device.generation) return
     let next: Device = { ...current }
     if (snapshots.length < sources.length) next.status = 'source_unavailable'
+    else if (next.status === 'source_unavailable') next.status = next.lastAcceptedAt ? 'accepted' : 'registered'
     const advance = () => {
       for (const snapshot of snapshots) next.cursor[snapshot.source] = snapshot.cutoff
       next.seen = [...new Set([...next.seen, ...ids])].slice(-400)
