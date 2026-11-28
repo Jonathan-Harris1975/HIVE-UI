@@ -20,6 +20,7 @@ import { HIVE_UI_VERSION } from '../../shared/version'
 import { HIVE_UI_BUILD_BRANCH, HIVE_UI_BUILD_SHA } from './build-meta'
 import { backendTimeoutMs, configuredBackends, isRetryableUpstreamStatus, isTimeoutError } from './upstream'
 import { handleTextBeeKdpOtpWebhook } from './textbee-webhook'
+export { NotificationPushHub } from './background-push'
 
 interface Env {
   ASSETS: Fetcher
@@ -35,6 +36,7 @@ interface Env {
   HIVE_UI_ACCESS_KEY?: string
   HIVE_UI_SESSION_SECRET?: string
   LOGIN_RATE_LIMITER: DurableObjectNamespace
+  NOTIFICATION_PUSH_HUB?: DurableObjectNamespace
   HIVE_UI_SESSION_TTL_SECONDS?: string
   HIVE_UI_IDLE_TIMEOUT_SECONDS?: string
   KOYEB_TOKEN?: string
@@ -615,6 +617,32 @@ async function handleApi(request: Request, env: Env, path: string): Promise<Resp
     })
   }
 
+  // Device management is handled by the always-on edge only after the
+  // existing same-origin and signed-session checks. Never forward cookies,
+  // bearer credentials or arbitrary URLs to the notification object.
+  const pushPrefix = 'v1/system/background-push/'
+  if (path.startsWith(pushPrefix)) {
+    const action = path.slice(pushPrefix.length)
+    const method = request.method
+    const allowed = (action === 'key' && method === 'GET')
+      || (action === 'devices' && method === 'DELETE')
+      || (['register', 'status', 'revoke', 'test'].includes(action) && method === 'POST')
+    if (!allowed) return errorResponse('push_operation_denied', 'Unknown notification operation.', 404, requestId)
+    if (!env.NOTIFICATION_PUSH_HUB) return errorResponse('push_unavailable', 'Background alerts are unavailable.', 503, requestId)
+    const length = Number(request.headers.get('content-length') || '0')
+    if (length > 4096) return errorResponse('push_request_invalid', 'Notification request is too large.', 400, requestId)
+    try {
+      const body = method === 'POST' ? await request.text() : undefined
+      if (body && body.length > 4096) return errorResponse('push_request_invalid', 'Notification request is too large.', 400, requestId)
+      const stub = env.NOTIFICATION_PUSH_HUB.get(env.NOTIFICATION_PUSH_HUB.idFromName('owner-devices-v1'))
+      const response = await stub.fetch('https://notification-push/' + action, {
+        method, body, headers: { 'content-type': 'application/json' },
+      })
+      return new Response(response.body, { status: response.status, headers: hardenHeaders(new Headers(response.headers), requestId) })
+    } catch {
+      return errorResponse('push_unavailable', 'Background alerts are unavailable.', 503, requestId)
+    }
+  }
 
   const adminToken = env.HIVE_ADMIN_TOKEN?.trim() ?? ''
   if (!adminToken) {
