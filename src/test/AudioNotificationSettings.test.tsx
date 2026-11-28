@@ -100,6 +100,8 @@ describe('HIVE Elements audio notifications', () => {
     }))
     render(<CommunicationsPage />)
     const frame = await screen.findByTitle('AIMS Comms Hub') as HTMLIFrameElement
+    expect(frame.getAttribute('allow')).toContain('autoplay https://chat.jonathan-harris.online')
+    expect(frame).toHaveAttribute('tabindex', '-1')
     const data = {
       type: 'aims-comms-notification',
       id: 'review-2',
