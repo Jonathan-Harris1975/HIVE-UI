@@ -23,7 +23,7 @@ function CodeBlock({ className, children }: { className?: string; children?: Rea
         <span>{language}</span>
         <button type="button" onClick={copyCode} className="flex items-center gap-1.5 text-slate-400 hover:text-cyan-200">
           {copied === 'Copied' ? <Check className="h-3.5 w-3.5" /> : <Copy className="h-3.5 w-3.5" />}
-          <span role="status">{copied}</span>
+          <span role={copied === 'Copy' ? undefined : 'status'}>{copied}</span>
         </button>
       </div>
       <pre className="overflow-x-auto p-4 text-[13px] leading-6"><code className={className}>{children}</code></pre>

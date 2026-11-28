@@ -99,7 +99,7 @@ export function ChatMessage({ message, onInspect }: ChatMessageProps) {
             className="inline-flex h-8 items-center gap-1.5 rounded-lg px-2 text-xs text-slate-400 hover:bg-white/5 hover:text-slate-300 disabled:opacity-30"
             aria-label="Copy message"
           >
-            {copied === 'Copied' ? <Check className="h-3.5 w-3.5" /> : <Copy className="h-3.5 w-3.5" />} <span role="status">{copied}</span>
+            {copied === 'Copied' ? <Check className="h-3.5 w-3.5" /> : <Copy className="h-3.5 w-3.5" />} <span role={copied === 'Copy' ? undefined : 'status'}>{copied}</span>
           </button>
           <button
             type="button"
