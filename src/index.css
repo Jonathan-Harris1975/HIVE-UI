@@ -390,6 +390,7 @@ input::placeholder, textarea::placeholder { opacity: 1; }
 .signal-lamp[data-tone="bg-cyan-300"] { color: #23eaff; }
 .signal-lamp[data-tone="bg-violet-300"] { color: #b98aff; }
 .signal-lamp[data-tone="bg-slate-500"] { color: #F1F5FF; }
+.hive-aims-indicator-key .signal-lamp[data-tone="aims-orange"] { color: #ff9233; }
 @media (forced-colors: active) {
   .signal-lamp { border-color: CanvasText; background: Canvas; }
   .signal-lamp > span { border-color: GrayText; background: Canvas; }
@@ -408,6 +409,10 @@ input::placeholder, textarea::placeholder { opacity: 1; }
 .hive-lamp-legend summary { cursor: pointer; min-height: 44px; display: flex; align-items: center; }
 .hive-legend-items { display: flex; flex-wrap: wrap; gap: 10px; padding-bottom: 8px; }
 .hive-legend-items > span { display: inline-flex; align-items: center; gap: 6px; }
+.hive-lamp-legend h3 { font-size: .8rem; font-weight: 600; margin-block: 4px 8px; }
+.hive-aims-indicator-key { border-top: 1px solid #38526a; padding-top: 8px; }
+.hive-aims-indicator-key p { margin-bottom: 8px; }
+.hive-aims-indicator-key .hive-legend-items > span { max-width: 100%; overflow-wrap: anywhere; }
 .hive-mobile-nav a { border-radius: 5px; }
 .hive-mobile-nav a:focus-visible, .hive-lamp-legend summary:focus-visible { outline: 2px solid #23eaff; outline-offset: -2px; }
 @media (max-width: 479px) { .hive-overview-inner { gap: 10px; } .hive-command-hero h2 { font-size: 1.5rem; } .hive-workspace-card { min-height: 64px; padding: 12px; } }
