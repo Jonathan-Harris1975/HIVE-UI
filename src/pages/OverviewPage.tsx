@@ -168,7 +168,9 @@ export function OverviewPage() {
                 <li key={item.event_id}>
                   <div>
                     <p>{item.title ?? item.event_type ?? 'Operational event'}</p>
-                    <small><time dateTime={item.occurred_at ?? item.received_at ?? undefined}>{item.occurred_at ? formatDate(item.occurred_at) : item.received_at ? 'Received ' + formatDate(item.received_at) : 'Time not reported'}</time></small>
+                    <small><time dateTime={item.occurred_at ?? item.received_at ?? undefined}>
+                      {item.occurred_at ? formatDate(item.occurred_at) : item.received_at ? 'Received ' + formatDate(item.received_at) : 'Time not reported'}
+                    </time></small>
                     {item.summary && <small>{item.summary}</small>}
                   </div>
                   <StatusBadge status={item.severity ?? 'unknown'} dotOnly={['critical', 'warning', 'info'].includes(item.severity ?? '')} />
