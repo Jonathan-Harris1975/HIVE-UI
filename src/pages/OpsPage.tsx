@@ -657,7 +657,7 @@ export function OpsPage() {
             {opsEvents?.items?.length ? (
               <details open={opsEvents.items.some((item) => item.severity === 'critical')} className="group mt-3 rounded-2xl border border-amber-300/15 bg-hive-panel/60">
                 <summary className="flex cursor-pointer list-none items-center justify-between gap-3 px-4 py-3">
-                  <span className="flex items-center gap-2 text-sm font-semibold text-white"><BellRing className="h-4 w-4 text-amber-300" /> Operational alerts</span>
+                  <span className="flex items-center gap-2 text-sm font-semibold text-white"><BellRing className="h-4 w-4 text-amber-300" /> Operational alerts ({opsEvents.count ?? 0})</span>
                   <StatusBadge status={opsEvents.items.some((item) => item.severity === 'critical') ? 'critical' : 'warning'} label={`${opsEvents.count ?? 0} recent alerts`} compact />
                 </summary>
                 <div className="border-t border-white/6 p-3">
@@ -713,7 +713,7 @@ export function OpsPage() {
               <div className="flex items-center justify-between gap-3">
                 <div>
                   <h2 id="lifecycle-review-title" className="text-sm font-semibold text-white">
-                    Needs My Review
+                    Needs My Review{actionableDataError ? '' : ` (${lifecycleReviews.length})`}
                   </h2>
                   <p className="mt-1 text-xs text-slate-400">
                     Only terminal states requiring a human decision appear here.
@@ -930,10 +930,10 @@ export function OpsPage() {
                 <span className="flex flex-wrap items-center justify-end gap-2 text-xs text-slate-400">
                   <span>{flags.filter((flag) => flag.status === 'ready').length}/{flags.length} ready</span>
                   {integrationAttentionCount > 0 && (
-                    <StatusBadge status="warning" label={`${integrationAttentionCount} need attention`} compact />
+                    <span className="inline-flex items-center gap-1"><StatusBadge status="warning" label="Attention" compact />{integrationAttentionCount}</span>
                   )}
                   {integrationUnknownCount > 0 && (
-                    <StatusBadge status="unknown" label={`${integrationUnknownCount} unknown`} compact />
+                    <span className="inline-flex items-center gap-1"><StatusBadge status="unknown" compact />{integrationUnknownCount}</span>
                   )}
                   {integrationDisabledCount > 0 && <span>{integrationDisabledCount} disabled</span>}
                 </span>
@@ -1101,6 +1101,7 @@ export function OpsPage() {
                     <div>
                       <p className="text-xs font-semibold uppercase tracking-[0.2em] text-violet-300/70">Execution preview</p>
                       <h3 className="mt-2 text-lg font-semibold text-white">Step statuses</h3>
+                      <p className="mt-1 text-xs text-slate-400">Blocked steps: {preview.blocked_count ?? 0}</p>
                     </div>
                     <div className="flex flex-wrap gap-2">
                       <StatusBadge status={preview.approval_state} />

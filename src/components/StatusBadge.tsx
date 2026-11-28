@@ -14,11 +14,12 @@ function dotTone(status: string, variant?: StatusBadgeProps['variant']): string 
   const value = normalise(status)
 
   if (['standby', 'maintenance'].includes(value)) return 'bg-violet-300'
-  if (['starting', 'checking'].includes(value)) return 'bg-cyan-300'
+  if (['starting', 'checking', 'info', 'information'].includes(value)) return 'bg-cyan-300'
   if (['unknown', 'not_configured', 'not-configured', 'unavailable', 'disabled'].includes(value)) return 'bg-slate-500'
   if ([
     'busy',
     'warning',
+    'stale',
     'degraded',
     'partial',
     'review_required',
@@ -78,6 +79,9 @@ function display(status: string, variant?: StatusBadgeProps['variant']): string 
   if (value === 'maintenance') return 'Maintenance'
   if (value === 'starting') return 'Starting'
   if (value === 'busy') return 'Busy'
+  if (value === 'warning') return 'Attention'
+  if (value === 'stale') return 'Stale'
+  if (['info', 'information'].includes(value)) return 'Information'
 
   if (variant === 'liveness') {
     if (['healthy', 'online', 'active', 'ok', 'ready'].includes(value)) return 'Online'
@@ -102,19 +106,19 @@ function display(status: string, variant?: StatusBadgeProps['variant']): string 
   return status.replace(/_/g, ' ').replace(/\b\w/g, (character) => character.toUpperCase())
 }
 
-export function StatusBadge({ status, label, compact = false, dotOnly = false, variant }: StatusBadgeProps) {
+export function StatusBadge({ status, label, compact = false, variant }: StatusBadgeProps) {
   const value = status?.trim() || 'unknown'
   const tone = dotTone(value, variant)
   const statusLabel = label || display(value, variant)
   const activeLens = tone === 'bg-rose-300' ? 'red' : tone === 'bg-emerald-300' ? 'green' : 'amber'
   return (
-    <span title={statusLabel} className={`inline-flex items-center gap-1.5 font-medium ${compact ? 'text-xs' : 'text-xs'} ${textTone(value, variant)}`}>
+    <span title={statusLabel} className={`inline-flex shrink-0 items-center font-medium ${compact ? 'text-xs' : 'text-xs'} ${textTone(value, variant)}`}>
       <span className="signal-lamp" aria-hidden="true" data-tone={tone}>
         {(['red', 'amber', 'green'] as const).map((lens) => (
           <span key={lens} data-lens={lens} data-active={lens === activeLens} />
         ))}
       </span>
-      <span className={dotOnly ? 'sr-only' : undefined}>{statusLabel}</span>
+      <span className="sr-only">{statusLabel}</span>
     </span>
   )
 }

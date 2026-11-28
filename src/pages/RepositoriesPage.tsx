@@ -212,12 +212,13 @@ export function RepositoriesPage() {
         <EcosystemProductionPanel renderRepositoryDetails={(repositoryId) => {
           const repo = summariesById.get(repositoryId)
           const service = healthMap.get(repositoryId)
-          const readiness = repo ? repositoryReadiness(repo) : 'warning'
+          const readiness = repo ? repositoryReadiness(repo) : 'unknown'
           return (
             <div className="mt-3 space-y-2 border-t border-white/8 pt-3">
               <div className="flex flex-wrap items-center justify-between gap-2">
                 <span>Governed snapshot</span>
-                <StatusBadge status={readiness} label={repo ? (readiness === 'ready' ? 'Current' : 'Attention') : 'Missing'} compact />
+                <StatusBadge status={readiness === 'readonly' ? 'warning' : readiness}
+                  label={repo ? (readiness === 'ready' ? 'Current' : 'Attention') : 'Missing'} compact />
               </div>
               <div className="flex flex-wrap items-center justify-between gap-2">
                 <span>Service</span>

@@ -6,7 +6,7 @@ for (const variant of [undefined, 'liveness', 'readiness', 'operational'] as con
   for (const status of ['unknown', 'skipped', 'blocked', 'failed', 'verified']) {
     test(`${variant ?? 'default'} preserves ${status} evidence state`, () => {
       render(<StatusBadge status={status} variant={variant} />)
-      expect(screen.getByText(status[0].toUpperCase() + status.slice(1))).toBeVisible()
+      expect(screen.getByText(status[0].toUpperCase() + status.slice(1))).toHaveClass('sr-only')
       expect(screen.queryByText('Checking')).not.toBeInTheDocument()
     })
   }
@@ -44,10 +44,20 @@ test('keeps failure and successful readiness colour aligned with status text', (
   expect(container.firstElementChild).toHaveClass('text-rose-200')
 })
 
-test('traffic light retains fixed red amber green order, visible label and exactly one illuminated lens', () => {
+test('traffic light retains fixed red amber green order, accessible-only label and exactly one illuminated lens', () => {
   const { container } = render(<StatusBadge status="degraded" variant="operational" />)
-  expect(screen.getByText('Degraded')).toBeVisible()
+  expect(screen.getByText('Degraded')).toHaveClass('sr-only')
   expect(Array.from(container.querySelectorAll('[data-lens]'), lens => lens.getAttribute('data-lens'))).toEqual(['red', 'amber', 'green'])
   expect(container.querySelectorAll('[data-active="true"]')).toHaveLength(1)
   expect(container.querySelector('[data-active="true"]')).toHaveAttribute('data-lens', 'amber')
+})
+
+test('all badges hide adjacent status wording, including explicitly false legacy dotOnly', () => {
+  for (const status of ['healthy', 'warning', 'failed', 'unknown', 'checking', 'maintenance']) {
+    const { container, unmount } = render(<StatusBadge status={status} label={status} dotOnly={false} />)
+    expect(screen.getByText(status)).toHaveClass('sr-only')
+    expect(container.firstElementChild).toHaveAttribute('title', status)
+    expect(container.querySelectorAll('[data-active="true"]')).toHaveLength(1)
+    unmount()
+  }
 })
