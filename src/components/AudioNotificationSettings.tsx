@@ -286,9 +286,11 @@ export function notifyNewHIVEEvents(items: HIVEOperationalEvent[], options: { pl
       }
     }
     if ('Notification' in window && Notification.permission === 'granted') {
+      const notificationTitle = event.source === 'AIMS Comms Hub' ? 'AIMS Comms Hub' : 'HIVE'
+      const notificationBody = 'An update is available. Open the workspace to review it.'
       const showDesktopFallback = () => {
         try {
-          const notification = new Notification(event.title, { body: event.summary })
+          const notification = new Notification(notificationTitle, { body: notificationBody, silent: !enabled })
           notification.onclick = () => {
             acknowledgeHIVENotification(event.notification_id)
             notification.close()
@@ -308,9 +310,9 @@ export function notifyNewHIVEEvents(items: HIVEOperationalEvent[], options: { pl
           try {
             // Lock-screen notifications must not disclose operational or message details.
             await registration.showNotification(
-              event.source === 'AIMS Comms Hub' ? 'AIMS Comms Hub' : 'HIVE',
+              notificationTitle,
               {
-                body: 'An update is available. Open the workspace to review it.',
+                body: notificationBody,
                 tag: event.notification_id,
                 data: { workspace: event.source === 'AIMS Comms Hub' ? 'communications' : 'operations' },
                 silent: !enabled,
