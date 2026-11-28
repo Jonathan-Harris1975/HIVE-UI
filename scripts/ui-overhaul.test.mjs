@@ -301,9 +301,10 @@ test('ecosystem navigation provides a direct mobile Communications entry and a c
   const shell = source('src/components/AppShell.tsx')
   const css = source('src/index.css')
   const comms = source('src/pages/CommunicationsPage.tsx')
-  assert.ok(shell.includes("['/overview', '/communications', '/chat', '/repositories', '/ops']"))
+  const destinations = shell.match(/\.filter\(\(item\)\s*=>\s*\[([^\]]+)\]\.includes\(item\.to\)\)/)?.[1] ?? ''
+  assert.deepEqual([...destinations.matchAll(/'([^']+)'/g)].map(match => match[1]), ['/overview', '/communications', '/chat', '/repositories', '/ops'])
   assert.ok(shell.includes('aria-label="Return to HIVE overview"'))
-  assert.ok(css.includes('grid-template-columns: repeat(5, minmax(0, 1fr))'))
+  assert.match(css, /\.hive-mobile-nav\s*\{[^}]*grid-template-columns\s*:\s*repeat\(\s*5\s*,\s*minmax\(\s*0\s*,\s*1fr\s*\)\s*\)/)
   assert.ok(comms.includes('tabIndex={ready && !error ? 0 : -1}'))
   assert.ok(comms.includes('signal: controller.signal'))
   assert.ok(comms.includes('controller.abort()'))
