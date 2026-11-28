@@ -21,8 +21,8 @@ export function healthEvidenceFresh(generatedAt?: string, now = Date.now()): boo
 }
 
 export function serviceAttentionRank(status?: string): number {
-  if (['down', 'failed', 'error', 'critical'].includes(status || '')) return 0
-  if (['degraded', 'warning', 'blocked'].includes(status || '')) return 1
+  if (['down', 'offline', 'failed', 'error', 'critical'].includes(status || '')) return 0
+  if (['degraded', 'warning', 'blocked', 'partial', 'auth_blocked', 'forbidden', 'unauthorised', 'unauthorized', 'stale'].includes(status || '')) return 1
   if (!status || ['unknown', 'not_configured', 'unavailable'].includes(status)) return 2
   if (status === 'healthy') return 4
   return 3

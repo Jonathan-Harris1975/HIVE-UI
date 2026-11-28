@@ -45,7 +45,7 @@ function dotTone(status: string, variant?: StatusBadgeProps['variant']): string 
   }
   if (variant === 'operational') {
     if (['healthy', 'ok', 'active', 'ready'].includes(value)) return 'bg-emerald-300'
-    if (['down', 'failed', 'error', 'critical'].includes(value)) return 'bg-rose-300'
+    if (['down', 'offline', 'failed', 'error', 'critical'].includes(value)) return 'bg-rose-300'
   }
 
   if (['verified', 'complete', 'completed', 'approved', 'healthy', 'ready', 'ready_for_execution', 'ok', 'active', 'low'].includes(value)) return 'bg-emerald-300'
@@ -81,6 +81,10 @@ function display(status: string, variant?: StatusBadgeProps['variant']): string 
   if (value === 'busy') return 'Busy'
   if (value === 'warning') return 'Attention'
   if (value === 'stale') return 'Stale'
+  if (value === 'complete' || value === 'completed') return 'Completed'
+  if (['approved', 'ready_for_execution', 'review_required', 'pending_review', 'approved_handoff_pending', 'needs_changes', 'reverted', 'planned', 'queued', 'readonly', 'proposed', 'low', 'medium', 'high'].includes(value)) {
+    return status.replace(/_/g, ' ').replace(/\b\w/g, (character) => character.toUpperCase())
+  }
   if (['info', 'information'].includes(value)) return 'Information'
 
   if (variant === 'liveness') {
@@ -99,7 +103,7 @@ function display(status: string, variant?: StatusBadgeProps['variant']): string 
   if (variant === 'operational') {
     if (['healthy', 'ok', 'active', 'ready'].includes(value)) return 'Healthy'
     if (['blocked', 'auth_blocked', 'forbidden', 'unauthorised', 'unauthorized'].includes(value)) return 'Blocked'
-    if (['down', 'failed', 'error', 'critical'].includes(value)) return 'Down'
+    if (['down', 'offline', 'failed', 'error', 'critical'].includes(value)) return 'Down'
     if (['partial', 'degraded'].includes(value)) return 'Degraded'
     return value === 'starting' ? 'Starting' : 'Unknown'
   }
@@ -118,7 +122,7 @@ export function StatusBadge({ status, label, compact = false, variant }: StatusB
           <span key={lens} data-lens={lens} data-active={lens === activeLens} />
         ))}
       </span>
-      <span className="sr-only">{statusLabel}</span>
+      <span className="sr-only hive-signal-description">{statusLabel}</span>
     </span>
   )
 }

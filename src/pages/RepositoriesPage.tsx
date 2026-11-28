@@ -7,6 +7,7 @@ import {
   ShieldCheck,
 } from 'lucide-react'
 import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useSearchParams } from 'react-router'
 import { EcosystemProductionPanel, ScheduledWorkPanel } from '../components/EcosystemProductionPanel'
 import { StatusBadge } from '../components/StatusBadge'
 import { apiFetch } from '../lib/api'
@@ -92,6 +93,8 @@ function formatUnixDate(value?: number | null): string {
 }
 
 export function RepositoriesPage() {
+  const [searchParams] = useSearchParams()
+  const selectedRepository = searchParams.get('repo') || ''
   const [state, setState] = useState<OverviewState>({
     repositories: [],
     refreshConfig: null,
@@ -254,7 +257,7 @@ export function RepositoriesPage() {
               )}
             </div>
           )
-        }} />
+        }} key={selectedRepository} initialQuery={selectedRepository} />
         <ScheduledWorkPanel scheduler={healthMap.get('MAST')} />
 
         <section className="mt-4 rounded-2xl border border-white/8 bg-hive-panel/60 p-4 sm:p-5">

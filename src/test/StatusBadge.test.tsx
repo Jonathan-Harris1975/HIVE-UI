@@ -61,3 +61,12 @@ test('all badges hide adjacent status wording, including explicitly false legacy
     unmount()
   }
 })
+
+test('operational descriptions agree with the lamp for completed and offline states', () => {
+  const { container, rerender } = render(<StatusBadge status="completed" variant="operational" />)
+  expect(screen.getByText('Completed')).toHaveClass('hive-signal-description')
+  expect(container.querySelector('.signal-lamp')).toHaveAttribute('data-tone', 'bg-emerald-300')
+  rerender(<StatusBadge status="offline" variant="operational" />)
+  expect(screen.getByText('Down')).toHaveClass('hive-signal-description')
+  expect(container.querySelector('.signal-lamp')).toHaveAttribute('data-tone', 'bg-rose-300')
+})
