@@ -185,7 +185,7 @@ export function EcosystemProductionPanel({ renderRepositoryDetails }: { renderRe
         {report?.generated_at && <span>Observed {formatDate(report.generated_at)}</span>}
       </div>
       <p className="mt-2 max-w-4xl text-xs leading-5 text-slate-500">
-        Runtime, release and snapshot evidence are independent.
+        Runtime health means the service responded. Release gates and snapshot freshness are independent evidence.
       </p>
       {loading && (
         <p role="status" aria-live="polite" className="mt-3 text-xs text-slate-300">

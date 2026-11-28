@@ -147,7 +147,8 @@ export function RepositoriesPage() {
     () => healthyServiceCount(state.repoHealth?.repos ?? []),
     [state.repoHealth],
   )
-  const currentHealth = !loading && !error && state.repoHealth?.ok === true && healthEvidenceFresh(state.repoHealth.generated_at, now)
+  const currentHealth = !loading && !error && state.repoHealth?.ok === true && Boolean(state.repoHealth.repos?.length)
+    && healthEvidenceFresh(state.repoHealth.generated_at, now)
   const totalFiles = useMemo(
     () => state.repositories.reduce((sum, repo) => sum + repo.file_count, 0),
     [state.repositories],

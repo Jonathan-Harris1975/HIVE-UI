@@ -57,7 +57,7 @@ export function OverviewPage() {
     return () => window.clearInterval(timer)
   }, [])
   const repos = snapshot.repositories?.repos
-  const currentHealth = !loading && healthEvidenceFresh(snapshot.repositories?.generated_at, now)
+  const currentHealth = !loading && Boolean(repos?.length) && healthEvidenceFresh(snapshot.repositories?.generated_at, now)
   const orderedRepos = [...(repos || [])].sort((a, b) => serviceAttentionRank(a.status) - serviceAttentionRank(b.status) || a.repo.localeCompare(b.repo))
   const attention = repos?.filter((repo) => serviceAttentionRank(repo.status) < 3)
   const orderedAlerts = [...(snapshot.alerts?.items || [])].sort((a, b) => serviceAttentionRank(a.severity) - serviceAttentionRank(b.severity))
