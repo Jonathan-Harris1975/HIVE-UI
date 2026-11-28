@@ -25,6 +25,7 @@ import {
 import {
   useCallback,
   useEffect,
+  useLayoutEffect,
   useMemo,
   useRef,
   useState,
@@ -89,15 +90,15 @@ function FileIcon({ name }: { name: string }) {
 export function FilesPage() {
   const navigate = useNavigate();
   const { setPayload, setOpen } = useInspector();
-  const [files, setFiles] = useState<FileObject[]>([]);
-  const [prefixes, setPrefixes] = useState<string[]>([]);
+  const [listedFiles, setFiles] = useState<FileObject[]>([]);
+  const [listedPrefixes, setPrefixes] = useState<string[]>([]);
   const [lanes, setLanes] = useState<R2Lane[]>([]);
   const [selectedLane, setSelectedLane] = useState("");
   const [prefix, setPrefix] = useState("");
   const [activeSearch, setActiveSearch] = useState("");
   const [searchInput, setSearchInput] = useState("");
   const [currentCursor, setCurrentCursor] = useState<string | null>(null);
-  const [nextCursor, setNextCursor] = useState<string | null>(null);
+  const [listedNextCursor, setNextCursor] = useState<string | null>(null);
   const [cursorHistory, setCursorHistory] = useState<Array<string | null>>([]);
   const [lanesOpen, setLanesOpen] = useState(false);
   const [storage, setStorage] = useState("r2");
@@ -125,6 +126,18 @@ export function FilesPage() {
     () => lanes.find((lane) => lane.lane === selectedLane),
     [lanes, selectedLane],
   );
+  const queryKey = JSON.stringify([selectedLane, prefix, activeSearch, currentCursor, Boolean(activeLane?.readable)]);
+  const [listingKey, setListingKey] = useState("");
+  const latestQuery = useRef(queryKey);
+  const listingRequest = useRef<AbortController | null>(null);
+  useLayoutEffect(() => {
+    latestQuery.current = queryKey;
+    return () => { listingRequest.current?.abort(); };
+  }, [queryKey]);
+  // Never associate an old listing with a newly selected lane or folder.
+  const files = listingKey === queryKey ? listedFiles : [];
+  const prefixes = listingKey === queryKey ? listedPrefixes : [];
+  const nextCursor = listingKey === queryKey ? listedNextCursor : null;
   const readableLanes = useMemo(
     () => lanes.filter((lane) => lane.readable),
     [lanes],
@@ -192,10 +205,17 @@ export function FilesPage() {
   }, []);
 
   const loadObjects = useCallback(async () => {
+    if (latestQuery.current !== queryKey) return;
+    listingRequest.current?.abort();
+    const request = new AbortController();
+    listingRequest.current = request;
+    const current = () => !request.signal.aborted && latestQuery.current === queryKey && listingRequest.current === request;
     if (!selectedLane || !activeLane?.readable) {
       setFiles([]);
       setPrefixes([]);
       setNextCursor(null);
+      setListingKey(queryKey);
+      setLoading(false);
       return;
     }
     setLoading(true);
@@ -206,13 +226,18 @@ export function FilesPage() {
       if (activeSearch) params.set("search", activeSearch);
       const response = await apiFetch<FileListResponse>(
         `/v1/files/r2/${encodeURIComponent(selectedLane)}/objects?${params.toString()}`,
+        { signal: request.signal },
       );
+      if (!current()) return;
       if (!response.ok) throw new Error(responseMessage(response));
       setFiles(response.files ?? []);
       setPrefixes(response.prefixes ?? []);
       setStorage(response.storage ?? "r2");
       setNextCursor(response.next_cursor ?? null);
+      setListingKey(queryKey);
     } catch (caught) {
+      if (!current()) return;
+      setListingKey(queryKey);
       setFiles([]);
       setPrefixes([]);
       setNextCursor(null);
@@ -220,9 +245,9 @@ export function FilesPage() {
         caught instanceof Error ? caught.message : "Files could not be loaded.",
       );
     } finally {
-      setLoading(false);
+      if (current()) setLoading(false);
     }
-  }, [activeLane?.readable, activeSearch, currentCursor, prefix, selectedLane]);
+  }, [activeLane?.readable, activeSearch, currentCursor, prefix, queryKey, selectedLane]);
 
   useEffect(() => {
     void loadLanes();
@@ -251,6 +276,7 @@ export function FilesPage() {
   }, [activeLane, prefix]);
 
   function selectLane(lane: R2Lane) {
+    if (uploading || deletingObjects || pendingDelete) return;
     setSelectedLane(lane.lane);
     setSelectedAction(null);
     setPrefix(rootPrefixForLane(lane));
