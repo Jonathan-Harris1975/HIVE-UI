@@ -136,11 +136,11 @@ const packageMetadata = JSON.parse(await readFile('package.json', 'utf8'))
 const packageLock = JSON.parse(await readFile('package-lock.json', 'utf8'))
 const declaredReactRouter = packageMetadata.dependencies?.['react-router']
 const lockedReactRouter = packageLock.packages?.['node_modules/react-router']?.version
-if (declaredReactRouter !== '8.4.0' || lockedReactRouter !== '8.4.0') {
-  throw new Error(`React Router must remain on the reviewed 8.4.0 release (manifest=${declaredReactRouter || 'missing'}, lock=${lockedReactRouter || 'missing'}).`)
+if (declaredReactRouter !== '8.5.3' || lockedReactRouter !== '8.5.3') {
+  throw new Error(`React Router must remain on the explicitly pinned 8.5.3 release (manifest=${declaredReactRouter || 'missing'}, lock=${lockedReactRouter || 'missing'}).`)
 }
 if (!packageLock.packages?.['node_modules/react-router']?.dependencies?.['@remix-run/route-pattern']) {
-  throw new Error('React Router 8.4.0 lock entry must retain its @remix-run/route-pattern dependency.')
+  throw new Error('React Router 8.5.3 lock entry must retain its @remix-run/route-pattern dependency.')
 }
 const bundleBudget = JSON.parse(await readFile('config/bundle-budget.json', 'utf8'))
 if (bundleBudget.policyVersion !== packageMetadata.version) {
