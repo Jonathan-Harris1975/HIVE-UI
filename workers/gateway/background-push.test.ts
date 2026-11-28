@@ -92,3 +92,31 @@ describe('background push gateway boundary', () => {
     expect(dispatch).toHaveBeenCalledTimes(1)
   })
 })
+
+
+describe('owner system notification routing', () => {
+  it('only includes the reserved admin system inbox for the configured HIVE admin owner', async () => {
+    let sql = ''
+    let params: unknown[] = []
+    const db = { prepare(query: string) {
+      sql = query
+      return { bind(...values: unknown[]) {
+        params = values
+        return { all: async () => ({ success: true, results: [] }) }
+      } }
+    } } as unknown as Parameters<typeof readAlertSource>[0]['PUSH_AIMS_DB']
+    const cutoff = Date.parse('2026-11-28T01:00:00Z')
+    for (const [actor, role, expected] of [
+      ['hive-owner', 'admin', true], ['hive-owner', 'read_only', false], ['other', 'admin', false],
+    ] as const) {
+      await readAlertSource({
+        PUSH_AIMS_DB: db, HIVE_COMMS_ACTOR: actor, HIVE_COMMS_ROLE: role,
+      }, 'communications', cutoff - 3600000, cutoff)
+      expect(params[0]).toBe(actor)
+      expect(sql.includes("actor = 'admin' AND type IN")).toBe(expected)
+      expect(sql).not.toContain("'assignment'")
+      expect(sql).not.toContain("'mention'")
+      expect(sql).toContain("status = 'unread'")
+    }
+  })
+})
