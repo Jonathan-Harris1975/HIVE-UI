@@ -326,7 +326,7 @@ input::placeholder, textarea::placeholder { opacity: 1; }
 
 /* Command centre: intentional layout, independent evidence and responsive navigation. */
 .hive-nav-link[aria-current="page"] { box-shadow: inset 3px 0 0 var(--color-hive-accent); background: #12334b; }
-.hive-mobile-nav { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); flex-shrink: 0; border-top: 1px solid #25415b; background: var(--color-hive-surface); padding: 3px 4px max(3px, env(safe-area-inset-bottom)); }
+.hive-mobile-nav { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); flex-shrink: 0; border-top: 1px solid #25415b; background: var(--color-hive-surface); padding: 3px 4px max(3px, env(safe-area-inset-bottom)); }
 .hive-mobile-nav a { display: flex; flex-direction: column; justify-content: center; align-items: center; gap: 3px; min-height: 52px; font-size: 11px; color: var(--color-hive-muted); border-radius: 10px; }
 .hive-mobile-nav a[aria-current="page"] { background: #12334b; color: var(--color-hive-accent-strong); }
 @media (min-width: 1024px) { .hive-mobile-nav { display: none; } }
