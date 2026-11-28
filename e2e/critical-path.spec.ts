@@ -71,6 +71,9 @@ test.describe('HIVE-UI critical path', () => {
     await page.getByPlaceholder(/enter access key/i).fill('e2e-test-key')
     await page.getByRole('button', { name: /unlock console/i }).click()
 
+    await expect(page.getByTestId('command-centre')).toBeVisible({ timeout: 15_000 })
+    await page.getByTestId('command-centre').getByRole('link', { name: /Chat Ask HIVE/i }).click()
+
     // --- Chat controls and one streamed turn ---
     const chatInput = page.getByRole('textbox', { name: 'Message HIVE' })
     await expect(chatInput).toBeVisible({ timeout: 15_000 })
