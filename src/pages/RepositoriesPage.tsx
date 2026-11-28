@@ -11,7 +11,7 @@ import { EcosystemProductionPanel, ScheduledWorkPanel } from '../components/Ecos
 import { StatusBadge } from '../components/StatusBadge'
 import { apiFetch } from '../lib/api'
 import { formatBytes, formatDate } from '../lib/format'
-import { GOVERNED_REPOSITORIES } from '../lib/repositories'
+import { GOVERNED_REPOSITORIES, healthyServiceCount, healthEvidenceFresh } from '../lib/repositories'
 import type {
   RepoHealthItem,
   RepoHealthResponse,
@@ -98,6 +98,7 @@ export function RepositoriesPage() {
     repoHealth: null,
   })
   const [loading, setLoading] = useState(true)
+  const [now, setNow] = useState(Date.now)
   const [error, setError] = useState<string | null>(null)
 
   const loadOverview = useCallback(async (forceHealth = false) => {
@@ -127,6 +128,10 @@ export function RepositoriesPage() {
   useEffect(() => {
     void loadOverview(false)
   }, [loadOverview])
+  useEffect(() => {
+    const timer = window.setInterval(() => setNow(Date.now()), 15_000)
+    return () => window.clearInterval(timer)
+  }, [])
 
   const summariesById = useMemo(
     () => new Map(state.repositories.map((repo) => [repo.repository_id, repo])),
@@ -139,9 +144,11 @@ export function RepositoriesPage() {
     [state.repositories],
   )
   const serviceHealthyCount = useMemo(
-    () => (state.repoHealth?.repos ?? []).filter((item) => ['healthy', 'busy', 'standby'].includes(item.status)).length,
+    () => healthyServiceCount(state.repoHealth?.repos ?? []),
     [state.repoHealth],
   )
+  const currentHealth = !loading && !error && state.repoHealth?.ok === true && Boolean(state.repoHealth.repos?.length)
+    && healthEvidenceFresh(state.repoHealth.generated_at, now)
   const totalFiles = useMemo(
     () => state.repositories.reduce((sum, repo) => sum + repo.file_count, 0),
     [state.repositories],
@@ -187,9 +194,9 @@ export function RepositoriesPage() {
               <p className="mt-2 break-words text-xl font-semibold tabular-nums text-white">{loading ? 'Loading…' : error ? 'Unavailable' : `${fullyCurrentCount}/${GOVERNED_REPOSITORIES.length}`}</p>
             </div>
             <div className="min-w-0 rounded-xl border border-[#25415b] bg-hive-raised p-3">
-              <p className="text-xs font-medium text-hive-muted">Services healthy</p>
+              <p className="text-xs font-medium text-hive-muted">{currentHealth ? 'Services healthy' : 'Last reported healthy'}</p>
               <p className="mt-2 break-words text-xl font-semibold tabular-nums text-white">
-                {loading ? 'Loading…' : error ? 'Unavailable' : state.repoHealth?.ok ? `${serviceHealthyCount}/${GOVERNED_REPOSITORIES.length}` : 'Unknown'}
+                {loading ? 'Loading…' : error ? 'Unavailable' : state.repoHealth?.ok && state.repoHealth.repos ? `${serviceHealthyCount}/${state.repoHealth.repos.length}` : 'Unknown'}
               </p>
             </div>
             <div className="min-w-0 rounded-xl border border-[#25415b] bg-hive-raised p-3">
@@ -201,6 +208,9 @@ export function RepositoriesPage() {
               <p className="mt-2 break-words text-xl font-semibold tabular-nums text-white">{loading ? 'Loading…' : error ? 'Unavailable' : formatBytes(totalBytes)}</p>
             </div>
           </div>
+          <p className="mt-2 text-xs text-slate-400">
+            {currentHealth ? 'Probe observed ' : 'Health evidence not current · last observed '}{formatDate(state.repoHealth?.generated_at)}
+          </p>
         </section>
 
         {error && (
@@ -222,7 +232,7 @@ export function RepositoriesPage() {
               </div>
               <div className="flex flex-wrap items-center justify-between gap-2">
                 <span>Service</span>
-                <StatusBadge status={service?.status ?? 'unknown'} variant="operational" compact />
+                <StatusBadge status={currentHealth ? service?.status ?? 'unknown' : 'unknown'} variant="operational" compact />
               </div>
               {!repo && <p className="leading-5 text-amber-200">No governed snapshot registered for this repository.</p>}
               {repo && (
