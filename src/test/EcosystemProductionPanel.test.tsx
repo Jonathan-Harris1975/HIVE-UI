@@ -2,7 +2,7 @@ import { act, fireEvent, render, screen, waitFor, within } from '@testing-librar
 import { afterEach, expect, it, vi } from 'vitest'
 import { EcosystemProductionPanel, ScheduledWorkPanel } from '../components/EcosystemProductionPanel'
 import { apiFetch } from '../lib/api'
-import { GOVERNED_REPOSITORIES } from '../lib/repositories'
+import { GOVERNED_REPOSITORIES, healthyServiceCount, healthEvidenceFresh } from '../lib/repositories'
 
 vi.mock('../lib/api', () => ({ apiFetch: vi.fn() }))
 const request = vi.mocked(apiFetch)
@@ -147,4 +147,12 @@ it.each([
     expect(within(card).getByText('CI/deployment: CI: ' + status)).toBeVisible()
   }
   expect(screen.queryByText('Release decision: Allowed')).not.toBeInTheDocument()
+})
+
+it('counts only genuinely healthy services and expires old or missing health evidence', () => {
+  expect(healthyServiceCount([{ status: 'healthy' }, { status: 'busy' }, { status: 'standby' }])).toBe(1)
+  const now = Date.now()
+  expect(healthEvidenceFresh(new Date(now - 121_000).toISOString(), now)).toBe(false)
+  expect(healthEvidenceFresh(undefined, now)).toBe(false)
+  expect(healthEvidenceFresh(new Date(now).toISOString(), now)).toBe(true)
 })

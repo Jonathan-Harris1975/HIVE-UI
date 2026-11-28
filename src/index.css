@@ -395,3 +395,19 @@ input::placeholder, textarea::placeholder { opacity: 1; }
   .signal-lamp > span { border-color: GrayText; background: Canvas; }
   .signal-lamp > span[data-active="true"] { background: CanvasText; border-color: CanvasText; outline: 1px solid CanvasText; }
 }
+
+/* Compact command-centre controls and consistent hardware-panel geometry. */
+.hive-command-hero { padding: clamp(14px, 2.5vw, 28px); border-radius: 8px; }
+.hive-metric-card, .hive-evidence-card, .hive-workspace-card { border-radius: 6px; }
+.hive-metric-card { gap: 5px; padding: clamp(10px, 1.6vw, 16px); }
+.hive-evidence-list li, .hive-alert-list li { padding-block: 8px; }
+.hive-repository-card { min-width: 0; border-radius: 6px; border-color: #38526a; }
+.hive-gate-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 4px; margin-top: 8px; }
+.hive-gate-grid > div { display: grid; justify-items: center; gap: 3px; padding: 4px; border: 1px solid #304056; border-radius: 2px; }
+.hive-lamp-legend { border: 1px solid #38526a; border-radius: 6px; padding: 4px 12px; font-size: .8rem; }
+.hive-lamp-legend summary { cursor: pointer; min-height: 44px; display: flex; align-items: center; }
+.hive-legend-items { display: flex; flex-wrap: wrap; gap: 10px; padding-bottom: 8px; }
+.hive-legend-items > span { display: inline-flex; align-items: center; gap: 6px; }
+.hive-mobile-nav a { border-radius: 5px; }
+.hive-mobile-nav a:focus-visible, .hive-lamp-legend summary:focus-visible { outline: 2px solid #23eaff; outline-offset: -2px; }
+@media (max-width: 479px) { .hive-overview-inner { gap: 10px; } .hive-command-hero h2 { font-size: 1.5rem; } .hive-workspace-card { min-height: 64px; padding: 12px; } }

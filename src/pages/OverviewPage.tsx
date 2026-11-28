@@ -5,6 +5,7 @@ import { StatusBadge } from '../components/StatusBadge'
 import { useAuth } from '../context/AuthContext'
 import { apiFetch } from '../lib/api'
 import { formatDate } from '../lib/format'
+import { healthyServiceCount, healthEvidenceFresh, serviceAttentionRank } from '../lib/repositories'
 import type { HealthResponse, OpsEventsResponse, RepoHealthResponse } from '../types/api'
 
 const destinations = [
@@ -22,6 +23,7 @@ export function OverviewPage() {
   const { health: lastHealth } = useAuth()
   const [snapshot, setSnapshot] = useState<Snapshot>({ health: null, repositories: null, alerts: null, fetchedAt: null })
   const [loading, setLoading] = useState(true)
+  const [now, setNow] = useState(Date.now)
   const controller = useRef<AbortController | null>(null)
 
   const refresh = useCallback(async () => {
@@ -50,7 +52,15 @@ export function OverviewPage() {
     return () => controller.current?.abort()
   }, [refresh])
 
+  useEffect(() => {
+    const timer = window.setInterval(() => setNow(Date.now()), 15_000)
+    return () => window.clearInterval(timer)
+  }, [])
   const repos = snapshot.repositories?.repos
+  const currentHealth = !loading && healthEvidenceFresh(snapshot.repositories?.generated_at, now)
+  const orderedRepos = [...(repos || [])].sort((a, b) => serviceAttentionRank(a.status) - serviceAttentionRank(b.status) || a.repo.localeCompare(b.repo))
+  const attention = repos?.filter((repo) => serviceAttentionRank(repo.status) < 3)
+  const orderedAlerts = [...(snapshot.alerts?.items || [])].sort((a, b) => serviceAttentionRank(a.severity) - serviceAttentionRank(b.severity))
   const alerts = snapshot.alerts?.items
   const critical = alerts?.filter((item) => item.severity === 'critical').length
   const unavailable = !loading && (!snapshot.health || !repos || !alerts)
@@ -63,7 +73,7 @@ export function OverviewPage() {
           <div>
             <p className="hive-kicker">HIVE / Control centre</p>
             <h2 id="command-title">Your ecosystem at a glance</h2>
-            <p>Monitor the estate, review operational evidence and move directly into the work that needs attention.</p>
+            <p>Review exceptions, evidence and the work that needs attention.</p>
           </div>
           <Link to="/ops" className="hive-primary-action">Open Operations <span aria-hidden="true">→</span></Link>
         </section>
@@ -85,8 +95,10 @@ export function OverviewPage() {
             <small>Repository health probe results</small>
           </Link>
           <Link to="/repositories" className="hive-metric-card">
-            <span>Healthy services</span><strong>{loading ? 'Checking' : repos ? repos.filter((repo) => repo.status === 'healthy').length + '/' + repos.length : 'Unknown'}</strong>
-            <small>Healthy only; standby is separate</small>
+            <span>{currentHealth ? 'Healthy services' : 'Last reported healthy'}</span><strong>
+              {loading ? 'Checking' : repos ? healthyServiceCount(repos) + '/' + repos.length : 'Unknown'}
+            </strong>
+            <small>{currentHealth ? 'Healthy only; standby is separate' : 'Not current health evidence'}</small>
           </Link>
           <Link to="/ops" className="hive-metric-card">
             <span>Critical alerts</span><strong className={critical ? 'text-hive-danger' : ''}>{loading ? 'Checking' : critical ?? 'Unknown'}</strong>
@@ -94,19 +106,37 @@ export function OverviewPage() {
           </Link>
         </div>
 
+        <section className="hive-evidence-card" aria-labelledby="exception-title">
+          <div className="hive-section-heading"><h2 id="exception-title">Requires attention</h2><Link to="/ops">Operations →</Link></div>
+          {!currentHealth ? <p className="hive-evidence-caption">Current service evidence unavailable or stale. No healthy state is inferred.</p>
+            : attention?.length ? <ul className="hive-evidence-list">
+              {attention.map((repo) => <li key={repo.repo}><Link to="/repositories">{repo.label ?? repo.repo}</Link>
+                <StatusBadge status={repo.status} variant="operational" /></li>)}
+            </ul> : <p className="hive-evidence-caption">No service exceptions in the current probe.</p>}
+          {critical ? <p className="hive-evidence-caption text-rose-200">{critical} critical event(s) in recent stored alerts; check Operations for context.</p> : null}
+        </section>
+        <details className="hive-lamp-legend">
+          <summary>Indicator key</summary>
+          <div className="hive-legend-items">
+            {([['healthy', 'Healthy'], ['warning', 'Attention'], ['failed', 'Failure'], ['checking', 'Checking / information'],
+              ['maintenance', 'Maintenance / standby'], ['unknown', 'Unknown']] as const).map(([status, label]) =>
+              <span key={status}><StatusBadge status={status} label={label} /><span aria-hidden="true">{label}</span></span>)}
+          </div>
+        </details>
         <div className="hive-evidence-grid">
           <section className="hive-evidence-card" aria-labelledby="service-title">
             <div className="hive-section-heading"><h2 id="service-title">Service health</h2><Link to="/repositories">View estate →</Link></div>
             <p className="hive-evidence-caption">{snapshot.repositories?.generated_at ? 'Probe generated ' + formatDate(snapshot.repositories.generated_at) : 'Probe timestamp not reported'}</p>
             {repos?.length ? <ul className="hive-evidence-list">
-              {repos.map((repo) => <li key={repo.repo}><span>{repo.label ?? repo.repo}</span><StatusBadge status={repo.status} variant="operational" /></li>)}
+              {orderedRepos.map((repo) => <li key={repo.repo}><span>{repo.label ?? repo.repo}</span>
+                <StatusBadge status={currentHealth ? repo.status : 'unknown'} variant="operational" /></li>)}
             </ul> : <p className="hive-evidence-caption">{loading ? 'Loading service evidence…' : repos ? 'No services reported.' : 'Service health unavailable.'}</p>}
           </section>
           <section className="hive-evidence-card" aria-labelledby="alert-title">
             <div className="hive-section-heading"><h2 id="alert-title">Recent alerts</h2><Link to="/ops">View alerts →</Link></div>
             <p className="hive-evidence-caption">Historical events, not proof of current incidents.</p>
             {alerts?.length ? <ul className="hive-alert-list">
-              {alerts.map((item) => (
+              {orderedAlerts.map((item) => (
                 <li key={item.event_id}>
                   <div>
                     <p>{item.title ?? item.event_type ?? 'Operational event'}</p>

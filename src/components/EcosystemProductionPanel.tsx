@@ -76,6 +76,13 @@ function gateSummary(item?: RepositoryEvidence): string {
   if (outstanding.length) return outstanding.map(([name, gate]) => name + ': ' + (gate.status || 'unverified')).join('; ')
   return item?.state === 'GREEN' ? 'Required release evidence verified.' : 'Release evidence not fully verified.'
 }
+function gateTone(gates: Gate[]): string {
+  if (!gates.length) return 'unknown'
+  if (gates.some((gate) => gate.state === 'BLOCKED' || ['failure', 'timed_out', 'startup_failure', 'action_required'].includes(gate.status || ''))) return 'failed'
+  if (gates.every((gate) => gate.status === 'success')) return 'ready'
+  if (gates.some((gate) => ['pending', 'queued', 'in_progress', 'requested'].includes(gate.status || ''))) return 'checking'
+  return 'unknown'
+}
 const decisionLabel = (decision?: string) => decision === 'ALLOW' ? 'Allowed' : decision === 'BLOCK' ? 'Blocked' : decision || 'Unknown'
 
 export function EcosystemProductionPanel({ renderRepositoryDetails }: { renderRepositoryDetails?: (id: string) => ReactNode }) {
@@ -86,6 +93,7 @@ export function EcosystemProductionPanel({ renderRepositoryDetails }: { renderRe
   const [query, setQuery] = useState('')
   const [filter, setFilter] = useState<'all' | 'attention' | 'ready' | 'unknown'>('all')
   const [sortBy, setSortBy] = useState<'attention' | 'name'>('attention')
+  const [expanded, setExpanded] = useState<Record<string, boolean>>({})
   const load = useCallback(async () => {
     setLoading(true)
     setError(null)
@@ -177,8 +185,7 @@ export function EcosystemProductionPanel({ renderRepositoryDetails }: { renderRe
         {report?.generated_at && <span>Observed {formatDate(report.generated_at)}</span>}
       </div>
       <p className="mt-2 max-w-4xl text-xs leading-5 text-slate-500">
-        Runtime health means the service responded. The release decision reflects CI and deployment evidence.
-        Snapshot freshness describes indexed code; these checks answer different questions.
+        Runtime, release and snapshot evidence are independent.
       </p>
       {loading && (
         <p role="status" aria-live="polite" className="mt-3 text-xs text-slate-300">
@@ -230,17 +237,31 @@ export function EcosystemProductionPanel({ renderRepositoryDetails }: { renderRe
         </label>
         <p role="status" aria-live="polite" className="text-xs text-slate-500 sm:col-span-3">Showing {repositoryIds.length} of {GOVERNED_REPOSITORIES.length} repositories</p>
       </div>
-      <div className="mt-3 grid gap-2 md:grid-cols-2 xl:grid-cols-4">
+      <div className="mt-3 grid gap-2 md:grid-cols-2 xl:grid-cols-3">
         {repositoryIds.map((id) => {
           const item = byId.get(id)
           const gates = item?.gate_evidence
           const presentation = releasePresentation(item)
+          const ci = current ? gateTone(Object.values(gates?.required_workflows || {})) : 'unknown'
+          const deployment = current && gates?.deployment ? gateTone([gates.deployment]) : 'unknown'
+          const runtime = current ? tone(item?.runtime_state) : 'unknown'
           return (
-            <article key={id} className="rounded-xl border border-white/8 bg-hive-surface p-3 text-xs text-slate-400">
+            <article key={id} className="hive-repository-card border bg-hive-surface p-3 text-xs text-slate-400">
               <div className="flex items-center justify-between gap-2">
                 <h4 className="font-semibold text-white">{id}</h4>
                 <StatusBadge status={current ? presentation.status : 'unknown'} label={current ? presentation.label : 'Unknown'} compact />
               </div>
+              <div className="hive-gate-grid" aria-label={id + ' evidence summary'}>
+                {([['Runtime', runtime], ['CI', ci], ['Deploy', deployment]] as const).map(([label, status]) => (
+                  <div key={label}><span>{label}</span><StatusBadge status={status} label={label + ' evidence: ' + status} /></div>
+                ))}
+              </div>
+              <details className="mt-2" open={expanded[id] ?? (current && item?.state !== 'GREEN')}
+                onToggle={(event) => {
+                  const open = event.currentTarget.open
+                  setExpanded((prior) => prior[id] === open ? prior : { ...prior, [id]: open })
+                }}>
+                <summary className="cursor-pointer py-2 text-slate-300">Detailed evidence</summary>
               <p className="mt-2">Runtime: {current ? runtimeLabel(item?.runtime_state) : 'Not verified'}</p>
               <p className="mt-1">Deployment: {current ? gates?.deployment?.status || 'Unknown' : 'Not verified'}</p>
               {renderRepositoryDetails?.(id)}
@@ -263,6 +284,7 @@ export function EcosystemProductionPanel({ renderRepositoryDetails }: { renderRe
                   <p key={failure.workflow} className="mt-2 text-amber-200">{failure.workflow}: {failure.status}</p>
                 ))}
                 {!gates && <p className="mt-1">No current evidence received.</p>}
+              </details>
               </details>
             </article>
           )
