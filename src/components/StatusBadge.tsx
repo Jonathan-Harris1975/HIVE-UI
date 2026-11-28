@@ -114,6 +114,16 @@ function display(status: string, variant?: StatusBadgeProps['variant']): string 
   return status.replace(/_/g, ' ').replace(/\b\w/g, (character) => character.toUpperCase())
 }
 
+export function SignalLamp({ tone, activeLens }: { tone: string; activeLens: 'red' | 'amber' | 'green' }) {
+  return (
+    <span className="signal-lamp" aria-hidden="true" data-tone={tone}>
+      {(['red', 'amber', 'green'] as const).map(lens => (
+        <span key={lens} data-lens={lens} data-active={lens === activeLens} />
+      ))}
+    </span>
+  )
+}
+
 export function StatusBadge({ status, label, compact = false, variant }: StatusBadgeProps) {
   const value = status?.trim() || 'unknown'
   const tone = dotTone(value, variant)
@@ -121,11 +131,7 @@ export function StatusBadge({ status, label, compact = false, variant }: StatusB
   const activeLens = tone === 'bg-rose-300' ? 'red' : tone === 'bg-emerald-300' ? 'green' : 'amber'
   return (
     <span title={statusLabel} className={`inline-flex shrink-0 items-center font-medium ${compact ? 'text-xs' : 'text-xs'} ${textTone(value, variant)}`}>
-      <span className="signal-lamp" aria-hidden="true" data-tone={tone}>
-        {(['red', 'amber', 'green'] as const).map((lens) => (
-          <span key={lens} data-lens={lens} data-active={lens === activeLens} />
-        ))}
-      </span>
+      <SignalLamp tone={tone} activeLens={activeLens} />
       <span className="sr-only hive-signal-description">{statusLabel}</span>
     </span>
   )
