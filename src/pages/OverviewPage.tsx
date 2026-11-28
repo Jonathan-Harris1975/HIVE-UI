@@ -1,8 +1,8 @@
 import { Activity, Bot, Files, FolderGit2, RefreshCcw, Workflow } from 'lucide-react'
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { Link } from 'react-router'
-import { StatusBadge } from '../components/StatusBadge'
 import { AimsIndicatorKey } from '../components/AimsIndicatorKey'
+import { StatusBadge } from '../components/StatusBadge'
 import { useAuth } from '../context/AuthContext'
 import { apiFetch } from '../lib/api'
 import { formatDate } from '../lib/format'
@@ -146,7 +146,7 @@ export function OverviewPage() {
         </section>
         <details className="hive-lamp-legend">
           <summary>Indicator key</summary>
-          <h3>HIVE operational status</h3>
+          <h3 id="hive-operational-status">HIVE operational status</h3>
           <div className="hive-legend-items">
             {([['healthy', 'Healthy'], ['warning', 'Attention'], ['failed', 'Failure'], ['checking', 'Checking / information'],
               ['maintenance', 'Maintenance / standby'], ['unknown', 'Unknown']] as const).map(([status, label]) =>

@@ -409,7 +409,7 @@ input::placeholder, textarea::placeholder { opacity: 1; }
 .hive-lamp-legend summary { cursor: pointer; min-height: 44px; display: flex; align-items: center; }
 .hive-legend-items { display: flex; flex-wrap: wrap; gap: 10px; padding-bottom: 8px; }
 .hive-legend-items > span { display: inline-flex; align-items: center; gap: 6px; }
-.hive-lamp-legend h3 { font-size: .8rem; font-weight: 600; margin-block: 4px 8px; }
+#hive-operational-status { font-size: .8rem; font-weight: 600; margin-block: 4px 8px; }
 .hive-aims-indicator-key { border-top: 1px solid #38526a; padding-top: 8px; }
 .hive-aims-indicator-key p { margin-bottom: 8px; }
 .hive-aims-indicator-key .hive-legend-items > span { max-width: 100%; overflow-wrap: anywhere; }

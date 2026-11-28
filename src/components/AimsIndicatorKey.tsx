@@ -1,27 +1,27 @@
 // AIMS-UI apps/console/app.js: prioritySignal, statusSignal and notificationSignal.
 // AIMS-UI apps/console/styles.css: signal-orange and signal-low have distinct lens positions.
 const groups = [
-  { heading: 'AIMS conversation priority', items: [
-    ['Critical / urgent', 'bg-rose-300', 'red'],
-    ['High', 'aims-orange', 'red'],
-    ['Medium', 'bg-amber-300', 'amber'],
-    ['Normal', 'bg-cyan-300', 'amber'],
-    ['Low', 'bg-violet-300', 'green'],
-    ['Unknown', 'bg-slate-500', 'amber'],
+  { id: 'priority', heading: 'AIMS conversation priority', items: [
+    { id: 'critical-urgent', label: 'Critical / urgent', tone: 'bg-rose-300', activeLens: 'red' },
+    { id: 'high', label: 'High', tone: 'aims-orange', activeLens: 'red' },
+    { id: 'medium', label: 'Medium', tone: 'bg-amber-300', activeLens: 'amber' },
+    { id: 'normal', label: 'Normal', tone: 'bg-cyan-300', activeLens: 'amber' },
+    { id: 'low', label: 'Low', tone: 'bg-violet-300', activeLens: 'green' },
+    { id: 'unknown-priority', label: 'Unknown', tone: 'bg-slate-500', activeLens: 'amber' },
   ] },
-  { heading: 'AIMS conversation status', items: [
-    ['Failed / blocked / quarantined', 'bg-rose-300', 'red'],
-    ['Pending / escalated / overdue', 'bg-amber-300', 'amber'],
-    ['Open / queued / in progress', 'bg-cyan-300', 'amber'],
-    ['Resolved / sent / completed', 'bg-emerald-300', 'green'],
-    ['Snoozed', 'bg-violet-300', 'amber'],
-    ['Unknown', 'bg-slate-500', 'amber'],
+  { id: 'status', heading: 'AIMS conversation status', items: [
+    { id: 'failed-blocked-quarantined', label: 'Failed / blocked / quarantined', tone: 'bg-rose-300', activeLens: 'red' },
+    { id: 'pending-escalated-overdue', label: 'Pending / escalated / overdue', tone: 'bg-amber-300', activeLens: 'amber' },
+    { id: 'open-queued-in-progress', label: 'Open / queued / in progress', tone: 'bg-cyan-300', activeLens: 'amber' },
+    { id: 'resolved-sent-completed', label: 'Resolved / sent / completed', tone: 'bg-emerald-300', activeLens: 'green' },
+    { id: 'snoozed', label: 'Snoozed', tone: 'bg-violet-300', activeLens: 'amber' },
+    { id: 'unknown-status', label: 'Unknown', tone: 'bg-slate-500', activeLens: 'amber' },
   ] },
-  { heading: 'AIMS notification severity', items: [
-    ['Critical', 'bg-rose-300', 'red'],
-    ['Warning', 'bg-amber-300', 'amber'],
-    ['Information', 'bg-cyan-300', 'amber'],
-    ['Unknown severity', 'bg-slate-500', 'amber'],
+  { id: 'severity', heading: 'AIMS notification severity', items: [
+    { id: 'critical-severity', label: 'Critical', tone: 'bg-rose-300', activeLens: 'red' },
+    { id: 'warning', label: 'Warning', tone: 'bg-amber-300', activeLens: 'amber' },
+    { id: 'information', label: 'Information', tone: 'bg-cyan-300', activeLens: 'amber' },
+    { id: 'unknown-severity', label: 'Unknown severity', tone: 'bg-slate-500', activeLens: 'amber' },
   ] },
 ] as const
 
@@ -29,12 +29,12 @@ export function AimsIndicatorKey() {
   return (
     <div className="hive-aims-indicator-key">
       <p>Communications cards: priority above status. Tables: separate columns.</p>
-      {groups.map(({ heading, items }) => (
-        <section key={heading} aria-label={heading}>
+      {groups.map(({ id, heading, items }) => (
+        <section key={id} aria-label={heading}>
           <h3>{heading}</h3>
           <div className="hive-legend-items">
-            {items.map(([label, tone, activeLens]) => (
-              <span key={label}>
+            {items.map(({ id: itemId, label, tone, activeLens }) => (
+              <span key={itemId}>
                 <span className="signal-lamp" data-tone={tone} aria-hidden="true">
                   {(['red', 'amber', 'green'] as const).map(lens => (
                     <span key={lens} data-lens={lens} data-active={lens === activeLens} />
