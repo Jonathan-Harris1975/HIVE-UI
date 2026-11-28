@@ -250,6 +250,19 @@ test.describe('HIVE-UI deployed gateway browser acceptance', () => {
       await expect(embedded).toBeVisible({ timeout: 30_000 })
       await expect(embedded.locator('[data-view="inbox"]')).toHaveAttribute('aria-label', 'Unified inbox')
       await checkViewport(page, 'AIMS embedded phone')
+
+      // Exercise the actual integrated navigation, not just a standalone handoff.
+      await page.goto(hiveOrigin + '/overview', { waitUntil: 'domcontentloaded' })
+      await page.getByRole('navigation', { name: 'Quick navigation' }).getByRole('link', { name: /Communications/ }).click()
+      await expect(page).toHaveURL(/\/communications$/)
+      const frame = page.locator('iframe[title="AIMS Comms Hub"]')
+      await expect(frame).toBeVisible({ timeout: 30_000 })
+      const sections = page.frameLocator('iframe[title="AIMS Comms Hub"]').getByRole('navigation', { name: 'Communications sections' })
+      await expect(sections).toBeVisible({ timeout: 30_000 })
+      await expect(sections.locator('[data-view="inbox"] span')).toBeVisible()
+      await checkViewport(page, 'Integrated HIVE to AIMS phone')
+      await page.getByRole('link', { name: 'Return to HIVE overview' }).click()
+      await expect(page).toHaveURL(/\/overview$/)
       console.info('AIMS browser acceptance: live handoff, layout and keyboard checks passed (no private snapshot exported)')
     } finally {
       await page.request.post(hiveOrigin + '/api/auth/logout', { headers: { origin: hiveOrigin } }).catch(() => undefined)
