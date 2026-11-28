@@ -51,3 +51,22 @@ class_name = "LoginRateLimiter"
 tag = "login-rate-limiter-v1"
 new_sqlite_classes = ["LoginRateLimiter"]
 
+
+# Existing durable alert sources; the notification object issues SELECT only.
+[[d1_databases]]
+binding = "PUSH_HIVE_DB"
+database_name = "database-hive"
+database_id = "d120b708-2d77-4186-88eb-1469a5eb259c"
+
+[[d1_databases]]
+binding = "PUSH_AIMS_DB"
+database_name = "database-comms-hub"
+database_id = "1c926f7c-4c5d-4fac-b26d-839db5e6c66e"
+
+[[durable_objects.bindings]]
+name = "NOTIFICATION_PUSH_HUB"
+class_name = "NotificationPushHub"
+
+[[migrations]]
+tag = "notification-push-hub-v1"
+new_sqlite_classes = ["NotificationPushHub"]
