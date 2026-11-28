@@ -49,6 +49,7 @@ export function CommunicationsPage() {
 
   useEffect(() => {
     let cancelled = false
+    const controller = new AbortController()
     setFrameUrl(null)
     setReady(false)
     setError(null)
@@ -58,6 +59,7 @@ export function CommunicationsPage() {
         const response = await fetch('/api/auth/comms-handoff?embed=1&format=json', {
           method: 'GET',
           credentials: 'same-origin',
+          signal: controller.signal,
           headers: { accept: 'application/json' },
         })
         const payload = await response.json().catch(() => ({})) as HandoffResponse
@@ -71,7 +73,7 @@ export function CommunicationsPage() {
     }
 
     void createHandoff()
-    return () => { cancelled = true }
+    return () => { cancelled = true; controller.abort() }
   }, [frameKey])
 
   useEffect(() => {
@@ -113,6 +115,9 @@ export function CommunicationsPage() {
 
   function reload() {
     if (timeoutRef.current) window.clearTimeout(timeoutRef.current)
+    setReady(false)
+    setError(null)
+    setFrameUrl(null)
     setFrameKey((value) => value + 1)
   }
 
@@ -143,7 +148,9 @@ export function CommunicationsPage() {
           ref={frameRef}
           title="AIMS Comms Hub"
           src={frameUrl}
-          className="h-full w-full border-0 bg-hive-canvas"
+          className={`block h-full w-full border-0 bg-hive-canvas ${!ready || error ? 'invisible' : ''}`}
+          tabIndex={ready && !error ? 0 : -1}
+          aria-hidden={!ready || Boolean(error)}
           referrerPolicy="no-referrer"
           allow="clipboard-read; clipboard-write"
         />
