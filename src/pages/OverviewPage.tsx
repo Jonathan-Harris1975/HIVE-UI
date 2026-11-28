@@ -146,7 +146,7 @@ export function OverviewPage() {
         </section>
         <details className="hive-lamp-legend">
           <summary>Indicator key</summary>
-          <h3 id="hive-operational-status">HIVE operational status</h3>
+          <h3 id="hive-operational-status" className="hive-legend-heading">HIVE operational status</h3>
           <div className="hive-legend-items">
             {([['healthy', 'Healthy'], ['warning', 'Attention'], ['failed', 'Failure'], ['checking', 'Checking / information'],
               ['maintenance', 'Maintenance / standby'], ['unknown', 'Unknown']] as const).map(([status, label]) =>
