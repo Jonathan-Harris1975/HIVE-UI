@@ -15,6 +15,8 @@ export function CommandPalette({ items, onClose, onSelect }: Props) {
   const input = useRef<HTMLInputElement>(null)
   const results = items.filter(item => item.label.toLowerCase().includes(query.trim().toLowerCase()))
   const selected = Math.min(index, Math.max(0, results.length - 1))
+  const activeId = results.length ? `hive-command-${selected}` : undefined
+  useEffect(() => { if (activeId) document.getElementById(activeId)?.scrollIntoView({ block: 'nearest' }) }, [activeId])
   useEffect(() => {
     const element = dialog.current
     const prior = document.activeElement as HTMLElement | null
@@ -23,6 +25,7 @@ export function CommandPalette({ items, onClose, onSelect }: Props) {
     return () => { element?.close(); prior?.focus() }
   }, [])
   function keydown(event: KeyboardEvent<HTMLInputElement>) {
+    if (event.nativeEvent.isComposing) return
     if (event.key === 'ArrowDown' || event.key === 'ArrowUp') {
       event.preventDefault()
       if (results.length) setIndex((selected + results.length + (event.key === 'ArrowDown' ? 1 : -1)) % results.length)
@@ -38,13 +41,15 @@ export function CommandPalette({ items, onClose, onSelect }: Props) {
         <Search className="h-5 w-5 shrink-0 text-cyan-300" aria-hidden="true" />
         <input ref={input} value={query} onChange={event => { setQuery(event.target.value); setIndex(0) }}
           onKeyDown={keydown} aria-label="Find a page" placeholder="Find a page…" autoComplete="off"
+          role="combobox" aria-expanded="true" aria-autocomplete="list" aria-activedescendant={activeId}
           aria-controls="hive-command-results" className="min-h-11 min-w-0 flex-1 bg-transparent text-base outline-none" />
         <button type="button" aria-label="Close command palette" onClick={onClose}
           className="grid min-h-11 min-w-11 place-items-center rounded-hive"><X className="h-5 w-5" /></button>
       </div>
-      <ul id="hive-command-results" className="mt-2 grid gap-1">
-        {results.map((item, i) => <li key={item.to}>
-          <button type="button" onClick={() => onSelect(item.to)} data-selected={i === selected}
+      <ul id="hive-command-results" role="listbox" aria-label="Pages" className="mt-2 grid gap-1">
+        {results.map((item, i) => <li key={item.to} role="presentation">
+          <button id={`hive-command-${i}`} role="option" aria-selected={i === selected} tabIndex={-1}
+            type="button" onClick={() => onSelect(item.to)} data-selected={i === selected}
             className="hive-command-result min-h-11 w-full rounded-hive px-3 text-left text-sm">{item.label}</button>
         </li>)}
       </ul>

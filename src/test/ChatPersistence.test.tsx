@@ -3,6 +3,7 @@ import userEvent from '@testing-library/user-event'
 import { describe, expect, it, vi } from 'vitest'
 import { ChatProvider, useChat } from '../context/ChatContext'
 import { ChatMessage } from '../components/ChatMessage'
+import { MarkdownMessage } from '../components/MarkdownMessage'
 
 vi.mock('../lib/api', () => ({
   apiFetch: vi.fn(async (path: string) => path.includes('/v1/db/conversations/')
@@ -29,5 +30,19 @@ describe('saved chat status', () => {
     expect(screen.getByText('This response was truncated.')).toBeInTheDocument()
     expect(screen.getAllByRole('status')).toHaveLength(2)
     expect(screen.getByText('Complete answer')).toBeInTheDocument()
+  })
+})
+
+
+describe('formatted code', () => {
+  it('copies highlighted code text without object representations or nested pre elements', async () => {
+    const user = userEvent.setup()
+    const write = vi.spyOn(navigator.clipboard, 'writeText').mockResolvedValue(undefined)
+    const { container } = render(<MarkdownMessage content={'```js\nconst number = 42;\n```'} />)
+    expect(container.querySelector('pre pre')).toBeNull()
+    await user.click(screen.getByRole('button', { name: 'Copy' }))
+    expect(write).toHaveBeenCalledWith('const number = 42;')
+    expect(screen.getByText('Copied')).toBeInTheDocument()
+    write.mockRestore()
   })
 })

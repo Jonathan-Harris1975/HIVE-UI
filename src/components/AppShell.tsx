@@ -557,7 +557,8 @@ function useMobileDrawer(open: boolean, close: () => void) {
       window.cancelAnimationFrame(raf)
       document.removeEventListener('keydown', onKeyDown)
       document.body.style.overflow = previousOverflow
-      previousFocusRef.current?.focus()
+      const previous = previousFocusRef.current
+      if (previous?.isConnected) previous.focus({ preventScroll: true })
     }
   }, [open, close])
 
@@ -708,7 +709,10 @@ export function AppShell() {
       </div>
 
       <InspectorPanel />
-      {paletteOpen && <CommandPalette items={navigationGroups.flatMap(group => group.items).map(({ to, label }) => ({ to, label }))}
+      {paletteOpen && <CommandPalette items={Array.from(new Map(
+        [...navigationGroups.flatMap(group => group.items), ...sectionTabs.flatMap(group => group.items)]
+          .map(({ to, label }) => [to, { to, label }]),
+      ).values())}
         onClose={() => setPaletteOpen(false)} onSelect={to => { setPaletteOpen(false); navigate(to) }} />}
     </div>
   )
