@@ -166,7 +166,12 @@ export function EcosystemProductionPanel({ renderRepositoryDetails }: { renderRe
         </button>
       </div>
       <div role="status" aria-live="polite" className="mt-3 flex flex-wrap items-center gap-3 text-xs text-slate-400">
-        <StatusBadge status={current ? (report?.state === 'DEGRADED' ? 'unknown' : tone(report?.state)) : 'unknown'} label={loading ? 'Checking' : current ? (report?.state === 'DEGRADED' ? 'Verification or runtime evidence incomplete' : productionLabel(report?.state)) : 'Unknown'} />
+        <StatusBadge
+          status={current ? (report?.state === 'DEGRADED' ? 'unknown' : tone(report?.state)) : 'unknown'}
+          label={loading ? 'Checking' : current
+            ? (report?.state === 'DEGRADED' ? 'Verification or runtime evidence incomplete' : productionLabel(report?.state))
+            : 'Unknown'}
+        />
         <span>Release decision: {current ? decisionLabel(report?.release_decision) : 'Not verified'}</span>
         <span>Runtime health: {current ? `${runtimeHealthy}/${GOVERNED_REPOSITORIES.length} healthy` : 'Not verified'}</span>
         {report?.generated_at && <span>Observed {formatDate(report.generated_at)}</span>}
