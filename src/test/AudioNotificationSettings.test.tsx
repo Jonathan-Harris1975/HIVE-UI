@@ -49,6 +49,34 @@ describe('HIVE Elements audio notifications', () => {
     expect(play).toHaveBeenCalledTimes(1)
   })
 
+
+  it('uses a persistent generic notification on supported mobile browsers', async () => {
+    vi.stubGlobal('Audio', FakeAudio)
+    const showNotification = vi.fn().mockResolvedValue(undefined)
+    const register = vi.fn().mockResolvedValue({ active: {}, showNotification })
+    const oldDescriptor = Object.getOwnPropertyDescriptor(navigator, 'serviceWorker')
+    Object.defineProperty(navigator, 'serviceWorker', { configurable: true, value: { register } })
+    class MobileNotification {
+      static permission = 'granted'
+      constructor() { throw new TypeError('Mobile requires persistent notifications') }
+    }
+    vi.stubGlobal('Notification', MobileNotification)
+    try {
+      notifyNewHIVEEvents([{
+        event_id: 'mobile-review', event_type: 'review_required',
+        title: 'Private operational details', summary: 'Do not display on lock screen',
+      }])
+      await waitFor(() => expect(showNotification).toHaveBeenCalledWith('HIVE', {
+        body: 'An update is available. Open the workspace to review it.',
+        tag: 'mobile-review', data: { workspace: 'operations' }, silent: false,
+      }))
+      expect(register).toHaveBeenCalledWith('/notification-worker.js')
+    } finally {
+      if (oldDescriptor) Object.defineProperty(navigator, 'serviceWorker', oldDescriptor)
+      else Reflect.deleteProperty(navigator, 'serviceWorker')
+    }
+  })
+
   it('routes only validated, actionable AIMS alerts to HIVE browser notifications', () => {
     vi.stubGlobal('Audio', FakeAudio)
     const shown: Array<{ title: string; options?: NotificationOptions }> = []
