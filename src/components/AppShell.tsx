@@ -27,6 +27,7 @@ import { HIVE_UI_BUILD, HIVE_UI_VERSION } from '../lib/build'
 import { formatCost, formatDate } from '../lib/format'
 import { useOnlineStatus } from '../hooks/useOnlineStatus'
 import { ConfirmDialog } from './ConfirmDialog'
+import { CommandPalette } from './CommandPalette'
 import { EmptyState } from './EmptyState'
 import { HiveLogo } from './HiveLogo'
 
@@ -375,10 +376,25 @@ function InspectorRowView({ row }: { row: InspectorRow }) {
 
 function InspectorPanel() {
   const { open, available, payload, setOpen } = useInspector()
+  const [mobile, setMobile] = useState(() => window.matchMedia('(max-width: 1023px)').matches)
+  useEffect(() => {
+    const media = window.matchMedia('(max-width: 1023px)')
+    const update = () => setMobile(media.matches)
+    media.addEventListener('change', update)
+    return () => media.removeEventListener('change', update)
+  }, [])
+  const close = useCallback(() => setOpen(false), [setOpen])
+  const drawer = useMobileDrawer(mobile && available && open, close)
   if (!available || !open) return null
 
   return (
+    <>
+    {mobile && <button className="fixed inset-0 z-30 bg-black/60 lg:hidden" type="button"
+      aria-label="Dismiss inspector" tabIndex={-1} onClick={close} />}
     <aside
+      ref={drawer}
+      role={mobile ? 'dialog' : undefined}
+      aria-modal={mobile || undefined}
       aria-label="Inspector"
       className={
         [
@@ -399,7 +415,8 @@ function InspectorPanel() {
             <p className="text-xs font-semibold uppercase tracking-[0.2em] text-cyan-300/80">{payload.eyebrow ?? 'Inspector'}</p>
             <h2 className="mt-1 truncate text-sm font-semibold text-white">{payload.title}</h2>
           </div>
-          <button type="button" onClick={() => setOpen(false)} aria-label="Close inspector" className="rounded-lg p-2 text-slate-400 hover:bg-white/5 hover:text-white">
+          <button type="button" onClick={() => setOpen(false)} aria-label="Close inspector"
+            className="grid min-h-11 min-w-11 place-items-center rounded-hive text-slate-400 hover:bg-white/5 hover:text-white">
             <PanelRightClose className="h-5 w-5" />
           </button>
         </div>
@@ -422,6 +439,7 @@ function InspectorPanel() {
         </div>
       </div>
     </aside>
+    </>
   )
 }
 
@@ -501,6 +519,7 @@ function useMobileDrawer(open: boolean, close: () => void) {
   useEffect(() => {
     if (!open) return undefined
     previousFocusRef.current = document.activeElement instanceof HTMLElement ? document.activeElement : null
+    const previousOverflow = document.body.style.overflow
     document.body.style.overflow = 'hidden'
     const raf = window.requestAnimationFrame(() => {
       drawerRef.current?.querySelector<HTMLElement>('button, [href], input, [tabindex]:not([tabindex="-1"])')?.focus()
@@ -515,13 +534,16 @@ function useMobileDrawer(open: boolean, close: () => void) {
       if (event.key !== 'Tab' || !drawerRef.current) return
       const items = Array.from(
         drawerRef.current.querySelectorAll<HTMLElement>(
-          'button:not([disabled]), [href], input:not([disabled]), [tabindex]:not([tabindex="-1"])',
+          'button:not([disabled]), [href], input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])',
         ),
-      )
+      ).filter(item => item.getClientRects().length && !item.closest('[inert], [aria-hidden="true"]'))
       if (!items.length) return
       const first = items[0]
       const last = items[items.length - 1]
-      if (event.shiftKey && document.activeElement === first) {
+      if (!drawerRef.current.contains(document.activeElement)) {
+        event.preventDefault()
+        ;(event.shiftKey ? last : first).focus()
+      } else if (event.shiftKey && document.activeElement === first) {
         event.preventDefault()
         last.focus()
       } else if (!event.shiftKey && document.activeElement === last) {
@@ -534,7 +556,7 @@ function useMobileDrawer(open: boolean, close: () => void) {
     return () => {
       window.cancelAnimationFrame(raf)
       document.removeEventListener('keydown', onKeyDown)
-      document.body.style.overflow = ''
+      document.body.style.overflow = previousOverflow
       previousFocusRef.current?.focus()
     }
   }, [open, close])
@@ -548,7 +570,34 @@ export function AppShell() {
   const online = useOnlineStatus()
   const { open, available, toggle } = useInspector()
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
-  const [railCollapsed, setRailCollapsed] = useState(false)
+  const [railCollapsed, setRailCollapsed] = useState(() => {
+    try { return localStorage.getItem('hive-rail-collapsed') === 'true' } catch { return false }
+  })
+  const [paletteOpen, setPaletteOpen] = useState(false)
+  const [mobile, setMobile] = useState(() => window.matchMedia('(max-width: 1023px)').matches)
+  useEffect(() => {
+    const media = window.matchMedia('(max-width: 1023px)')
+    const update = () => setMobile(media.matches)
+    media.addEventListener('change', update)
+    return () => media.removeEventListener('change', update)
+  }, [])
+  const mobileInspectorOpen = mobile && open && available
+  const navigate = useNavigate()
+  useEffect(() => {
+    try { localStorage.setItem('hive-rail-collapsed', String(railCollapsed)) } catch { /* optional preference */ }
+  }, [railCollapsed])
+  useEffect(() => {
+    const shortcut = (event: KeyboardEvent) => {
+      if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === 'k'
+        && !event.isComposing && !mobileMenuOpen && !open && !document.querySelector('[aria-modal="true"], dialog[open]')) {
+        event.preventDefault()
+        setPaletteOpen(true)
+      }
+    }
+    document.addEventListener('keydown', shortcut)
+    return () => document.removeEventListener('keydown', shortcut)
+  }, [mobileMenuOpen, open])
+
   const [display, setDisplay] = useState(() => {
     try {
       return { comfortable: localStorage.getItem('hive-comfortable') === 'true', describeLamps: localStorage.getItem('hive-describe-lamps') === 'true' }
@@ -607,7 +656,7 @@ export function AppShell() {
         </div>
       )}
 
-      <div className="flex min-w-0 flex-1 flex-col" inert={mobileMenuOpen}>
+      <div className="flex min-w-0 flex-1 flex-col" inert={mobileMenuOpen || paletteOpen || mobileInspectorOpen}>
         {!online && (
           <div role="status" className="shrink-0 border-b border-amber-300/20 bg-amber-300/8 px-4 py-2 text-center text-xs text-amber-100">
             Browser offline. Stored pages remain visible, but HIVE requests will wait for the connection to return.
@@ -631,6 +680,9 @@ export function AppShell() {
             </div>
           </div>
           <div className="flex shrink-0 items-center gap-1 sm:gap-2">
+            <button type="button" aria-label="Open command palette" title="Find a page (Ctrl+K)"
+              className="grid min-h-11 min-w-11 place-items-center rounded-hive text-hive-muted hover:text-white"
+              disabled={open} onClick={() => setPaletteOpen(true)}><Search className="h-5 w-5" aria-hidden="true" /></button>
             <HeaderActions health={health} open={open} available={available && pathname !== '/communications'} toggle={toggle} />
           </div>
         </header>
@@ -656,6 +708,8 @@ export function AppShell() {
       </div>
 
       <InspectorPanel />
+      {paletteOpen && <CommandPalette items={navigationGroups.flatMap(group => group.items).map(({ to, label }) => ({ to, label }))}
+        onClose={() => setPaletteOpen(false)} onSelect={to => { setPaletteOpen(false); navigate(to) }} />}
     </div>
   )
 }

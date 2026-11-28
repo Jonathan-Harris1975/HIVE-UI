@@ -291,7 +291,7 @@ test('command centre routes to independent read-only evidence and responsive wor
   assert.ok(page.includes('Unknown values are not treated as healthy or zero'))
   assert.ok(page.includes('request.signal.aborted'))
   assert.ok(shell.includes('aria-label="Quick navigation"'))
-  assert.ok(shell.includes('inert={mobileMenuOpen}'))
+  assert.ok(shell.includes('inert={mobileMenuOpen || paletteOpen || mobileInspectorOpen}'))
   assert.ok(css.includes('.hive-metric-grid'))
   assert.ok(css.includes('repeat(4, minmax(0,1fr))'))
   assert.doesNotMatch(page, /method:\s*['"](?:POST|DELETE|PATCH|PUT)/)

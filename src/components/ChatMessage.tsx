@@ -1,5 +1,5 @@
 import { Bot, Check, Copy, ExternalLink, FileText, Info, LoaderCircle, UserRound } from 'lucide-react'
-import { useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { formatCost } from '../lib/format'
 import type { UiMessage } from '../types/api'
 import { MarkdownMessage } from './MarkdownMessage'
@@ -10,16 +10,18 @@ interface ChatMessageProps {
 }
 
 export function ChatMessage({ message, onInspect }: ChatMessageProps) {
-  const [copied, setCopied] = useState(false)
+  const [copied, setCopied] = useState('Copy')
+  const timer = useRef<number | undefined>(undefined)
+  useEffect(() => () => window.clearTimeout(timer.current), [])
   const assistant = message.role === 'assistant'
   const streamingCount = message.streaming_count ?? message.content.length
   const streamingStatus = message.streaming_status || 'HIVE is thinking'
 
   async function copyMessage() {
     if (!message.content) return
-    await navigator.clipboard.writeText(message.content)
-    setCopied(true)
-    window.setTimeout(() => setCopied(false), 1600)
+    try { await navigator.clipboard.writeText(message.content); setCopied('Copied') } catch { setCopied('Copy failed') }
+    window.clearTimeout(timer.current)
+    timer.current = window.setTimeout(() => setCopied('Copy'), 1600)
   }
 
   return (
@@ -33,7 +35,7 @@ export function ChatMessage({ message, onInspect }: ChatMessageProps) {
       <div className={`min-w-0 max-w-[88%] ${assistant ? 'flex-1' : ''}`}>
         <div className={assistant
           ? 'rounded-2xl border border-white/8 bg-hive-panel/70 px-4 py-4 text-sm leading-7 text-slate-300 sm:px-5'
-          : 'rounded-2xl rounded-tr-md bg-gradient-to-br from-[#163a59] to-[#102a43] px-4 py-3 text-sm text-slate-100 shadow-lg shadow-black/10'}
+          : 'rounded-hive border border-white/10 bg-hive-raised px-4 py-3 text-sm text-slate-100'}
         >
           {assistant ? (
             <>
@@ -72,7 +74,7 @@ export function ChatMessage({ message, onInspect }: ChatMessageProps) {
                       </span>
                     )}
                   </span>
-                  {message.sourceCitation.public_url && (
+                  {message.sourceCitation.public_url && /^https?:\/\//i.test(message.sourceCitation.public_url) && (
                     <a
                       href={message.sourceCitation.public_url}
                       target="_blank"
@@ -97,7 +99,7 @@ export function ChatMessage({ message, onInspect }: ChatMessageProps) {
             className="inline-flex h-8 items-center gap-1.5 rounded-lg px-2 text-xs text-slate-400 hover:bg-white/5 hover:text-slate-300 disabled:opacity-30"
             aria-label="Copy message"
           >
-            {copied ? <Check className="h-3.5 w-3.5" /> : <Copy className="h-3.5 w-3.5" />} {copied ? 'Copied' : 'Copy'}
+            {copied === 'Copied' ? <Check className="h-3.5 w-3.5" /> : <Copy className="h-3.5 w-3.5" />} <span role={copied === 'Copy' ? undefined : 'status'}>{copied}</span>
           </button>
           <button
             type="button"
