@@ -70,3 +70,10 @@ test('operational descriptions agree with the lamp for completed and offline sta
   expect(screen.getByText('Down')).toHaveClass('hive-signal-description')
   expect(container.querySelector('.signal-lamp')).toHaveAttribute('data-tone', 'bg-rose-300')
 })
+
+ test('blocked work uses the red lens; authentication blocks remain amber', () => {
+  const { container, rerender } = render(<StatusBadge status="blocked" variant="operational" />)
+  expect(container.querySelector('[data-active="true"]')).toHaveAttribute('data-lens', 'red')
+  rerender(<StatusBadge status="auth_blocked" variant="operational" />)
+  expect(container.querySelector('[data-active="true"]')).toHaveAttribute('data-lens', 'amber')
+})

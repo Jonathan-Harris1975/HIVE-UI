@@ -28,7 +28,6 @@ function dotTone(status: string, variant?: StatusBadgeProps['variant']): string 
     'needs_changes',
     'reverted',
     'medium',
-    'blocked',
     'auth_blocked',
     'forbidden',
     'unauthorised',

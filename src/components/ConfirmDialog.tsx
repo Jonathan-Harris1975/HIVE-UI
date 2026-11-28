@@ -66,22 +66,26 @@ export function ConfirmDialog({
   const cancelRef = useRef<HTMLButtonElement | null>(null)
   const previousFocusRef = useRef<HTMLElement | null>(null)
 
+  const hasTextInput = Boolean(textInput)
+
   useEffect(() => {
     if (!open) return undefined
     previousFocusRef.current = document.activeElement instanceof HTMLElement ? document.activeElement : null
+    const previousOverflow = document.body.style.overflow
     document.body.style.overflow = 'hidden'
-    window.setTimeout(() => {
-      if (textInput) {
+    const timer = window.setTimeout(() => {
+      if (hasTextInput) {
         panelRef.current?.querySelector<HTMLInputElement | HTMLTextAreaElement>('input, textarea')?.focus()
       } else {
         cancelRef.current?.focus()
       }
     }, 0)
     return () => {
-      document.body.style.overflow = ''
+      window.clearTimeout(timer)
+      document.body.style.overflow = previousOverflow
       previousFocusRef.current?.focus()
     }
-  }, [open, textInput])
+  }, [open, hasTextInput])
 
   if (!open) return null
 
@@ -125,7 +129,7 @@ export function ConfirmDialog({
         aria-labelledby={titleId}
         aria-describedby={descriptionId}
         aria-busy={busy}
-        className="w-full max-w-lg rounded-3xl border border-white/10 bg-hive-dialog p-5 shadow-2xl shadow-black/45 sm:p-6"
+        className="max-h-[calc(100dvh-2rem)] overflow-y-auto overscroll-contain w-full max-w-lg rounded-3xl border border-white/10 bg-hive-dialog p-5 shadow-2xl shadow-black/45 sm:p-6"
       >
         <div className="flex items-start justify-between gap-4">
           <div className="flex min-w-0 gap-3">

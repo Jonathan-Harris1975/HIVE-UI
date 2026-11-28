@@ -220,7 +220,7 @@ function ConversationSection({ closeMobile }: { closeMobile?: () => void }) {
               <button
                 type="button"
                 onClick={() => void selectConversation(conversation.id)}
-                className="w-full px-3 py-2.5 pr-16 text-left"
+                className="w-full px-3 py-2.5 pr-24 text-left"
               >
                 <div className={`truncate text-sm font-semibold ${active ? 'text-cyan-50' : 'text-slate-200'}`}>{title}</div>
                 <div className="mt-1 flex gap-2 text-xs text-slate-300">
@@ -242,7 +242,7 @@ function ConversationSection({ closeMobile }: { closeMobile?: () => void }) {
                   type="button"
                   aria-label="Rename conversation"
                   onClick={() => openRename(conversation.id, title)}
-                  className="rounded-md p-1.5 text-slate-400 hover:bg-white/8 hover:text-cyan-200"
+                  className="flex min-h-11 min-w-11 items-center justify-center rounded-md text-slate-400 hover:bg-white/8 hover:text-cyan-200"
                 >
                   <Pencil className="h-3.5 w-3.5" />
                 </button>
@@ -250,7 +250,7 @@ function ConversationSection({ closeMobile }: { closeMobile?: () => void }) {
                   type="button"
                   aria-label="Delete conversation"
                   onClick={() => openDelete(conversation.id, title)}
-                  className="rounded-md p-1.5 text-slate-400 hover:bg-rose-400/10 hover:text-rose-300"
+                  className="flex min-h-11 min-w-11 items-center justify-center rounded-md text-slate-400 hover:bg-rose-400/10 hover:text-rose-300"
                 >
                   <Trash2 className="h-3.5 w-3.5" />
                 </button>
