@@ -69,7 +69,12 @@ export function CommunicationsPage() {
         if (target.origin !== AIMS_ORIGIN || target.pathname !== '/console/') throw new Error('Communications handoff returned an unexpected destination.')
         if (!cancelled) setFrameUrl(target.toString())
       } catch (cause) {
-        if (!cancelled) setError(controller.signal.aborted ? 'The secure AIMS connection timed out. Retry to reconnect.' : cause instanceof Error ? cause.message : 'Communications Interface could not be opened.')
+        if (!cancelled) {
+          const message = controller.signal.aborted
+            ? 'The secure AIMS connection timed out. Retry to reconnect.'
+            : cause instanceof Error ? cause.message : 'Communications Interface could not be opened.'
+          setError(message)
+        }
       } finally {
         window.clearTimeout(requestTimeout)
       }
