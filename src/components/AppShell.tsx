@@ -467,7 +467,9 @@ function HeaderActions({ health, open, available, toggle }: { health: ReturnType
       <Link to="/ops" title={health?.build ? `HIVE build: ${health.build}` : 'Open Operations'}
         aria-label={health == null ? 'API status unknown. Open Operations' : health.ok ? 'Last API check: responded. Open Operations' : 'Last API check: failed. Open Operations'}
         className="flex min-h-11 items-center gap-2 rounded-hive px-2 py-1.5 text-xs text-hive-muted hover:text-hive-text">
-        <span className={`signal-lamp ${health == null ? '' : health.ok ? 'text-cyan-300' : 'text-rose-200'}`} data-tone={health?.ok === false ? 'bg-rose-300' : health?.ok ? 'bg-cyan-300' : 'bg-slate-500'} aria-hidden="true">
+        <span className={`signal-lamp ${health == null ? '' : health.ok ? 'text-cyan-300' : 'text-rose-200'}`}
+          data-tone={health?.ok === false ? 'bg-rose-300' : health?.ok ? 'bg-cyan-300' : 'bg-slate-500'}
+          aria-hidden="true">
           {(['red', 'amber', 'green'] as const).map(lens => <span key={lens} data-lens={lens} data-active={lens === (health?.ok === false ? 'red' : 'amber')} />)}
         </span>
         <span className="hidden sm:inline">{health == null ? 'API status unknown' : health.ok ? 'Last API check: responded' : 'Last API check: failed'}</span>
