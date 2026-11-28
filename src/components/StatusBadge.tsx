@@ -82,7 +82,12 @@ function display(status: string, variant?: StatusBadgeProps['variant']): string 
   if (value === 'warning') return 'Attention'
   if (value === 'stale') return 'Stale'
   if (value === 'complete' || value === 'completed') return 'Completed'
-  if (['approved', 'ready_for_execution', 'review_required', 'pending_review', 'approved_handoff_pending', 'needs_changes', 'reverted', 'planned', 'queued', 'readonly', 'proposed', 'low', 'medium', 'high'].includes(value)) {
+  const compoundStatuses = [
+    'approved', 'ready_for_execution', 'review_required', 'pending_review',
+    'approved_handoff_pending', 'needs_changes', 'reverted', 'planned',
+    'queued', 'readonly', 'proposed', 'low', 'medium', 'high',
+  ]
+  if (compoundStatuses.includes(value)) {
     return status.replace(/_/g, ' ').replace(/\b\w/g, (character) => character.toUpperCase())
   }
   if (['info', 'information'].includes(value)) return 'Information'
