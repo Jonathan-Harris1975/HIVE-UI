@@ -129,14 +129,14 @@ export function ConfirmDialog({
         aria-labelledby={titleId}
         aria-describedby={descriptionId}
         aria-busy={busy}
-        className="max-h-[calc(100dvh-2rem)] overflow-y-auto overscroll-contain w-full max-w-lg rounded-3xl border border-white/10 bg-hive-dialog p-5 shadow-2xl shadow-black/45 sm:p-6"
+        className="max-h-[calc(100dvh-2rem)] overflow-y-auto overscroll-contain w-full max-w-lg rounded-hive-lg border border-white/10 bg-hive-dialog p-5 shadow-2xl shadow-black/45 sm:p-6"
       >
         <div className="flex items-start justify-between gap-4">
           <div className="flex min-w-0 gap-3">
             <div
               className={
                 [
-                  "mt-0.5 flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl border ",
+                  "mt-0.5 flex h-10 w-10 shrink-0 items-center justify-center rounded-hive border ",
                   String(
                     tone === 'destructive'
                       ? 'border-rose-300/20 bg-rose-300/10 text-rose-200'
@@ -163,7 +163,7 @@ export function ConfirmDialog({
           </button>
         </div>
 
-        <div className="mt-5 space-y-3 rounded-2xl border border-white/8 bg-hive-canvas/80 p-4 text-xs leading-5 text-slate-300">
+        <div className="mt-5 space-y-3 rounded-hive border border-white/8 bg-hive-canvas/80 p-4 text-xs leading-5 text-slate-300">
           {objectName && <p><span className="font-semibold text-slate-100">Affected object:</span> {objectName}</p>}
           {systems.length > 0 && <p><span className="font-semibold text-slate-100">Systems touched:</span> {systems.join(' · ')}</p>}
           {children}

@@ -96,20 +96,22 @@ export function OverviewPage() {
           <div>
             <p className="hive-kicker">HIVE / Control centre</p>
             <h2 id="command-title">Your ecosystem at a glance</h2>
-            <p>Review exceptions, evidence and the work that needs attention.</p>
+            <p>Exceptions, evidence and operational activity.</p>
           </div>
           <Link to="/ops" className="hive-primary-action">Open Operations <span aria-hidden="true">→</span></Link>
         </section>
 
         <div className="hive-section-heading">
           <div><h2>Operational snapshot</h2><p role="status">{loading ? 'Checking sources…' : snapshot.fetchedAt ? 'Fetched ' + formatDate(snapshot.fetchedAt) : 'Not yet fetched'}</p></div>
-          <button type="button" className="hive-secondary-action" onClick={() => void refresh()} disabled={loading}>
-            <RefreshCcw className={loading ? 'h-4 w-4 animate-spin' : 'h-4 w-4'} aria-hidden="true" /> Refresh
-          </button>
+          <div className="hive-refresh-controls">
+            <label className="hive-refresh-option">Auto-refresh <select value={refreshSeconds} onChange={(event) => setRefreshSeconds(Number(event.target.value))}>
+              <option value={0}>Off</option><option value={60}>60 seconds</option><option value={120}>2 minutes</option>
+            </select></label>
+            <button type="button" className="hive-secondary-action" onClick={() => void refresh()} disabled={loading}>
+              <RefreshCcw className={loading ? 'h-4 w-4 animate-spin' : 'h-4 w-4'} aria-hidden="true" /> Refresh
+            </button>
+          </div>
         </div>
-        <label className="hive-refresh-option">Auto-refresh <select value={refreshSeconds} onChange={(event) => setRefreshSeconds(Number(event.target.value))}>
-          <option value={0}>Off</option><option value={60}>60 seconds</option><option value={120}>2 minutes</option>
-        </select></label>
         {unavailable && <p role="status" className="hive-snapshot-notice">Some sources are unavailable. Unknown values are not treated as healthy or zero.</p>}
         <div className="hive-metric-grid" aria-busy={loading}>
           <Link to="/ops" className="hive-metric-card">
@@ -127,7 +129,7 @@ export function OverviewPage() {
             <small>{currentHealth ? 'Healthy only; standby is separate' : 'Not current health evidence'}</small>
           </Link>
           <Link to="/ops" className="hive-metric-card">
-            <span>Critical alerts</span><strong className={critical ? 'text-hive-danger' : ''}>{loading ? 'Checking' : critical ?? 'Unknown'}</strong>
+            <span>Recent critical alerts</span><strong className={critical ? 'text-hive-danger' : ''}>{loading ? 'Checking' : critical ?? 'Unknown'}</strong>
             <small>In up to six recent stored events</small>
           </Link>
         </div>
@@ -166,7 +168,9 @@ export function OverviewPage() {
                 <li key={item.event_id}>
                   <div>
                     <p>{item.title ?? item.event_type ?? 'Operational event'}</p>
-                    <small>{item.occurred_at ? formatDate(item.occurred_at) : item.received_at ? 'Received ' + formatDate(item.received_at) : 'Time not reported'}</small>
+                    <small><time dateTime={item.occurred_at ?? item.received_at ?? undefined}>
+                      {item.occurred_at ? formatDate(item.occurred_at) : item.received_at ? 'Received ' + formatDate(item.received_at) : 'Time not reported'}
+                    </time></small>
                     {item.summary && <small>{item.summary}</small>}
                   </div>
                   <StatusBadge status={item.severity ?? 'unknown'} dotOnly={['critical', 'warning', 'info'].includes(item.severity ?? '')} />
