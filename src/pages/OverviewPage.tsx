@@ -1,7 +1,7 @@
 import { Activity, Bot, Files, FolderGit2, RefreshCcw, Workflow } from 'lucide-react'
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { Link } from 'react-router'
-import { AimsIndicatorKey } from '../components/AimsIndicatorKey'
+import { IndicatorKey } from '../components/IndicatorKey'
 import { StatusBadge } from '../components/StatusBadge'
 import { useAuth } from '../context/AuthContext'
 import { apiFetch } from '../lib/api'
@@ -144,16 +144,7 @@ export function OverviewPage() {
             </ul> : <p className="hive-evidence-caption">No service exceptions in the current probe.</p>}
           {critical ? <p className="hive-evidence-caption text-rose-200">{critical} critical event(s) in recent stored alerts; check Operations for context.</p> : null}
         </section>
-        <details className="hive-lamp-legend">
-          <summary>Indicator key</summary>
-          <h3 id="hive-operational-status" className="hive-legend-heading">HIVE operational status</h3>
-          <div className="hive-legend-items">
-            {([['healthy', 'Healthy'], ['warning', 'Attention'], ['failed', 'Failure'], ['checking', 'Checking / information'],
-              ['maintenance', 'Maintenance / standby'], ['unknown', 'Unknown']] as const).map(([status, label]) =>
-              <span key={status}><StatusBadge status={status} label={label} /><span aria-hidden="true">{label}</span></span>)}
-          </div>
-          <AimsIndicatorKey />
-        </details>
+        <IndicatorKey />
         <div className="hive-evidence-grid">
           <section className="hive-evidence-card" aria-labelledby="service-title">
             <div className="hive-section-heading"><h2 id="service-title">Service health</h2><Link to="/repositories">View estate →</Link></div>
